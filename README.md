@@ -6,12 +6,10 @@
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Iron Dome is a two-layer defense system for npm/Python supply chains:
+Iron Dome is a two-layer defense system for npm/Python supply chains. Companion to [PicoSentry](https://github.com/KirkForge/PicoSentry) — static scan → runtime sandbox.
 
-- **L3 Execution Sandbox** — Run any command under policy. Seccomp (Linux), Seatbelt (macOS), or subprocess (universal). Produces deterministic SARIF/JSON verdicts.
+- **L3 Execution Sandbox** — Run any command under kernel-level policy. Real seccomp-bpf (Linux), Seatbelt/sandbox-exec (macOS), or universal subprocess backend.
 - **L4 Behavioral Analysis** — Post-execution profiling. Detect exfiltration, timing anomalies, honeypot touches, entropy spikes, and baseline drift.
-
-Companion to [PicoSentry](https://github.com/KirkForge/PicoSentry) (static scan → runtime sandbox).
 
 ## Quick Start
 
@@ -32,37 +30,34 @@ irondome analyze --input sandbox.json
 irondome rules
 ```
 
-## Why Iron Dome?
+## L3 Backends
 
-Static scanners (PicoSentry, Socket.dev, Snyk) inspect code. Iron Dome **executes** it safely:
+Iron Dome auto-detects the best available backend:
 
-| Layer | What | How |
-|-------|------|-----|
-| **L3 Sandbox** | Run under policy | Seccomp-bpf syscall filtering, network deny, filesystem restrictions, timeout enforcement |
-| **L4 Behavioral** | Analyze what happened | Profiling (network, DNS, FS, spawns), entropy analysis, honeypot detection, baseline drift |
+| Backend | Platform | Mechanism | Deterministic |
+|---------|----------|-----------|---------------|
+| **seccomp-bpf** | Linux | Kernel syscall filtering via libseccomp (ctypes), fork+exec | ✅ |
+| **seatbelt** | macOS | sandbox-exec with generated profile DSL | ✅ |
+| **subprocess** | Universal | Process isolation with post-hoc pattern analysis | ✅ |
 
-Together they catch what static analysis misses: dependency confusion with dynamic payloads, post-install data exfiltration, obfuscated eval chains, and supply-chain worms.
+The subprocess backend is the universal fallback. It applies policy by analyzing stdout/stderr for 10 suspicious pattern categories. The seccomp and seatbelt backends provide real kernel-level enforcement.
 
-## Output Formats
+## L3 Suspicious Pattern Detectors
 
-- **Table** — Human-readable terminal output
-- **JSON** — Machine-readable, deterministic (sha256 repeatable)
-- **SARIF 2.1.0** — GitHub code scanning, VS Code, CI integration
+| Rule | Detects |
+|------|---------|
+| L3-SUS-001 | Dynamic code execution (eval, exec, compile) |
+| L3-SUS-002 | Shell execution (subprocess, os.system, os.popen) |
+| L3-SUS-003 | Sensitive file access (/etc/passwd, /etc/shadow) |
+| L3-SUS-004 | Network tool usage (curl, wget, nc, telnet) |
+| L3-SUS-005 | Permission escalation (chmod +x, chmod 777) |
+| L3-SUS-006 | Base64 decoding |
+| L3-SUS-007 | Destructive commands (rm -rf /, dd if=/dev) |
+| L3-SUS-008 | Process introspection (/proc/self, ptrace) |
+| L3-SUS-009 | SSH key access (.ssh/, id_rsa, id_ed25519) |
+| L3-SUS-010 | Dotfile access (/root/, /home/*/.) |
 
-## Determinism Guarantee
-
-`sha256(scan_a) == sha256(scan_b)` on identical inputs. No random IDs in findings, no timestamps, frozen dataclasses. Enforced by CI gate.
-
-## CLI Commands
-
-| Command | Description |
-|---------|-------------|
-| `irondome sandbox <cmd>` | Run under L3 policy |
-| `irondome analyze --input <file>` | L4 analysis on sandbox output |
-| `irondome pipeline <cmd>` | Full L3+L4 pipeline |
-| `irondome rules` | List L4 detector rules |
-
-## L4 Detector Rules
+## L4 Behavioral Detector Rules
 
 | Rule | Detects | Severity |
 |------|---------|----------|
@@ -82,11 +77,26 @@ Together they catch what static analysis misses: dependency confusion with dynam
 
 Custom baselines can be loaded from JSON files.
 
+## Output Formats
+
+- **Table** — Human-readable terminal output with verdict icons
+- **JSON** — Machine-readable, deterministic (sha256 repeatable)
+- **SARIF 2.1.0** — GitHub code scanning, VS Code, CI integration
+
+## Determinism Guarantee
+
+`sha256(scan_a) == sha256(scan_b)` on identical inputs. No random IDs in findings, no timestamps in evidence, frozen dataclasses throughout. Enforced by CI gate.
+
+## Why Iron Dome?
+
+Static scanners (PicoSentry, Socket.dev, Snyk) inspect code. Iron Dome **executes** it safely, catching what static analysis misses: dependency confusion with dynamic payloads, post-install data exfiltration, obfuscated eval chains, and supply-chain worms.
+
 ## Development
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest -v
+python -m pytest -v          # 33 tests
+irondome sandbox echo ci     # Quick self-test
 ```
 
 ## License
@@ -95,5 +105,5 @@ MIT — free for personal use, commercial licensing available.
 
 ## Related
 
-- [PicoSentry](https://github.com/KirkForge/PicoSentry) — Deterministic npm/pnpm supply-chain scanner
-- 55NDeep — Codex verification and delegation plugin
+- [PicoSentry](https://github.com/KirkForge/PicoSentry) — Deterministic npm/pnpm supply-chain scanner (19 rules, 369 tests)
+- [55NDeep](https://github.com/KirkForge/55NDeep-plugin) — Codex verification and delegation plugin
