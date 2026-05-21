@@ -10,6 +10,7 @@ from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.backends.subprocess_backend import SubprocessBackend
 from irondome.l3.models import Policy, SandboxResult
 from irondome.l3.policy import default_policy
+from irondome.l3.policy_hash import policy_hash
 
 logger = logging.getLogger("irondome.l3.engine")
 
@@ -21,6 +22,7 @@ def _detect_backend() -> SandboxBackend:
     if system == "Linux":
         try:
             from irondome.l3.backends.seccomp_backend import SeccompBackend
+
             backend = SeccompBackend()
             if backend.is_available():
                 logger.info("Using seccomp-bpf backend (Linux)")
@@ -33,6 +35,7 @@ def _detect_backend() -> SandboxBackend:
     elif system == "Darwin":
         try:
             from irondome.l3.backends.seatbelt_backend import SeatbeltBackend
+
             backend = SeatbeltBackend()
             if backend.is_available():
                 logger.info("Using seatbelt backend (macOS)")
@@ -71,29 +74,40 @@ def sandbox_run(
     env: Optional[dict] = None,
     backend: Optional[SandboxBackend] = None,
 ) -> SandboxResult:
-    """
-    Run a command under sandbox policy.
-
-    Args:
-        command: Command and arguments to execute.
-        policy: Sandbox policy (None = default deny-by-default).
-        timeout: Wall-time limit in seconds.
-        cwd: Working directory.
-        env: Environment variables.
-        backend: Override backend (None = auto-detect).
-
-    Returns:
-        SandboxResult with events and overall verdict.
-    """
+    """Run a command under sandbox policy."""
     if policy is None:
         policy = default_policy()
 
     be = backend or get_backend()
     result = be.run(command, policy, timeout=timeout, cwd=cwd, env=env)
 
+    # Attach deterministic evidence metadata
+    try:
+        ph = policy_hash(policy)
+    except Exception:
+        ph = ""
+
+    # Dataclasses are frozen; create a new result with updated fields.
+    result = SandboxResult(
+        run_id=result.run_id,
+        timestamp=result.timestamp,
+        backend=be.name,
+        policy_hash=ph,
+        policy_version=policy.version,
+        command=result.command,
+        overall_verdict=result.overall_verdict,
+        exit_code=result.exit_code,
+        duration_ms=result.duration_ms,
+        events=result.events,
+        policy_name=result.policy_name,
+        stdout=result.stdout,
+        stderr=result.stderr,
+    )
+
     logger.info(
-        "L3 sandbox %s: verdict=%s exit=%d duration=%dms events=%d",
+        "L3 sandbox %s: backend=%s verdict=%s exit=%d duration=%dms events=%d",
         result.run_id,
+        result.backend,
         result.overall_verdict.value,
         result.exit_code,
         result.duration_ms,
