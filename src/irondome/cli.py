@@ -99,8 +99,10 @@ def _cmd_analyze(args) -> int:
     with open(args.input) as f:
         data = json.load(f)
 
-    # Reconstruct SandboxResult from JSON
+    # Reconstruct SandboxResult from JSON.
+    # Note: JSON output is deterministic and may omit run_id/timestamp.
     from irondome.l3.models import SandboxEvent, Verdict
+
     events = [
         SandboxEvent(
             rule_id=e["rule_id"],
@@ -112,9 +114,11 @@ def _cmd_analyze(args) -> int:
         )
         for e in data.get("events", [])
     ]
-    from irondome.l3.models import SandboxResult
+
     sandbox = SandboxResult(
-        run_id=data.get("run_id", ""),
+        backend=data.get("backend", ""),
+        policy_hash=data.get("policy_hash", ""),
+        policy_version=data.get("policy_version", ""),
         command=data.get("command", []),
         overall_verdict=Verdict(data.get("overall_verdict", "ALLOW")),
         exit_code=data.get("exit_code", 0),
