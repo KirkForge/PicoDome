@@ -1,0 +1,51 @@
+version: 1
+name: npm-install
+mode: deny
+description: "Policy for running npm install in a sandboxed workspace"
+
+backends:
+  linux_seccomp: true
+  macos_seatbelt: true
+  subprocess: true
+
+exec:
+  allowlist:
+    - node
+    - npm
+  denylist:
+    - curl
+    - wget
+    - ssh
+
+fs:
+  read_allowlist:
+    - ./
+    - /usr/
+    - /lib/
+  write_allowlist:
+    - ./
+    - /tmp/
+
+network:
+  mode: allow
+  allowlist:
+    - registry.npmjs.org
+    - registry.yarnpkg.com
+
+env:
+  pass_through:
+    - PATH
+    - HOME
+    - npm_config_cache
+  denylist:
+    - AWS_.*
+    - GITHUB_TOKEN
+
+limits:
+  cpu_seconds: 120
+  wall_seconds: 300
+  memory_mb: 1024
+
+evidence:
+  include_policy_hash: true
+  include_backend: true
