@@ -1,0 +1,18 @@
+# Normalize line endings and avoid noisy diffs across OS
+* text=auto eol=lf
+
+# Treat common binaries as binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+
+# Friendlier diffs
+*.md text diff=markdown
+*.py text diff=python
+*.yml text diff=yaml
+*.yaml text diff=yaml
+*.toml text diff=toml
+*.json text diff=json
