@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import uuid
-import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from irondome.models import Verdict, _now_iso
 
@@ -35,6 +34,7 @@ class RuleTarget(str, Enum):
 @dataclass(frozen=True)
 class PolicyRule:
     """A single rule in a sandbox policy. Frozen for determinism."""
+
     rule_id: str
     target: RuleTarget
     action: SyscallAction
@@ -47,6 +47,7 @@ class PolicyRule:
 @dataclass(frozen=True)
 class Policy:
     """Sandbox execution policy. Frozen for determinism."""
+
     name: str
     version: str = "1.0"
     default_action: SyscallAction = SyscallAction.DENY
@@ -75,6 +76,7 @@ class Policy:
 @dataclass(frozen=True)
 class SandboxEvent:
     """A single event from a sandbox run. Frozen for determinism."""
+
     rule_id: str
     verdict: Verdict
     operation: str
@@ -96,9 +98,20 @@ class SandboxEvent:
 
 @dataclass(frozen=True)
 class SandboxResult:
-    """Result of a sandbox execution. Frozen for determinism."""
+    """Result of a sandbox execution.
+
+    NOTE: `run_id` and `timestamp` exist for internal tracing, but are deliberately
+    omitted from `to_dict()` to preserve deterministic output.
+    """
+
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: str = field(default_factory=_now_iso)
+
+    # Evidence metadata (deterministic)
+    backend: str = ""
+    policy_hash: str = ""
+    policy_version: str = ""
+
     command: List[str] = field(default_factory=list)
     overall_verdict: Verdict = Verdict.ALLOW
     exit_code: int = 0
@@ -110,12 +123,13 @@ class SandboxResult:
 
     def to_dict(self) -> Dict:
         return {
-            "run_id": self.run_id,
-            "timestamp": self.timestamp,
             "command": list(self.command),
             "overall_verdict": self.overall_verdict.value,
             "exit_code": self.exit_code,
             "duration_ms": self.duration_ms,
             "events": [e.to_dict() for e in self.events],
             "policy_name": self.policy_name,
+            "policy_version": self.policy_version,
+            "policy_hash": self.policy_hash,
+            "backend": self.backend,
         }
