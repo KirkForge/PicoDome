@@ -124,7 +124,7 @@ spec:
       storage: 5Gi
 ---
 # IMPORTANT: Create this secret with a strong token before deploying.
-# Do NOT use the placeholder below in production.
+# Do NOT store real tokens in this manifest.
 #
 # Example:
 #   kubectl create secret generic irondome-tokens \
@@ -135,8 +135,6 @@ kind: Secret
 metadata:
   name: irondome-tokens
 type: Opaque
-stringData:
-  api-tokens: "REPLACE_WITH_STRONG_TOKEN"
 ---
 apiVersion: v1
 kind: ServiceAccount

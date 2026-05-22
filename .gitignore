@@ -49,5 +49,12 @@ node_modules/
 .env
 .env.*
 
+# Secrets and certificates
+*.pem
+*.key
+*.crt
+*token*
+!**/api-tokens*
+
 # Coverage directory
 coverage/

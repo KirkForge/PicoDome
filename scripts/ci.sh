@@ -108,6 +108,13 @@ else
     fail "irondome pipeline echo ci-test"
 fi
 
+# ── Deploy Security ───────────────────────────────────────────────
+section "Deploy Security Check"
+if python3 scripts/check_deploy_security.py --strict; then
+    pass "deploy security check"
+else
+    fail "deploy security check"
+
 # ── Summary ───────────────────────────────────────────────────────
 echo ""
 echo -e "${YELLOW}━━━ Summary ━━━${NC}"
