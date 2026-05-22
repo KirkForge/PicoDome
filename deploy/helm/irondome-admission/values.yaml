@@ -1,0 +1,101 @@
+# IronDome Admission Controller Helm Values
+
+replicaCount: 2
+
+image:
+  repository: kirkforge/irondome-admission
+  pullPolicy: IfNotPresent
+  tag: ""
+
+# Webhook server port
+admission:
+  port: 8443
+  # Enable container image scanning before deployment
+  scanEnabled: false
+  # Minimum severity to block deployment (info/low/medium/high/critical)
+  scanMinSeverity: "high"
+  # IronDome daemon URL for scan requests
+  daemonUrl: "http://irondome:8443"
+
+# Pod security validation
+security:
+  denyPrivileged: true
+  denyRunAsRoot: true
+  requireSecurityContext: true
+  denyHostPath: true
+  denyHostNetwork: true
+  requireNonRoot: false
+  requireReadOnlyRoot: false
+  requireDropAllCaps: false
+
+# TLS configuration (required by K8s webhook)
+tls:
+  # Use cert-manager to auto-generate certs
+  certManager:
+    enabled: true
+    issuerRef:
+      name: selfsigned
+      kind: ClusterIssuer
+  # Or provide existing TLS secret
+  existingSecret: ""
+
+# ValidatingWebhookConfiguration
+webhook:
+  # Failure policy: Fail (block) or Ignore (allow on error)
+  failurePolicy: Fail
+  # Match pods in these namespaces (empty = all)
+  namespaceSelector: {}
+  # objectSelector: {}
+  # Rules for which resources to intercept
+  rules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["pods"]
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 443
+  targetPort: 8443
+
+serviceAccount:
+  create: true
+  name: ""
+
+rbac:
+  create: true
+
+networkPolicy:
+  enabled: true
+  ingress:
+    from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: kube-system
+
+healthProbe:
+  liveness:
+    initialDelaySeconds: 5
+    periodSeconds: 30
+  readiness:
+    initialDelaySeconds: 3
+    periodSeconds: 10

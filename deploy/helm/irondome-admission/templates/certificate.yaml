@@ -1,0 +1,19 @@
+{{- if .Values.tls.certManager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "irondome-admission.fullname" . }}-cert
+  labels:
+    {{- include "irondome-admission.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "irondome-admission.fullname" . }}-tls
+  duration: 8760h  # 1 year
+  renewBefore: 720h  # 30 days
+  issuerRef:
+    {{- toYaml .Values.tls.certManager.issuerRef | nindent 4 }}
+  dnsNames:
+    - {{ include "irondome-admission.fullname" . }}
+    - {{ include "irondome-admission.fullname" . }}.{{ .Release.Namespace }}
+    - {{ include "irondome-admission.fullname" . }}.{{ .Release.Namespace }}.svc
+    - {{ include "irondome-admission.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+{{- end }}
