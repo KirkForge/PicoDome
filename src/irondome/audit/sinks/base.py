@@ -177,8 +177,11 @@ def register_sink(name: str, cls: type[AuditSink]) -> None:
     SINK_REGISTRY[name] = cls
 
 
-def create_sink(name: str, config: SinkConfig | None = None) -> AuditSink:
-    """Create a sink instance by name from the registry."""
+def create_sink(name: str, config: SinkConfig | None = None, **kwargs: Any) -> AuditSink:
+    """Create a sink instance by name from the registry.
+
+    Additional keyword arguments are passed to the sink constructor.
+    """
     if name not in SINK_REGISTRY:
         raise ValueError(f"Unknown sink type: '{name}'. Available: {list(SINK_REGISTRY)}")
-    return SINK_REGISTRY[name](config)
+    return SINK_REGISTRY[name](config, **kwargs)
