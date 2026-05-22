@@ -1,6 +1,5 @@
 """Tests for the subprocess backend — pattern detection, verdicts, edge cases."""
 
-
 import pytest
 
 from irondome.l3.backends.subprocess_backend import SubprocessBackend
@@ -40,6 +39,7 @@ class TestBackendBasics:
 
     def test_backend_run_returns_sandbox_result(self, backend):
         from irondome.l3.models import SandboxResult
+
         result = backend.run(["echo", "test"], default_policy())
         assert isinstance(result, SandboxResult)
 
@@ -184,10 +184,7 @@ class TestNetworkDetection:
             default_policy(),
         )
         # Loopback should not trigger network event (it's filtered)
-        loopback_events = [
-            e for e in result.events
-            if e.operation == "network_outbound" and "127.0.0.1" in e.address
-        ]
+        loopback_events = [e for e in result.events if e.operation == "network_outbound" and "127.0.0.1" in e.address]
         assert len(loopback_events) == 0
 
     def test_detect_url(self, backend):
@@ -266,10 +263,10 @@ class TestCommandNotFound:
     def test_nonexistent_command(self, backend):
         result = backend.run(["nonexistent_command_xyzzy_12345"], default_policy())
         assert result.exit_code != 0
-        assert any(
-            e.rule_id in ("L3-EXEC-001", "L3-EXEC-002")
-            for e in result.events
-        ) or result.overall_verdict != Verdict.ALLOW
+        assert (
+            any(e.rule_id in ("L3-EXEC-001", "L3-EXEC-002") for e in result.events)
+            or result.overall_verdict != Verdict.ALLOW
+        )
 
 
 # ─── Permission denied ────────────────────────────────────────────────────────

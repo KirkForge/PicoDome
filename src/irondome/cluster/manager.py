@@ -42,9 +42,11 @@ DEFAULT_CLUSTER_PORT = 8444  # cluster communication port (distinct from daemon 
 
 class NodeStatus(str, Enum):
     """Cluster node status."""
+
     ONLINE = "online"
     OFFLINE = "offline"
     DRAINING = "draining"
+
 
 # ─── Cluster node ───────────────────────────────────────────────────────────
 
@@ -56,6 +58,7 @@ class ClusterNode:
     Deterministic: comparison is by (load, node_id) for consistent
     least-loaded assignment.
     """
+
     node_id: str
     address: str
     port: int = DEFAULT_CLUSTER_PORT
@@ -96,9 +99,11 @@ class ClusterNode:
         a single process session for testing.
         """
         import socket
+
         hostname = socket.gethostname()
         pid = os.getpid()
         return f"irondome-{hostname}-{pid}"
+
 
 # ─── Scan request ───────────────────────────────────────────────────────────
 
@@ -106,6 +111,7 @@ class ClusterNode:
 @dataclass
 class ScanRequest:
     """A scan request to be assigned to a cluster node."""
+
     scan_id: str
     command: list[str]
     priority: int = 0  # higher = more urgent
@@ -133,6 +139,7 @@ class ScanRequest:
             created_at=data.get("created_at", ""),
             status=data.get("status", "pending"),
         )
+
 
 # ─── State backends ─────────────────────────────────────────────────────────
 
@@ -380,9 +387,7 @@ class SQLiteStateBackend(StateBackend):
     def get_leader_id(self) -> str | None:
         conn = self._get_conn()
         try:
-            cursor = conn.execute(
-                "SELECT value FROM cluster_meta WHERE key = 'leader_id'"
-            )
+            cursor = conn.execute("SELECT value FROM cluster_meta WHERE key = 'leader_id'")
             row = cursor.fetchone()
             return row[0] if row else None
         finally:
@@ -398,6 +403,7 @@ class SQLiteStateBackend(StateBackend):
             conn.commit()
         finally:
             conn.close()
+
 
 # ─── Cluster state ──────────────────────────────────────────────────────────
 
@@ -478,10 +484,7 @@ class ClusterState:
                 return node
 
             # Find least-loaded online node (deterministic: sort by load, then node_id)
-            online_nodes = [
-                n for n in self._backend.load_all_nodes()
-                if n.status == NodeStatus.ONLINE
-            ]
+            online_nodes = [n for n in self._backend.load_all_nodes() if n.status == NodeStatus.ONLINE]
             if not online_nodes:
                 logger.warning("No online nodes available for scan %s", scan_id)
                 return None
@@ -619,9 +622,12 @@ class ClusterState:
             if remote_leader:
                 self._backend.set_leader_id(remote_leader)
 
-        logger.info("Merged state snapshot from peer (%d nodes, %d scans)",
-                    len(snapshot.get("nodes", [])),
-                    len(snapshot.get("scans", [])))
+        logger.info(
+            "Merged state snapshot from peer (%d nodes, %d scans)",
+            len(snapshot.get("nodes", [])),
+            len(snapshot.get("scans", [])),
+        )
+
 
 # ─── Cluster manager ────────────────────────────────────────────────────────
 
@@ -864,11 +870,9 @@ class ClusterManager:
             # Re-assign to another node
             new_node = self._state.assign_scan(scan.scan_id)
             if new_node:
-                logger.info("Scan %s redistributed from %s to %s",
-                            scan.scan_id, node_id, new_node.node_id)
+                logger.info("Scan %s redistributed from %s to %s", scan.scan_id, node_id, new_node.node_id)
             else:
-                logger.warning("No available node for scan %s (was on failed node %s)",
-                               scan.scan_id, node_id)
+                logger.warning("No available node for scan %s (was on failed node %s)", scan.scan_id, node_id)
 
         # Audit
         try:
@@ -963,9 +967,14 @@ class ClusterManager:
 
             elapsed = (now_ts or 0) - heartbeat_ts
             if elapsed > timeout_seconds:
-                logger.warning("Node %s missed %d heartbeats (elapsed: %ds), marking offline",
-                               node.node_id, self._max_missed_heartbeats, int(elapsed))
+                logger.warning(
+                    "Node %s missed %d heartbeats (elapsed: %ds), marking offline",
+                    node.node_id,
+                    self._max_missed_heartbeats,
+                    int(elapsed),
+                )
                 self.handle_node_failure(node.node_id)
+
 
 # ─── Utility functions ──────────────────────────────────────────────────────
 
@@ -979,16 +988,19 @@ def _parse_iso_timestamp(ts: str) -> float | None:
         # Handle both Z and +00:00 suffixes
         ts = ts.replace("Z", "+00:00")
         from datetime import datetime
+
         dt = datetime.fromisoformat(ts)
         return dt.timestamp()
     except (ValueError, TypeError):
         # Fallback: try time.strptime
         try:
             import calendar
+
             t = time.strptime(ts.replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
             return calendar.timegm(t)
         except (ValueError, TypeError):
             return None
+
 
 # ─── Module-level singleton ─────────────────────────────────────────────────
 

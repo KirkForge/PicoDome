@@ -41,6 +41,7 @@ class WebhookEvent(str, Enum):
 @dataclass(frozen=True)
 class WebhookConfig:
     """Configuration for a single webhook endpoint."""
+
     url: str
     secret: str = ""  # HMAC signing secret
     events: list[str] = field(default_factory=lambda: ["scan_alert"])
@@ -64,6 +65,7 @@ class WebhookConfig:
 @dataclass(frozen=True)
 class WebhookPayload:
     """JSON payload sent to webhook endpoints."""
+
     event: str
     timestamp: str
     data: dict[str, Any]
@@ -137,16 +139,19 @@ class WebhookDispatcher:
         Returns:
             Dict with delivery results per webhook.
         """
-        results = {"delivered": 0, "failed": 0, "skipped": 0, "details": []}
+        delivered = 0
+        failed = 0
+        skipped = 0
+        details: list[dict[str, str]] = []
 
         for wh in self._webhooks:
             if not wh.enabled:
-                results["skipped"] += 1
+                skipped += 1
                 continue
 
             # Check event filter
             if event.value not in wh.events and "*" not in wh.events:
-                results["skipped"] += 1
+                skipped += 1
                 continue
 
             # Check severity filter
@@ -154,7 +159,7 @@ class WebhookDispatcher:
                 sev_level = self.SEVERITY_ORDER.get(severity.lower(), 99)
                 min_level = self.SEVERITY_ORDER.get(wh.min_severity.lower(), 99)
                 if sev_level > min_level:
-                    results["skipped"] += 1
+                    skipped += 1
                     continue
 
             # Build and sign payload
@@ -170,13 +175,18 @@ class WebhookDispatcher:
             # Deliver with retries
             success = self._deliver(wh, payload_json, signature)
             if success:
-                results["delivered"] += 1
-                results["details"].append({"url": wh.url, "status": "delivered"})
+                delivered += 1
+                details.append({"url": wh.url, "status": "delivered"})
             else:
-                results["failed"] += 1
-                results["details"].append({"url": wh.url, "status": "failed"})
+                failed += 1
+                details.append({"url": wh.url, "status": "failed"})
 
-        return results
+        return {
+            "delivered": delivered,
+            "failed": failed,
+            "skipped": skipped,
+            "details": details,
+        }
 
     def notify_async(
         self,
@@ -236,10 +246,13 @@ class WebhookDispatcher:
             except (urllib.error.URLError, OSError, TimeoutError) as e:
                 logger.warning(
                     "Webhook delivery attempt %d/%d to %s failed: %s",
-                    attempt + 1, config.max_retries, config.url, e,
+                    attempt + 1,
+                    config.max_retries,
+                    config.url,
+                    e,
                 )
                 if attempt < config.max_retries - 1:
-                    backoff = 2 ** attempt  # 1s, 2s, 4s
+                    backoff = 2**attempt  # 1s, 2s, 4s
                     time.sleep(backoff)
 
         logger.error("Webhook delivery to %s failed after %d attempts", config.url, config.max_retries)
@@ -250,13 +263,15 @@ class WebhookDispatcher:
         """Create dispatcher from .irondome.yml webhooks section."""
         dispatcher = cls()
         for wh in config_data.get("webhooks", []):
-            dispatcher.add_webhook(WebhookConfig(
-                url=wh.get("url", ""),
-                secret=wh.get("secret", ""),
-                events=wh.get("events", ["scan_alert"]),
-                min_severity=wh.get("min_severity", "high"),
-                enabled=wh.get("enabled", True),
-                timeout_seconds=wh.get("timeout_seconds", 10.0),
-                max_retries=wh.get("max_retries", 3),
-            ))
+            dispatcher.add_webhook(
+                WebhookConfig(
+                    url=wh.get("url", ""),
+                    secret=wh.get("secret", ""),
+                    events=wh.get("events", ["scan_alert"]),
+                    min_severity=wh.get("min_severity", "high"),
+                    enabled=wh.get("enabled", True),
+                    timeout_seconds=wh.get("timeout_seconds", 10.0),
+                    max_retries=wh.get("max_retries", 3),
+                )
+            )
         return dispatcher

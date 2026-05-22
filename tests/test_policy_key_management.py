@@ -25,19 +25,21 @@ from irondome.policy_versioned.signing import (
     sign_policy_companion,
 )
 
-SAMPLE_POLICY_JSON = json.dumps({
-    "name": "test-policy",
-    "version": "1.0",
-    "default_action": "deny",
-    "rules": [
-        {
-            "rule_id": "deny-shells",
-            "target": "file_exec",
-            "action": "deny",
-            "paths": ["/bin/sh", "/bin/bash"],
-        },
-    ],
-})
+SAMPLE_POLICY_JSON = json.dumps(
+    {
+        "name": "test-policy",
+        "version": "1.0",
+        "default_action": "deny",
+        "rules": [
+            {
+                "rule_id": "deny-shells",
+                "target": "file_exec",
+                "action": "deny",
+                "paths": ["/bin/sh", "/bin/bash"],
+            },
+        ],
+    }
+)
 
 
 class TestLoadKeyPublic:
@@ -79,10 +81,14 @@ class TestLoadKeyPublic:
         key_file = tmp_path / "policy.key"
         key_file.write_text(hex2)
 
-        with mock.patch.dict(os.environ, {
-            "IRONDOME_POLICY_KEY": hex1,
-            "IRONDOME_POLICY_KEY_FILE": str(key_file),
-        }, clear=True):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "IRONDOME_POLICY_KEY": hex1,
+                "IRONDOME_POLICY_KEY_FILE": str(key_file),
+            },
+            clear=True,
+        ):
             loaded = load_key()
             assert loaded == key1  # env takes precedence
 
@@ -171,7 +177,8 @@ class TestPolicyVerificationInLoadPolicy:
 class TestHelmPolicySigning:
     def test_values_have_policy_signing_config(self):
         """Verify the Helm values.yaml has policySigning section."""
-        values_path = Path("/home/krk/Madlab/Clean-Live/IronDome/deploy/helm/irondome/values.yaml")
+        repo_root = Path(__file__).resolve().parent.parent
+        values_path = repo_root / "deploy" / "helm" / "irondome" / "values.yaml"
         content = values_path.read_text()
         assert "policySigning" in content
         assert "verify" in content
@@ -180,7 +187,8 @@ class TestHelmPolicySigning:
 
     def test_deployment_has_policy_signing_env(self):
         """Verify the deployment template has policy signing env vars."""
-        deploy_path = Path("/home/krk/Madlab/Clean-Live/IronDome/deploy/helm/irondome/templates/deployment.yaml")
+        repo_root = Path(__file__).resolve().parent.parent
+        deploy_path = repo_root / "deploy" / "helm" / "irondome" / "templates" / "deployment.yaml"
         content = deploy_path.read_text()
         assert "IRONDOME_POLICY_KEY" in content
         assert "IRONDOME_POLICY_KEY_FILE" in content

@@ -9,20 +9,12 @@ Covers:
 
 from __future__ import annotations
 
-import base64
 import hashlib
-import json
-import threading
-from http.server import HTTPServer
-from typing import Any
-
-import pytest
 
 from irondome.tenant import (
     DEFAULT_TENANT,
     TenantContext,
     TenantId,
-    TenantRegistry,
     reset_tenant_registry,
     setup_tenant_registry,
 )
@@ -67,25 +59,31 @@ class TestTenantHeaderResolution:
         assert tenant == DEFAULT_TENANT
 
     def test_x_tenant_header_resolves(self):
-        registry = setup_tenant_registry([
-            TenantContext(tenant_id=TenantId("alpha"), display_name="Team Alpha"),
-        ])
+        setup_tenant_registry(
+            [
+                TenantContext(tenant_id=TenantId("alpha"), display_name="Team Alpha"),
+            ]
+        )
         handler = _TestHandler({"X-Tenant": "alpha"})
         tenant = handler._resolve_tenant(None)
         assert tenant == TenantId("alpha")
 
     def test_x_tenant_header_case_insensitive(self):
-        setup_tenant_registry([
-            TenantContext(tenant_id=TenantId("alpha")),
-        ])
+        setup_tenant_registry(
+            [
+                TenantContext(tenant_id=TenantId("alpha")),
+            ]
+        )
         handler = _TestHandler({"X-Tenant": "Alpha"})
         tenant = handler._resolve_tenant(None)
         assert tenant == TenantId("alpha")
 
     def test_token_mapping_resolves(self):
-        registry = setup_tenant_registry([
-            TenantContext(tenant_id=TenantId("alpha")),
-        ])
+        registry = setup_tenant_registry(
+            [
+                TenantContext(tenant_id=TenantId("alpha")),
+            ]
+        )
         token = "my-secret-token"
         token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
         registry.map_token(token_hash, TenantId("alpha"))
@@ -95,25 +93,31 @@ class TestTenantHeaderResolution:
         assert tenant == TenantId("alpha")
 
     def test_header_overrides_token_mapping(self):
-        registry = setup_tenant_registry([
-            TenantContext(tenant_id=TenantId("alpha")),
-            TenantContext(tenant_id=TenantId("beta")),
-        ])
+        registry = setup_tenant_registry(
+            [
+                TenantContext(tenant_id=TenantId("alpha")),
+                TenantContext(tenant_id=TenantId("beta")),
+            ]
+        )
         token = "my-secret-token"
         token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
         registry.map_token(token_hash, TenantId("beta"))
 
-        handler = _TestHandler({
-            "Authorization": f"Bearer {token}",
-            "X-Tenant": "alpha",
-        })
+        handler = _TestHandler(
+            {
+                "Authorization": f"Bearer {token}",
+                "X-Tenant": "alpha",
+            }
+        )
         tenant = handler._resolve_tenant(token)
         assert tenant == TenantId("alpha")
 
     def test_unregistered_header_falls_back(self):
-        setup_tenant_registry([
-            TenantContext(tenant_id=TenantId("alpha")),
-        ])
+        setup_tenant_registry(
+            [
+                TenantContext(tenant_id=TenantId("alpha")),
+            ]
+        )
         handler = _TestHandler({"X-Tenant": "nonexistent"})
         tenant = handler._resolve_tenant(None)
         assert tenant == DEFAULT_TENANT
@@ -131,18 +135,22 @@ class TestTenantsEndpoint:
     def test_list_tenants_endpoint_exists(self):
         """Verify the tenants endpoint is registered in the daemon routes."""
         from irondome.daemon.server import IronDomeHandler
+
         # Just verify the method exists
         assert hasattr(IronDomeHandler, "_handle_list_tenants")
 
     def test_tenants_endpoint_response_format(self):
         """Test the response format of the list tenants handler."""
-        setup_tenant_registry([
-            TenantContext(tenant_id=TenantId("alpha"), display_name="Team Alpha"),
-            TenantContext(tenant_id=TenantId("beta"), display_name="Team Beta"),
-        ])
+        setup_tenant_registry(
+            [
+                TenantContext(tenant_id=TenantId("alpha"), display_name="Team Alpha"),
+                TenantContext(tenant_id=TenantId("beta"), display_name="Team Beta"),
+            ]
+        )
 
         # The handler would call get_tenant_registry().list_tenants()
         from irondome.tenant import get_tenant_registry
+
         registry = get_tenant_registry()
         tenants = registry.list_tenants()
 
@@ -165,6 +173,7 @@ class TestTenantsEndpoint:
     def test_empty_tenants_list(self):
         setup_tenant_registry([])
         from irondome.tenant import get_tenant_registry
+
         registry = get_tenant_registry()
         tenants = registry.list_tenants()
         assert len(tenants) == 0
@@ -182,9 +191,11 @@ class TestTenantInAuditMetadata:
     def test_tenant_id_in_scan_metadata(self):
         """Verify that _resolve_tenant returns a TenantId that can be
         included in audit metadata."""
-        setup_tenant_registry([
-            TenantContext(tenant_id=TenantId("alpha")),
-        ])
+        setup_tenant_registry(
+            [
+                TenantContext(tenant_id=TenantId("alpha")),
+            ]
+        )
         handler = _TestHandler({"X-Tenant": "alpha"})
         token = "test-token"
         tenant_id = handler._resolve_tenant(token)

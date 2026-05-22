@@ -14,9 +14,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
-CHART_DIR = Path("/home/krk/Madlab/Clean-Live/IronDome/deploy/helm/irondome-admission")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+CHART_DIR = REPO_ROOT / "deploy" / "helm" / "irondome-admission"
 
 
 class TestChartYaml:

@@ -36,6 +36,7 @@ class TenantId:
     A TenantId is a short, unique string that namespaces all data
     belonging to a team or organization within a shared IronDome instance.
     """
+
     value: str
 
     def __post_init__(self) -> None:
@@ -46,8 +47,7 @@ class TenantId:
         # Validate: alphanumeric + hyphens + underscores only
         if not all(c.isalnum() or c in "-_" for c in normalized):
             raise ValueError(
-                f"TenantId '{self.value}' contains invalid characters. "
-                "Use only alphanumeric, hyphens, and underscores."
+                f"TenantId '{self.value}' contains invalid characters. Use only alphanumeric, hyphens, and underscores."
             )
 
     @property
@@ -80,6 +80,7 @@ class TenantContext:
     Includes the tenant ID, display name, and any metadata
     (quota limits, feature flags, etc.).
     """
+
     tenant_id: TenantId
     display_name: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -120,10 +121,7 @@ class TenantRegistry:
         with self._lock:
             self._tenants.pop(tenant_id.normalized, None)
             # Remove token mappings for this tenant
-            self._token_map = {
-                k: v for k, v in self._token_map.items()
-                if v != tenant_id
-            }
+            self._token_map = {k: v for k, v in self._token_map.items() if v != tenant_id}
 
     def get(self, tenant_id: TenantId) -> TenantContext | None:
         """Look up a tenant by ID. Returns None if not found."""
@@ -241,10 +239,12 @@ def load_tenants_from_env() -> TenantRegistry:
             parts = entry.split(":", 1)
             tid = TenantId(parts[0])
             display_name = parts[1] if len(parts) > 1 else parts[0]
-            registry.register(TenantContext(
-                tenant_id=tid,
-                display_name=display_name,
-            ))
+            registry.register(
+                TenantContext(
+                    tenant_id=tid,
+                    display_name=display_name,
+                )
+            )
 
     # Load token-to-tenant mappings
     token_map_str = os.environ.get("IRONDOME_TENANT_TOKEN_MAP", "")

@@ -37,6 +37,7 @@ logger = logging.getLogger("irondome.baseline_hardening")
 @dataclass(frozen=True)
 class SignedBaseline:
     """A baseline with HMAC-SHA256 integrity signature."""
+
     baseline: Baseline
     signature: str = ""
     signed_at: str = ""
@@ -54,6 +55,7 @@ class SignedBaseline:
     def from_baseline(cls, baseline: Baseline, secret: str, signer: str = "") -> SignedBaseline:
         """Sign a baseline with HMAC-SHA256."""
         import time as _time
+
         content = json.dumps(baseline.to_dict(), sort_keys=True)
         sig = hmac.new(secret.encode(), content.encode(), hashlib.sha256).hexdigest()
         timestamp = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
@@ -74,6 +76,7 @@ class SignedBaseline:
 @dataclass
 class BaselineUpdateRateLimit:
     """Rate limit for baseline updates to prevent poisoning."""
+
     max_updates_per_hour: int = 2
     _update_times: list[float] = field(default_factory=list)
 
@@ -92,6 +95,7 @@ class BaselineUpdateRateLimit:
 @dataclass(frozen=True)
 class BaselineDriftCheck:
     """Result of checking if a new baseline diverges too far from the old one."""
+
     allowed: bool
     max_drift: float
     actual_drift: float

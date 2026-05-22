@@ -74,8 +74,7 @@ class TestSubprocessBackend:
         result = backend.run(["nonexistent_command_xyzzy"], default_policy())
         assert result.exit_code in (-1, 127)
         assert any(
-            e.rule_id in ("L3-EXEC-001", "L3-SECCOMP-KILL")
-            for e in result.events
+            e.rule_id in ("L3-EXEC-001", "L3-SECCOMP-KILL") for e in result.events
         ) or result.overall_verdict in (Verdict.DENY, Verdict.KILL)
 
     def test_result_to_dict(self):
@@ -107,10 +106,14 @@ class TestSeccompBackend:
 
     def test_sandbox_blocks_network(self):
         """Network access should be killed by seccomp."""
-        result = sandbox_run([
-            "python3", "-c",
-            "import urllib.request; urllib.request.urlopen('http://example.com')",
-        ], timeout=5.0)
+        result = sandbox_run(
+            [
+                "python3",
+                "-c",
+                "import urllib.request; urllib.request.urlopen('http://example.com')",
+            ],
+            timeout=5.0,
+        )
         # Either KILL from seccomp or DENY from pattern analysis
         assert result.overall_verdict in (Verdict.KILL, Verdict.DENY)
         # Should have evidence of violation

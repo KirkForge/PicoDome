@@ -23,8 +23,9 @@ def profile_from_sandbox_result(result: SandboxResult) -> BehavioralProfile:
     process spawns, and timing data from stdout/stderr output.
     """
     combined = result.stdout + "\n" + result.stderr
-    package = ".".join(result.command[:2]) if len(
-        result.command) >= 2 else result.command[0] if result.command else "unknown"
+    package = (
+        ".".join(result.command[:2]) if len(result.command) >= 2 else result.command[0] if result.command else "unknown"
+    )
 
     return BehavioralProfile(
         package=package,
@@ -56,13 +57,15 @@ def profile_from_trace(trace_text: str, package: str = "unknown") -> BehavioralP
 def _extract_timing_points(output: str) -> list[TimingPoint]:
     """Extract timing annotations from output."""
     points: list[TimingPoint] = []
-    pattern = re.compile(r'\[TIMING\]\s+(\S+)\s+(\d+)\s*ms', re.IGNORECASE)
+    pattern = re.compile(r"\[TIMING\]\s+(\S+)\s+(\d+)\s*ms", re.IGNORECASE)
 
     for match in pattern.finditer(output):
-        points.append(TimingPoint(
-            label=match.group(1),
-            elapsed_ms=int(match.group(2)),
-        ))
+        points.append(
+            TimingPoint(
+                label=match.group(1),
+                elapsed_ms=int(match.group(2)),
+            )
+        )
     return points
 
 
@@ -70,10 +73,10 @@ def _extract_network_calls(output: str) -> list[NetworkCall]:
     """Extract network call indicators from output."""
     calls: list[NetworkCall] = []
     ip_pattern = re.compile(
-        r'(?:connect|send|recv).*?'
-        r'((?:(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\.){3}'
-        r'(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2}))'
-        r'(?::(\d+))?',
+        r"(?:connect|send|recv).*?"
+        r"((?:(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\.){3}"
+        r"(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2}))"
+        r"(?::(\d+))?",
         re.IGNORECASE,
     )
 
@@ -93,9 +96,9 @@ def _extract_dns_queries(output: str) -> list[DnsQuery]:
     """Extract DNS query indicators from output."""
     queries: list[DnsQuery] = []
     dns_pattern = re.compile(
-        r'(?:getaddrinfo|gethostbyname|DNS|resolve).*?'
-        r'([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?'
-        r'\.(?:[a-zA-Z]{2,}))',
+        r"(?:getaddrinfo|gethostbyname|DNS|resolve).*?"
+        r"([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+        r"\.(?:[a-zA-Z]{2,}))",
         re.IGNORECASE,
     )
 

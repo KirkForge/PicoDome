@@ -107,11 +107,13 @@ class TestRegisterCustomBaseline:
             assert loaded.package == "myapp"
         finally:
             from irondome.l4.baseline import SHIPPED_BASELINES
+
             SHIPPED_BASELINES.pop("my-custom", None)
 
     def test_register_overrides_existing(self):
         # Save original to restore after test
         from irondome.l4.baseline import SHIPPED_BASELINES
+
         original = SHIPPED_BASELINES.get("python-script")
         try:
             custom = Baseline(

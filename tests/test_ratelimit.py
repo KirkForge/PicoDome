@@ -34,9 +34,13 @@ class TestTokenBucketLimiter:
         assert limiter.allow("actor-b") is True
 
     def test_global_rate_limit(self):
-        limiter = TokenBucketLimiter(RateLimitConfig(
-            rate_per_second=10.0, burst_size=100, global_rps=5.0,
-        ))
+        limiter = TokenBucketLimiter(
+            RateLimitConfig(
+                rate_per_second=10.0,
+                burst_size=100,
+                global_rps=5.0,
+            )
+        )
         # Global burst is 50 (5*10), exhaust it
         for _ in range(50):
             assert limiter.allow("actor-1") is True

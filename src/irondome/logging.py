@@ -84,10 +84,10 @@ class IronDomeTextFormatter(logging.Formatter):
 
     # ANSI color codes
     COLORS = {
-        "DEBUG": "\033[36m",     # Cyan
-        "INFO": "\033[32m",      # Green
-        "WARNING": "\033[33m",   # Yellow
-        "ERROR": "\033[31m",     # Red
+        "DEBUG": "\033[36m",  # Cyan
+        "INFO": "\033[32m",  # Green
+        "WARNING": "\033[33m",  # Yellow
+        "ERROR": "\033[31m",  # Red
         "CRITICAL": "\033[1;31m",  # Bold red
     }
     RESET = "\033[0m"
@@ -147,6 +147,7 @@ def setup_logging(
     handler.setLevel(numeric_level)
 
     # Set formatter
+    formatter: logging.Formatter
     if log_format == "json":
         formatter = IronDomeJSONFormatter(include_version=True)
     else:

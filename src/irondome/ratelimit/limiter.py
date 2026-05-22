@@ -25,6 +25,7 @@ logger = logging.getLogger("irondome.ratelimit")
 @dataclass(frozen=True)
 class RateLimitConfig:
     """Rate limit configuration."""
+
     # Tokens added per second per actor
     rate_per_second: float = 2.0
     # Maximum burst size (tokens that can accumulate)
@@ -174,10 +175,7 @@ class TokenBucketLimiter:
         """Remove buckets for idle actors."""
         now = time.monotonic()
         cutoff = now - self._config.idle_timeout_seconds
-        stale = [
-            actor for actor, bucket in self._buckets.items()
-            if bucket.last_refill < cutoff
-        ]
+        stale = [actor for actor, bucket in self._buckets.items() if bucket.last_refill < cutoff]
         for actor in stale:
             del self._buckets[actor]
         if stale:

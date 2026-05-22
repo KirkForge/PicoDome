@@ -36,63 +36,183 @@ SCMP_ACT_ALLOW = 0x7FFF0000
 # ─── Syscall name → number mappings ─────────────────────────────────────────
 
 _NETWORK_SYSCALLS = {
-    "connect", "accept", "accept4", "bind", "listen",
-    "sendto", "sendmsg", "sendmmsg", "recvfrom", "recvmsg", "recvmmsg",
-    "socket", "socketpair", "getsockname", "getpeername",
-    "setsockopt", "getsockopt", "shutdown",
+    "connect",
+    "accept",
+    "accept4",
+    "bind",
+    "listen",
+    "sendto",
+    "sendmsg",
+    "sendmmsg",
+    "recvfrom",
+    "recvmsg",
+    "recvmmsg",
+    "socket",
+    "socketpair",
+    "getsockname",
+    "getpeername",
+    "setsockopt",
+    "getsockopt",
+    "shutdown",
 }
 
 _FS_WRITE_SYSCALLS = {
-    "write", "writev", "pwrite64", "pwritev", "pwritev2",
-    "open", "openat", "creat",
-    "mkdir", "mkdirat", "rmdir",
-    "unlink", "unlinkat", "rename", "renameat", "renameat2",
-    "link", "linkat", "symlink", "symlinkat",
-    "chmod", "fchmod", "fchmodat",
-    "chown", "fchown", "lchown", "fchownat",
-    "truncate", "ftruncate", "fallocate",
-    "mknod", "mknodat",
-    "mount", "umount", "umount2",
+    "write",
+    "writev",
+    "pwrite64",
+    "pwritev",
+    "pwritev2",
+    "open",
+    "openat",
+    "creat",
+    "mkdir",
+    "mkdirat",
+    "rmdir",
+    "unlink",
+    "unlinkat",
+    "rename",
+    "renameat",
+    "renameat2",
+    "link",
+    "linkat",
+    "symlink",
+    "symlinkat",
+    "chmod",
+    "fchmod",
+    "fchmodat",
+    "chown",
+    "fchown",
+    "lchown",
+    "fchownat",
+    "truncate",
+    "ftruncate",
+    "fallocate",
+    "mknod",
+    "mknodat",
+    "mount",
+    "umount",
+    "umount2",
 }
 
 _FS_READ_SYSCALLS = {
-    "read", "readv", "pread64", "preadv", "preadv2",
-    "stat", "lstat", "fstat", "newfstatat",
-    "getdents", "getdents64",
-    "readlink", "readlinkat",
-    "access", "faccessat", "faccessat2",
+    "read",
+    "readv",
+    "pread64",
+    "preadv",
+    "preadv2",
+    "stat",
+    "lstat",
+    "fstat",
+    "newfstatat",
+    "getdents",
+    "getdents64",
+    "readlink",
+    "readlinkat",
+    "access",
+    "faccessat",
+    "faccessat2",
 }
 
 _PROCESS_SYSCALLS = {
-    "execve", "execveat", "fork", "vfork", "clone", "clone3",
+    "execve",
+    "execveat",
+    "fork",
+    "vfork",
+    "clone",
+    "clone3",
 }
 
 # Comprehensive safe syscalls needed for basic binary execution
 _SAFE_SYSCALLS = {
-    "read", "readv", "pread64", "preadv", "preadv2",
-    "write", "writev", "pwrite64",
-    "open", "openat", "close",
-    "stat", "lstat", "fstat", "newfstatat", "statfs", "fstatfs",
-    "access", "faccessat", "faccessat2", "readlink", "readlinkat",
-    "getcwd", "getdents64",
-    "mmap", "mprotect", "munmap", "brk", "mremap", "madvise",
-    "execve", "execveat", "exit", "exit_group",
-    "getpid", "gettid", "getuid", "getgid", "geteuid", "getegid",
+    "read",
+    "readv",
+    "pread64",
+    "preadv",
+    "preadv2",
+    "write",
+    "writev",
+    "pwrite64",
+    "open",
+    "openat",
+    "close",
+    "stat",
+    "lstat",
+    "fstat",
+    "newfstatat",
+    "statfs",
+    "fstatfs",
+    "access",
+    "faccessat",
+    "faccessat2",
+    "readlink",
+    "readlinkat",
+    "getcwd",
+    "getdents64",
+    "mmap",
+    "mprotect",
+    "munmap",
+    "brk",
+    "mremap",
+    "madvise",
+    "execve",
+    "execveat",
+    "exit",
+    "exit_group",
+    "getpid",
+    "gettid",
+    "getuid",
+    "getgid",
+    "geteuid",
+    "getegid",
     "getgroups",
-    "rt_sigaction", "rt_sigprocmask", "rt_sigreturn", "sigaltstack",
-    "tgkill", "tkill", "restart_syscall",
-    "futex", "set_robust_list", "get_robust_list", "set_tid_address",
-    "rseq", "membarrier",
-    "fcntl", "ioctl", "dup", "dup2", "dup3", "pipe2", "lseek",
-    "clock_gettime", "clock_nanosleep", "nanosleep",
-    "gettimeofday", "time", "setitimer", "getitimer",
-    "poll", "ppoll", "select", "pselect6",
-    "epoll_create1", "epoll_ctl", "epoll_pwait", "eventfd2",
-    "arch_prctl", "prctl", "prlimit64",
-    "getrandom", "getrusage", "getrlimit",
-    "uname", "sysinfo",
-    "sched_yield", "sched_getaffinity",
-    "memfd_create", "capget", "capset",
+    "rt_sigaction",
+    "rt_sigprocmask",
+    "rt_sigreturn",
+    "sigaltstack",
+    "tgkill",
+    "tkill",
+    "restart_syscall",
+    "futex",
+    "set_robust_list",
+    "get_robust_list",
+    "set_tid_address",
+    "rseq",
+    "membarrier",
+    "fcntl",
+    "ioctl",
+    "dup",
+    "dup2",
+    "dup3",
+    "pipe2",
+    "lseek",
+    "clock_gettime",
+    "clock_nanosleep",
+    "nanosleep",
+    "gettimeofday",
+    "time",
+    "setitimer",
+    "getitimer",
+    "poll",
+    "ppoll",
+    "select",
+    "pselect6",
+    "epoll_create1",
+    "epoll_ctl",
+    "epoll_pwait",
+    "eventfd2",
+    "arch_prctl",
+    "prctl",
+    "prlimit64",
+    "getrandom",
+    "getrusage",
+    "getrlimit",
+    "uname",
+    "sysinfo",
+    "sched_yield",
+    "sched_getaffinity",
+    "memfd_create",
+    "capget",
+    "capset",
 }
 
 
@@ -213,31 +333,33 @@ class SeccompBackend(SandboxBackend):
                 lib.seccomp_release(ctx)
 
                 # Wait with timeout
-                stdout_bytes, stderr_bytes, exit_code = self._wait_with_timeout(
-                    pid, out_r, err_r, effective_timeout
-                )
+                stdout_bytes, stderr_bytes, exit_code = self._wait_with_timeout(pid, out_r, err_r, effective_timeout)
 
                 stdout = stdout_bytes.decode("utf-8", errors="replace").strip()
                 stderr = stderr_bytes.decode("utf-8", errors="replace").strip()
 
                 if exit_code == -1:
-                    events.append(SandboxEvent(
-                        rule_id="L3-TIMEOUT-001",
-                        verdict=Verdict.KILL,
-                        operation="process_timeout",
-                        detail=f"Process exceeded {effective_timeout}s timeout",
-                        timestamp_ms=int(_now_ms() - start_ms),
-                    ))
+                    events.append(
+                        SandboxEvent(
+                            rule_id="L3-TIMEOUT-001",
+                            verdict=Verdict.KILL,
+                            operation="process_timeout",
+                            detail=f"Process exceeded {effective_timeout}s timeout",
+                            timestamp_ms=int(_now_ms() - start_ms),
+                        )
+                    )
 
                 # Check for seccomp kill (SIGSYS = 31)
                 if exit_code == -31:
-                    events.append(SandboxEvent(
-                        rule_id="L3-SECCOMP-KILL",
-                        verdict=Verdict.KILL,
-                        operation="seccomp_violation",
-                        detail="Process killed by seccomp — syscall violation",
-                        timestamp_ms=int(_now_ms() - start_ms),
-                    ))
+                    events.append(
+                        SandboxEvent(
+                            rule_id="L3-SECCOMP-KILL",
+                            verdict=Verdict.KILL,
+                            operation="seccomp_violation",
+                            detail="Process killed by seccomp — syscall violation",
+                            timestamp_ms=int(_now_ms() - start_ms),
+                        )
+                    )
                     # Get the blocked syscall list for evidence
                     if blocked:
                         events[-1] = SandboxEvent(
@@ -252,13 +374,15 @@ class SeccompBackend(SandboxBackend):
                 events.extend(self._posthoc_analysis(stdout, stderr))
 
         except FileNotFoundError:
-            events.append(SandboxEvent(
-                rule_id="L3-EXEC-001",
-                verdict=Verdict.DENY,
-                operation="exec_not_found",
-                detail=f"Command not found: {command[0] if command else '?'}",
-                timestamp_ms=int(_now_ms() - start_ms),
-            ))
+            events.append(
+                SandboxEvent(
+                    rule_id="L3-EXEC-001",
+                    verdict=Verdict.DENY,
+                    operation="exec_not_found",
+                    detail=f"Command not found: {command[0] if command else '?'}",
+                    timestamp_ms=int(_now_ms() - start_ms),
+                )
+            )
             stdout, stderr, exit_code = "", "", -1
         except Exception:
             logger.exception("Seccomp sandbox failed")
@@ -354,9 +478,7 @@ class SeccompBackend(SandboxBackend):
             self._syscall_cache[name] = lib.seccomp_syscall_resolve_name(name.encode())
         return self._syscall_cache[name]
 
-    def _wait_with_timeout(
-        self, pid: int, out_fd: int, err_fd: int, timeout: float
-    ) -> tuple:
+    def _wait_with_timeout(self, pid: int, out_fd: int, err_fd: int, timeout: float) -> tuple:
         """Wait for child process with timeout, collecting stdout/stderr."""
         import select as _select
 
@@ -431,6 +553,7 @@ class SeccompBackend(SandboxBackend):
     def _posthoc_analysis(self, stdout: str, stderr: str) -> list[SandboxEvent]:
         """Post-hoc pattern analysis on captured output."""
         from irondome.l3.backends.subprocess_backend import SubprocessBackend
+
         sb = SubprocessBackend()
         return sb._check_suspicious_patterns(stdout, stderr)
 
@@ -461,8 +584,7 @@ class SeccompBackend(SandboxBackend):
         """
         if policy.fail_closed:
             logger.error(
-                "FAIL-CLOSED: %s — refusing fallback to "
-                "unconfined subprocess backend",
+                "FAIL-CLOSED: %s — refusing fallback to unconfined subprocess backend",
                 reason,
             )
             return SandboxResult(
@@ -474,11 +596,7 @@ class SeccompBackend(SandboxBackend):
                         rule_id="L3-SANDBOX-DEGRADE",
                         verdict=Verdict.KILL,
                         operation="sandbox_degradation_blocked",
-                        detail=(
-                            f"Sandbox backend failed: {reason}. "
-                            "Fail-closed policy prevents "
-                            "unconfined execution."
-                        ),
+                        detail=(f"Sandbox backend failed: {reason}. Fail-closed policy prevents unconfined execution."),
                     ),
                 ],
                 policy_name=policy.name,
@@ -489,13 +607,17 @@ class SeccompBackend(SandboxBackend):
             )
 
         logger.warning(
-            "FAIL-OPEN: %s — falling back to subprocess "
-            "(no real sandboxing)",
+            "FAIL-OPEN: %s — falling back to subprocess (no real sandboxing)",
             reason,
         )
         from irondome.l3.backends.subprocess_backend import SubprocessBackend
+
         result = SubprocessBackend().run(
-            command, policy, timeout=timeout, cwd=cwd, env=env,
+            command,
+            policy,
+            timeout=timeout,
+            cwd=cwd,
+            env=env,
         )
         # Mark as degraded — observational when kernel was expected
         return SandboxResult(

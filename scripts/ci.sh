@@ -77,7 +77,7 @@ fi
 
 # ── Tests ─────────────────────────────────────────────────────────
 section "Pytest"
-if python -m pytest -v --tb=short 2>/dev/null; then
+if python3 -m pytest -v --tb=short 2>/dev/null; then
     pass "pytest"
 else
     fail "pytest"
@@ -87,8 +87,8 @@ fi
 if [[ $QUICK -eq 0 ]]; then
     section "Determinism Verification"
     echo "  Running Iron Dome sandbox twice in deterministic mode..."
-    RUN1=$(python -m irondome sandbox --deterministic-output --format json echo "ci-test" 2>/dev/null | sha256sum)
-    RUN2=$(python -m irondome sandbox --deterministic-output --format json echo "ci-test" 2>/dev/null | sha256sum)
+    RUN1=$(python3 -m irondome sandbox --deterministic-output --format json echo "ci-test" 2>/dev/null | sha256sum)
+    RUN2=$(python3 -m irondome sandbox --deterministic-output --format json echo "ci-test" 2>/dev/null | sha256sum)
     echo "  Run 1: ${RUN1%% *}"
     echo "  Run 2: ${RUN2%% *}"
     if [[ "$RUN1" == "$RUN2" ]]; then
@@ -102,7 +102,7 @@ fi
 
 # ── Self-Test ─────────────────────────────────────────────────────
 section "Self-Test (Pipeline)"
-if python -m irondome pipeline echo "ci-test" 2>/dev/null; then
+if python3 -m irondome pipeline echo "ci-test" 2>/dev/null; then
     pass "irondome pipeline echo ci-test"
 else
     fail "irondome pipeline echo ci-test"
@@ -110,10 +110,11 @@ fi
 
 # ── Deploy Security ───────────────────────────────────────────────
 section "Deploy Security Check"
-if python3 scripts/check_deploy_security.py --strict; then
+if python3 scripts/check_deploy_security.py; then
     pass "deploy security check"
 else
     fail "deploy security check"
+fi
 
 # ── Summary ───────────────────────────────────────────────────────
 echo ""

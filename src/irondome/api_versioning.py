@@ -36,6 +36,7 @@ DEPRECATED_VERSIONS: dict[str, str] = {}  # currently none
 @dataclass(frozen=True)
 class APIVersion:
     """Parsed API version."""
+
     major: int
     minor: int = 0
     prefix: str = "v"
@@ -64,6 +65,7 @@ class APIVersion:
 @dataclass(frozen=True)
 class DeprecationNotice:
     """Deprecation notice for an API endpoint or version."""
+
     version: str
     sunset_date: str  # when the version will be removed
     replacement: str  # the newer version or endpoint to use

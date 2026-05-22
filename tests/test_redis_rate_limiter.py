@@ -13,7 +13,6 @@ Covers:
 from __future__ import annotations
 
 import os
-import time
 from unittest import mock
 
 import pytest
@@ -92,6 +91,7 @@ class MockRedisForRateLimit:
 
     def scan_iter(self, pattern):
         import fnmatch
+
         for key in list(self._data.keys()):
             if fnmatch.fnmatch(key, pattern):
                 yield key
@@ -141,14 +141,14 @@ class TestRedisLimiterWithMock:
 
     @pytest.fixture
     def limiter(self):
-        l = RedisTokenBucketLimiter(
+        limiter = RedisTokenBucketLimiter(
             config=RateLimitConfig(rate_per_second=10.0, burst_size=5),
         )
         mock_redis = MockRedisForRateLimit()
-        l._client = mock_redis
-        l._lua_script = mock_redis.register_script(None)
-        l._available = True
-        return l
+        limiter._client = mock_redis
+        limiter._lua_script = mock_redis.register_script(None)
+        limiter._available = True
+        return limiter
 
     def test_allow_within_burst(self, limiter):
         assert limiter.allow("actor-1")

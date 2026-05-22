@@ -33,9 +33,7 @@ def compare_profile_to_baseline(
         if len(profile.dns_queries) > baseline.expected_dns_queries:
             dns_drift = True
             drift_count += 1
-            drift_flags.append(
-                f"DNS: {len(profile.dns_queries)} queries (expected ≤{baseline.expected_dns_queries})"
-            )
+            drift_flags.append(f"DNS: {len(profile.dns_queries)} queries (expected ≤{baseline.expected_dns_queries})")
 
     # Filesystem drift
     fs_drift = False
@@ -43,9 +41,7 @@ def compare_profile_to_baseline(
         if len(profile.fs_ops) > baseline.expected_fs_ops:
             fs_drift = True
             drift_count += 1
-            drift_flags.append(
-                f"FS: {len(profile.fs_ops)} operations (expected ≤{baseline.expected_fs_ops})"
-            )
+            drift_flags.append(f"FS: {len(profile.fs_ops)} operations (expected ≤{baseline.expected_fs_ops})")
 
     # Spawn drift
     spawn_drift = False
@@ -53,9 +49,7 @@ def compare_profile_to_baseline(
         if len(profile.spawns) > baseline.expected_spawns:
             spawn_drift = True
             drift_count += 1
-            drift_flags.append(
-                f"Spawns: {len(profile.spawns)} processes (expected ≤{baseline.expected_spawns})"
-            )
+            drift_flags.append(f"Spawns: {len(profile.spawns)} processes (expected ≤{baseline.expected_spawns})")
 
     # Timing drift
     timing_drift = False
@@ -64,9 +58,7 @@ def compare_profile_to_baseline(
         if profile.total_runtime_ms < low or profile.total_runtime_ms > high:
             timing_drift = True
             drift_count += 1
-            drift_flags.append(
-                f"Timing: {profile.total_runtime_ms}ms (expected {low}-{high}ms)"
-            )
+            drift_flags.append(f"Timing: {profile.total_runtime_ms}ms (expected {low}-{high}ms)")
 
     # Domain checks — compare hostname if available, skip if only an IP address
     if baseline.allowed_domains and "*" not in baseline.allowed_domains:
@@ -85,9 +77,7 @@ def compare_profile_to_baseline(
     # Path checks
     if baseline.allowed_paths and "**" not in baseline.allowed_paths:
         for op in profile.fs_ops:
-            allowed = any(
-                _path_matches(op.path, p) for p in baseline.allowed_paths
-            )
+            allowed = any(_path_matches(op.path, p) for p in baseline.allowed_paths)
             if not allowed:
                 if not fs_drift:
                     fs_drift = True
@@ -137,4 +127,5 @@ def find_best_baseline(
 def _path_matches(path: str, pattern: str) -> bool:
     """Simple glob matching for paths."""
     import fnmatch
+
     return fnmatch.fnmatch(path, pattern)

@@ -35,6 +35,7 @@ logger = logging.getLogger("irondome.audit")
 
 class AuditEventType(str, Enum):
     """Canonical event types for the audit log."""
+
     # Scan lifecycle
     SCAN_START = "scan_start"
     SCAN_COMPLETE = "scan_complete"
@@ -66,12 +67,14 @@ class AuditEventType(str, Enum):
     DATA_EXPORT = "data_export"
     DATA_DELETE = "data_delete"
 
+
 # ─── Audit event model ─────────────────────────────────────────────────────
 
 
 @dataclass(frozen=True)
 class AuditEvent:
     """A single audit event. Frozen for immutability after creation."""
+
     event_type: AuditEventType
     actor: str
     detail: str = ""
@@ -99,6 +102,7 @@ class AuditEvent:
     def to_json_line(self) -> str:
         """Single-line JSON for the append-only log."""
         return json.dumps(self.to_dict(), sort_keys=True, default=str)
+
 
 # ─── Audit logger ──────────────────────────────────────────────────────────
 
@@ -252,9 +256,7 @@ class AuditLogger:
                     try:
                         data = json.loads(line)
                     except json.JSONDecodeError:
-                        violations.append(
-                            f"Line {line_num}: invalid JSON"
-                        )
+                        violations.append(f"Line {line_num}: invalid JSON")
                         continue
 
                     recorded_prev = data.get("prev_hash", "")
@@ -442,6 +444,7 @@ class AuditLogger:
             return hashlib.sha256(last_line.encode("utf-8")).hexdigest()
         except (json.JSONDecodeError, KeyError):
             return ""
+
 
 # ─── Module-level singleton ────────────────────────────────────────────────
 

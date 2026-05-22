@@ -131,8 +131,8 @@ class TestDefaultTenant:
         assert DEFAULT_TENANT.normalized == "default"
 
     def test_default_tenant_equality(self):
-        assert DEFAULT_TENANT == TenantId("default")
-        assert DEFAULT_TENANT == TenantId("Default")
+        assert TenantId("default") == DEFAULT_TENANT
+        assert TenantId("Default") == DEFAULT_TENANT
 
 
 class TestTenantRegistry:
@@ -273,9 +273,13 @@ class TestEnvLoading:
         reset_tenant_registry()
 
     def test_load_tenants_from_env(self):
-        with mock.patch.dict(os.environ, {
-            "IRONDOME_TENANTS": "alpha:Team Alpha;beta:Team Beta",
-        }, clear=False):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "IRONDOME_TENANTS": "alpha:Team Alpha;beta:Team Beta",
+            },
+            clear=False,
+        ):
             registry = load_tenants_from_env()
             assert registry.tenant_count == 2
             ctx = registry.get(TenantId("alpha"))
@@ -283,10 +287,14 @@ class TestEnvLoading:
             assert ctx.display_name == "Team Alpha"
 
     def test_load_token_map_from_env(self):
-        with mock.patch.dict(os.environ, {
-            "IRONDOME_TENANTS": "alpha:Team Alpha",
-            "IRONDOME_TENANT_TOKEN_MAP": "hash1:alpha,hash2:alpha",
-        }, clear=False):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "IRONDOME_TENANTS": "alpha:Team Alpha",
+                "IRONDOME_TENANT_TOKEN_MAP": "hash1:alpha,hash2:alpha",
+            },
+            clear=False,
+        ):
             registry = load_tenants_from_env()
             resolved = registry.resolve_tenant("hash1")
             assert resolved == TenantId("alpha")
@@ -297,9 +305,13 @@ class TestEnvLoading:
             assert registry.tenant_count == 0
 
     def test_tenant_without_display_name(self):
-        with mock.patch.dict(os.environ, {
-            "IRONDOME_TENANTS": "alpha",
-        }, clear=False):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "IRONDOME_TENANTS": "alpha",
+            },
+            clear=False,
+        ):
             registry = load_tenants_from_env()
             ctx = registry.get(TenantId("alpha"))
             assert ctx is not None

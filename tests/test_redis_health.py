@@ -32,26 +32,35 @@ class TestRedisConfig:
             assert config.url == "redis://myhost:6379/2"
 
     def test_from_env_enabled(self):
-        with mock.patch.dict(os.environ, {
-            "IRONDOME_REDIS_URL": "redis://localhost:6379/0",
-            "IRONDOME_REDIS_ENABLED": "true",
-        }):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "IRONDOME_REDIS_URL": "redis://localhost:6379/0",
+                "IRONDOME_REDIS_ENABLED": "true",
+            },
+        ):
             config = RedisConfig.from_env()
             assert config.enabled is True
 
     def test_from_env_disabled(self):
-        with mock.patch.dict(os.environ, {
-            "IRONDOME_REDIS_URL": "redis://localhost:6379/0",
-            "IRONDOME_REDIS_ENABLED": "false",
-        }):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "IRONDOME_REDIS_URL": "redis://localhost:6379/0",
+                "IRONDOME_REDIS_ENABLED": "false",
+            },
+        ):
             config = RedisConfig.from_env()
             assert config.enabled is False
 
     def test_from_env_timeout(self):
-        with mock.patch.dict(os.environ, {
-            "IRONDOME_REDIS_URL": "redis://localhost:6379/0",
-            "IRONDOME_REDIS_TIMEOUT": "10.0",
-        }):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "IRONDOME_REDIS_URL": "redis://localhost:6379/0",
+                "IRONDOME_REDIS_TIMEOUT": "10.0",
+            },
+        ):
             config = RedisConfig.from_env()
             assert config.socket_timeout == 10.0
 
@@ -110,6 +119,7 @@ class TestHealthEndpointIntegration:
         """Verify the /health endpoint structure includes redis key."""
         # This tests the response format, not a live server
         from irondome.redis_health import check_redis_health
+
         redis_health = check_redis_health()
         expected_keys = {"connected", "latency_ms", "version", "error", "mode"}
         assert expected_keys.issubset(set(redis_health.keys()))

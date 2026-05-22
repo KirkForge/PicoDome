@@ -37,8 +37,8 @@ SEVERITY_NOTICE = 5
 
 # Priority = (facility * 8) + severity
 PRIORITY_INFO = FACILITY_USER * 8 + SEVERITY_INFORMATIONAL  # 14
-PRIORITY_WARNING = FACILITY_USER * 8 + SEVERITY_WARNING       # 12
-PRIORITY_ERROR = FACILITY_USER * 8 + SEVERITY_ERROR           # 11
+PRIORITY_WARNING = FACILITY_USER * 8 + SEVERITY_WARNING  # 12
+PRIORITY_ERROR = FACILITY_USER * 8 + SEVERITY_ERROR  # 11
 
 # Map AuditEventType to syslog severity
 _EVENT_SEVERITY: dict[str, int] = {
@@ -167,7 +167,7 @@ class SyslogSink(AuditSink):
         for k, v in event.metadata.items():
             sd_pairs.append(f'{k}="{v}"')
 
-        sd = f'[{self._app_name} {" ".join(sd_pairs)}]'
+        sd = f"[{self._app_name} {' '.join(sd_pairs)}]"
 
         # Message body
         msg = f"{event.event_type.value} by {event.actor}"
@@ -175,6 +175,4 @@ class SyslogSink(AuditSink):
             msg += f": {event.detail}"
 
         # RFC 5424: <pri>VERSION TIMESTAMP HOSTNAME APP-NAME PROCID MSGID SD MSG
-        return (
-            f"<{priority}>1 {timestamp} {hostname} {self._app_name} {procid} {msgid} {sd} {msg}"
-        )
+        return f"<{priority}>1 {timestamp} {hostname} {self._app_name} {procid} {msgid} {sd} {msg}"

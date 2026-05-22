@@ -75,11 +75,7 @@ class L4Engine:
         if baselines is None:
             baselines = load_all_baselines()
 
-        selected = (
-            {k: v for k, v in self._rules.items() if k in rules}
-            if rules
-            else dict(self._rules)
-        )
+        selected = {k: v for k, v in self._rules.items() if k in rules} if rules else dict(self._rules)
 
         if not selected:
             logger.warning("No detector rules selected for L4 analysis")

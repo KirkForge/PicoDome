@@ -14,9 +14,6 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
-
-import pytest
 
 from irondome.audit import AuditEventType
 from irondome.audit.logger import AuditEvent
@@ -138,7 +135,6 @@ class TestFileSinkRotation:
         assert total == 10
 
     def test_rotation_count_limit(self, tmp_path):
-        import gzip
 
         sink = FileSink(output_dir=tmp_path, max_bytes=100, rotate_count=3)
         sink.start()

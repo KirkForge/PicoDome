@@ -56,9 +56,7 @@ def _l3_cyclonedx(result: SandboxResult) -> str:
     vulns: list = []
     seen: set = set()
     for event in result.events:
-        vuln_id = hashlib.sha256(
-            f"{event.rule_id}:{event.operation}:{event.detail}".encode()
-        ).hexdigest()[:16]
+        vuln_id = hashlib.sha256(f"{event.rule_id}:{event.operation}:{event.detail}".encode()).hexdigest()[:16]
 
         if vuln_id in seen:
             continue
@@ -119,9 +117,7 @@ def _l4_cyclonedx(result: AnalysisResult) -> str:
     vulns: list = []
     seen: set = set()
     for f in result.findings:
-        vuln_id = hashlib.sha256(
-            f"{f.rule_id}:{f.message}:{f.location}".encode()
-        ).hexdigest()[:16]
+        vuln_id = hashlib.sha256(f"{f.rule_id}:{f.message}:{f.location}".encode()).hexdigest()[:16]
 
         if vuln_id in seen:
             continue

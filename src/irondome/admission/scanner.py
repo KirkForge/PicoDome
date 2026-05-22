@@ -63,9 +63,7 @@ class ImageScanner:
             enabled = os.environ.get("IRONDOME_ADMISSION_SCAN_ENABLED", "").lower() in ("true", "1", "yes")
         self.enabled = enabled
         self.min_severity = min_severity
-        self.daemon_url = daemon_url or os.environ.get(
-            "IRONDOME_ADMISSION_DAEMON_URL", _DEFAULT_DAEMON_URL
-        )
+        self.daemon_url = daemon_url or os.environ.get("IRONDOME_ADMISSION_DAEMON_URL", _DEFAULT_DAEMON_URL)
         self.timeout = timeout
         self._min_level = SEVERITY_LEVELS.get(min_severity, 3)
 
@@ -117,10 +115,12 @@ class ImageScanner:
         try:
             # Submit scan to IronDome daemon
             url = f"{self.daemon_url}/api/v1/scan"
-            payload = json.dumps({
-                "command": ["container-analysis", image],
-                "policy": "strict",
-            }).encode("utf-8")
+            payload = json.dumps(
+                {
+                    "command": ["container-analysis", image],
+                    "policy": "strict",
+                }
+            ).encode("utf-8")
 
             req = Request(
                 url,
@@ -137,15 +137,11 @@ class ImageScanner:
             findings = result.get("findings", [])
 
             if verdict == "DENY":
-                return False, (
-                    f"container '{container_name}' image '{image}' denied: "
-                    f"{len(findings)} findings"
-                )
+                return False, (f"container '{container_name}' image '{image}' denied: {len(findings)} findings")
 
             # Check severity of findings
             blocking_findings = [
-                f for f in findings
-                if SEVERITY_LEVELS.get(f.get("severity", "low"), 0) >= self._min_level
+                f for f in findings if SEVERITY_LEVELS.get(f.get("severity", "low"), 0) >= self._min_level
             ]
 
             if blocking_findings:
@@ -163,7 +159,8 @@ class ImageScanner:
             # If daemon is unreachable, log warning and allow (fail-open for availability)
             logger.warning(
                 "Cannot reach IronDome daemon for image scan '%s': %s — allowing (fail-open)",
-                image, exc,
+                image,
+                exc,
             )
             return True, ""
 

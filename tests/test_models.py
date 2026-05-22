@@ -130,6 +130,7 @@ class TestFinding:
         assert f2.finding_id == ""
         # Use _generate_finding_id() for non-deterministic IDs
         from irondome.models import _generate_finding_id
+
         id1 = _generate_finding_id()
         id2 = _generate_finding_id()
         assert id1 != id2
@@ -287,6 +288,7 @@ class TestSandboxResult:
         assert r.timestamp == ""
         # Non-deterministic mode uses helper functions
         from irondome.models import _generate_run_id, _generate_timestamp
+
         run_id = _generate_run_id()
         ts = _generate_timestamp()
         assert len(run_id) > 0
@@ -562,12 +564,18 @@ class TestDeterministicOutput:
     def test_sandbox_result_deterministic_with_explicit_ids(self):
         """With explicit run_id/timestamp, output is fully deterministic."""
         r1 = SandboxResult(
-            run_id="fixed", timestamp="2025-01-01T00:00:00Z",
-            command=["echo"], overall_verdict=Verdict.ALLOW, exit_code=0,
+            run_id="fixed",
+            timestamp="2025-01-01T00:00:00Z",
+            command=["echo"],
+            overall_verdict=Verdict.ALLOW,
+            exit_code=0,
         )
         r2 = SandboxResult(
-            run_id="fixed", timestamp="2025-01-01T00:00:00Z",
-            command=["echo"], overall_verdict=Verdict.ALLOW, exit_code=0,
+            run_id="fixed",
+            timestamp="2025-01-01T00:00:00Z",
+            command=["echo"],
+            overall_verdict=Verdict.ALLOW,
+            exit_code=0,
         )
         assert r1.to_dict() == r2.to_dict()
 
@@ -602,10 +610,17 @@ class TestSyscallAction:
 class TestRuleTarget:
     def test_all_values(self):
         targets = [
-            "file_read", "file_write", "file_exec",
-            "network_out", "network_in", "network_bind",
-            "process_spawn", "process_kill", "dns_query",
-            "signal_send", "syscall_generic",
+            "file_read",
+            "file_write",
+            "file_exec",
+            "network_out",
+            "network_in",
+            "network_bind",
+            "process_spawn",
+            "process_kill",
+            "dns_query",
+            "signal_send",
+            "syscall_generic",
         ]
         for t in targets:
             assert RuleTarget(t) is not None

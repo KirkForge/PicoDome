@@ -45,6 +45,7 @@ class RedisBaselineStore:
 
         try:
             import redis
+
             self._client = redis.from_url(self._redis_url, decode_responses=True)
             self._client.ping()
             self._available = True

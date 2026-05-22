@@ -194,12 +194,13 @@ class TestEndToEnd:
 
     def test_suspicious_pipeline(self):
         """Suspicious command should trigger L3+L4 findings."""
-        sandbox = sandbox_run([
-            "python3", "-c",
-            "print('connect 192.168.1.100:1337'); "
-            "print('reading /etc/passwd'); "
-            "print('eval(compile(bad))')",
-        ])
+        sandbox = sandbox_run(
+            [
+                "python3",
+                "-c",
+                "print('connect 192.168.1.100:1337'); print('reading /etc/passwd'); print('eval(compile(bad))')",
+            ]
+        )
         profile = profile_from_sandbox_result(sandbox)
         result = create_default_engine().analyze(profile)
         assert result.overall_verdict in (BehavioralVerdict.SUSPICIOUS, BehavioralVerdict.MALICIOUS)

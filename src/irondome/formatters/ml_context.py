@@ -57,9 +57,7 @@ def _l3_ml_context(result: SandboxResult, token_budget: int) -> str:
     if result.events:
         lines.append(f"events: {len(result.events)}")
         for event in result.events:
-            lines.append(
-                f"  - {event.rule_id}: {event.verdict.value} | {event.operation} | {event.detail}"
-            )
+            lines.append(f"  - {event.rule_id}: {event.verdict.value} | {event.operation} | {event.detail}")
     else:
         lines.append("events: 0")
 

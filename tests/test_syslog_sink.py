@@ -14,14 +14,13 @@ from __future__ import annotations
 
 import socket
 import threading
-from typing import Any
 
 import pytest
 
 from irondome.audit import AuditEventType
 from irondome.audit.logger import AuditEvent
 from irondome.audit.sinks import SyslogSink, create_sink
-from irondome.audit.sinks.base import SinkConfig, SinkHealth
+from irondome.audit.sinks.base import SinkConfig
 
 
 def _make_event(actor: str = "test", **kwargs) -> AuditEvent:
@@ -60,7 +59,7 @@ class _UDPCollector:
             try:
                 data, _ = self._sock.recvfrom(8192)
                 self.messages.append(data)
-            except socket.timeout:
+            except TimeoutError:
                 continue
             except OSError:
                 break
@@ -149,6 +148,7 @@ class TestSyslogSinkSend:
         assert sink.stats["events_sent"] == 1
         # Wait a moment for UDP delivery
         import time
+
         time.sleep(0.1)
         assert len(udp_collector.messages) >= 1
         msg = udp_collector.messages[0].decode("utf-8")

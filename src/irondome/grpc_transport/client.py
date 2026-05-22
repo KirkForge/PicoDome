@@ -108,9 +108,7 @@ class IronDomeGRPCClient:
             return
 
         if not is_grpc_available():
-            raise ImportError(
-                "grpcio is not installed. Install it with: pip install grpcio"
-            )
+            raise ImportError("grpcio is not installed. Install it with: pip install grpcio")
 
         import grpc
 
@@ -126,6 +124,7 @@ class IronDomeGRPCClient:
         # Try to use generated stubs, fall back to manual
         try:
             from irondome.grpc_transport.proto import irondome_pb2_grpc as pb2_grpc
+
             self._stub = pb2_grpc.IronDomeServiceStub(self._channel)
         except ImportError:
             logger.warning("Compiled protobuf stubs not found, using manual stub")
@@ -210,7 +209,10 @@ class IronDomeGRPCClient:
                 if attempt < self._max_retries:
                     logger.warning(
                         "Scan attempt %d/%d failed: %s — retrying in %.1fs",
-                        attempt, self._max_retries, e, self._retry_delay,
+                        attempt,
+                        self._max_retries,
+                        e,
+                        self._retry_delay,
                     )
                     time.sleep(self._retry_delay)
                 else:
@@ -268,12 +270,14 @@ class IronDomeGRPCClient:
         import grpc
 
         # Serialize request manually (simple JSON-based approach for fallback)
-        request_data = json.dumps({
-            "command": command,
-            "policy": policy or "",
-            "timeout": timeout,
-            "cwd": cwd or "",
-        }).encode("utf-8")
+        request_data = json.dumps(
+            {
+                "command": command,
+                "policy": policy or "",
+                "timeout": timeout,
+                "cwd": cwd or "",
+            }
+        ).encode("utf-8")
 
         # Use generic unary-unary call
         try:
@@ -327,6 +331,7 @@ class IronDomeGRPCClient:
         except ImportError:
             # Proto stubs not compiled
             import grpc
+
             try:
                 response_data = self._channel.unary_unary(
                     "/irondome.IronDomeService/Health",
@@ -358,6 +363,7 @@ class IronDomeGRPCClient:
             }
         except ImportError:
             import grpc
+
             request_data = json.dumps({"name": name, "version": version or 0}).encode("utf-8")
             try:
                 response_data = self._channel.unary_unary(
@@ -404,14 +410,17 @@ class IronDomeGRPCClient:
             }
         except ImportError:
             import grpc
-            request_data = json.dumps({
-                "event_type": event_type or "",
-                "actor": actor or "",
-                "target": target or "",
-                "since": since or "",
-                "until": until or "",
-                "limit": limit,
-            }).encode("utf-8")
+
+            request_data = json.dumps(
+                {
+                    "event_type": event_type or "",
+                    "actor": actor or "",
+                    "target": target or "",
+                    "since": since or "",
+                    "until": until or "",
+                    "limit": limit,
+                }
+            ).encode("utf-8")
             try:
                 response_data = self._channel.unary_unary(
                     "/irondome.IronDomeService/QueryAudit",

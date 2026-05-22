@@ -17,10 +17,6 @@ Covers:
 from __future__ import annotations
 
 import hashlib
-import json
-import tempfile
-from pathlib import Path
-from unittest import mock
 
 import pytest
 
@@ -30,7 +26,6 @@ from irondome.tenant import (
     DEFAULT_TENANT,
     TenantContext,
     TenantId,
-    TenantRegistry,
     reset_tenant_registry,
     setup_tenant_registry,
     tenant_key,
@@ -232,10 +227,12 @@ class TestTenantRegistryIsolation:
         reset_tenant_registry()
 
     def test_resolve_produces_correct_tenant(self):
-        registry = setup_tenant_registry([
-            TenantContext(tenant_id=TenantId("alpha")),
-            TenantContext(tenant_id=TenantId("beta")),
-        ])
+        registry = setup_tenant_registry(
+            [
+                TenantContext(tenant_id=TenantId("alpha")),
+                TenantContext(tenant_id=TenantId("beta")),
+            ]
+        )
 
         token_alpha = "token-alpha-123"
         hash_alpha = hashlib.sha256(token_alpha.encode("utf-8")).hexdigest()
@@ -253,9 +250,11 @@ class TestTenantRegistryIsolation:
         assert registry.resolve_tenant("unknown-hash") == DEFAULT_TENANT
 
     def test_cannot_spoof_tenant_with_header_without_registration(self):
-        registry = setup_tenant_registry([
-            TenantContext(tenant_id=TenantId("alpha")),
-        ])
+        registry = setup_tenant_registry(
+            [
+                TenantContext(tenant_id=TenantId("alpha")),
+            ]
+        )
 
         # "beta" is not registered, so header falls back
         resolved = registry.resolve_tenant("some-hash", header_tenant="beta")

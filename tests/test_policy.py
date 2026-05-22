@@ -140,11 +140,13 @@ class TestPolicyValidation:
         """A policy can have rules for every target type."""
         rules = []
         for i, target in enumerate(RuleTarget):
-            rules.append(PolicyRule(
-                rule_id=f"TEST-{i:03d}",
-                target=target,
-                action=SyscallAction.DENY,
-            ))
+            rules.append(
+                PolicyRule(
+                    rule_id=f"TEST-{i:03d}",
+                    target=target,
+                    action=SyscallAction.DENY,
+                )
+            )
         policy = Policy(name="all-targets", rules=rules)
         assert len(policy.rules) == len(RuleTarget)
 
@@ -168,12 +170,26 @@ class TestNodePreset:
             name="node-preset",
             default_action=SyscallAction.DENY,
             rules=[
-                PolicyRule(rule_id="NODE-001", target=RuleTarget.FILE_READ, action=SyscallAction.ALLOW,
-                           paths=["**/node_modules/**", "**/*.js"], description="Read JS files"),
-                PolicyRule(rule_id="NODE-002", target=RuleTarget.FILE_WRITE, action=SyscallAction.ALLOW,
-                           paths=["/tmp/**"], description="Write to tmp"),
-                PolicyRule(rule_id="NODE-003", target=RuleTarget.NETWORK_OUT, action=SyscallAction.DENY,
-                           description="Block network"),
+                PolicyRule(
+                    rule_id="NODE-001",
+                    target=RuleTarget.FILE_READ,
+                    action=SyscallAction.ALLOW,
+                    paths=["**/node_modules/**", "**/*.js"],
+                    description="Read JS files",
+                ),
+                PolicyRule(
+                    rule_id="NODE-002",
+                    target=RuleTarget.FILE_WRITE,
+                    action=SyscallAction.ALLOW,
+                    paths=["/tmp/**"],
+                    description="Write to tmp",
+                ),
+                PolicyRule(
+                    rule_id="NODE-003",
+                    target=RuleTarget.NETWORK_OUT,
+                    action=SyscallAction.DENY,
+                    description="Block network",
+                ),
             ],
         )
         assert policy.name == "node-preset"
@@ -187,14 +203,32 @@ class TestPythonPreset:
             name="python-preset",
             default_action=SyscallAction.DENY,
             rules=[
-                PolicyRule(rule_id="PY-001", target=RuleTarget.FILE_READ, action=SyscallAction.ALLOW,
-                           paths=["/usr/lib/python*/**", "**/site-packages/**"], description="Read Python libs"),
-                PolicyRule(rule_id="PY-002", target=RuleTarget.FILE_WRITE, action=SyscallAction.ALLOW,
-                           paths=["/tmp/**"], description="Write to tmp"),
-                PolicyRule(rule_id="PY-003", target=RuleTarget.NETWORK_OUT, action=SyscallAction.DENY,
-                           description="Block network"),
-                PolicyRule(rule_id="PY-004", target=RuleTarget.PROCESS_SPAWN, action=SyscallAction.DENY,
-                           description="Block spawns"),
+                PolicyRule(
+                    rule_id="PY-001",
+                    target=RuleTarget.FILE_READ,
+                    action=SyscallAction.ALLOW,
+                    paths=["/usr/lib/python*/**", "**/site-packages/**"],
+                    description="Read Python libs",
+                ),
+                PolicyRule(
+                    rule_id="PY-002",
+                    target=RuleTarget.FILE_WRITE,
+                    action=SyscallAction.ALLOW,
+                    paths=["/tmp/**"],
+                    description="Write to tmp",
+                ),
+                PolicyRule(
+                    rule_id="PY-003",
+                    target=RuleTarget.NETWORK_OUT,
+                    action=SyscallAction.DENY,
+                    description="Block network",
+                ),
+                PolicyRule(
+                    rule_id="PY-004",
+                    target=RuleTarget.PROCESS_SPAWN,
+                    action=SyscallAction.DENY,
+                    description="Block spawns",
+                ),
             ],
         )
         assert policy.name == "python-preset"

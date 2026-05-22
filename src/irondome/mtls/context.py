@@ -32,6 +32,7 @@ logger = logging.getLogger("irondome.mtls")
 @dataclass(frozen=True)
 class MTLSConfig:
     """mTLS configuration."""
+
     # Server certificate (PEM)
     cert_path: str = ""
     # Server private key (PEM)
@@ -127,9 +128,7 @@ def create_ssl_context(config: MTLSConfig | None = None) -> ssl.SSLContext | Non
         ctx.verify_mode = ssl.CERT_NONE
 
     # Harden: disable weak ciphers
-    ctx.set_ciphers(
-        "ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS"
-    )
+    ctx.set_ciphers("ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS")
 
     # Disable compression (CRIME attack)
     ctx.options |= ssl.OP_NO_COMPRESSION
@@ -166,12 +165,27 @@ def _create_dev_ssl_context() -> ssl.SSLContext:
     key_path = os.path.join(tmpdir, "server.key")
 
     try:
-        subprocess.run([
-            "openssl", "req", "-x509", "-newkey", "rsa:2048",
-            "-keyout", key_path, "-out", cert_path,
-            "-days", "1", "-nodes",
-            "-subj", "/CN=irondome-dev/O=KirkForge",
-        ], check=True, capture_output=True, timeout=10)
+        subprocess.run(
+            [
+                "openssl",
+                "req",
+                "-x509",
+                "-newkey",
+                "rsa:2048",
+                "-keyout",
+                key_path,
+                "-out",
+                cert_path,
+                "-days",
+                "1",
+                "-nodes",
+                "-subj",
+                "/CN=irondome-dev/O=KirkForge",
+            ],
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         logger.error("Failed to generate dev TLS cert: %s", e)
         raise RuntimeError(f"Cannot generate dev TLS cert: {e}") from e

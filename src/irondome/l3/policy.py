@@ -14,105 +14,200 @@ logger = logging.getLogger("irondome.l3.policy")
 
 DEFAULT_RULES: list = [
     # Allow reading system libraries and config
-    {"rule_id": "L3-FILE-R-001", "target": "file_read", "action": "allow",
-     "paths": ["/usr/lib/**", "/lib/**", "/usr/share/**", "/etc/ld.so.cache", "/etc/localtime", "/proc/self/**"],
-     "description": "Read system libraries and locale info"},
+    {
+        "rule_id": "L3-FILE-R-001",
+        "target": "file_read",
+        "action": "allow",
+        "paths": ["/usr/lib/**", "/lib/**", "/usr/share/**", "/etc/ld.so.cache", "/etc/localtime", "/proc/self/**"],
+        "description": "Read system libraries and locale info",
+    },
     # Allow reading Python standard library
-    {"rule_id": "L3-FILE-R-002", "target": "file_read", "action": "allow",
-     "paths": ["/usr/lib/python3*/**", "**/site-packages/**"],
-     "description": "Read Python packages"},
+    {
+        "rule_id": "L3-FILE-R-002",
+        "target": "file_read",
+        "action": "allow",
+        "paths": ["/usr/lib/python3*/**", "**/site-packages/**"],
+        "description": "Read Python packages",
+    },
     # Allow reading the project directory
-    {"rule_id": "L3-FILE-R-003", "target": "file_read", "action": "allow",
-     "paths": ["**"], "description": "Read project files"},
+    {
+        "rule_id": "L3-FILE-R-003",
+        "target": "file_read",
+        "action": "allow",
+        "paths": ["**"],
+        "description": "Read project files",
+    },
     # Deny writing outside /tmp and project dir
-    {"rule_id": "L3-FILE-W-001", "target": "file_write", "action": "allow",
-     "paths": ["/tmp/**", "/dev/null", "/dev/stdout", "/dev/stderr"],
-     "description": "Write to temp and stdio only"},
+    {
+        "rule_id": "L3-FILE-W-001",
+        "target": "file_write",
+        "action": "allow",
+        "paths": ["/tmp/**", "/dev/null", "/dev/stdout", "/dev/stderr"],
+        "description": "Write to temp and stdio only",
+    },
     # Deny network outbound (except DNS for resolution)
-    {"rule_id": "L3-NET-OUT-001", "target": "network_out", "action": "deny",
-     "description": "Block all outbound network"},
+    {
+        "rule_id": "L3-NET-OUT-001",
+        "target": "network_out",
+        "action": "deny",
+        "description": "Block all outbound network",
+    },
     # Allow DNS for name resolution
-    {"rule_id": "L3-DNS-001", "target": "dns_query", "action": "allow",
-     "description": "Allow DNS resolution"},
+    {"rule_id": "L3-DNS-001", "target": "dns_query", "action": "allow", "description": "Allow DNS resolution"},
     # Deny process spawning
-    {"rule_id": "L3-PROC-001", "target": "process_spawn", "action": "deny",
-     "description": "Block process spawning"},
+    {"rule_id": "L3-PROC-001", "target": "process_spawn", "action": "deny", "description": "Block process spawning"},
     # Deny network bind/listen
-    {"rule_id": "L3-NET-BIND-001", "target": "network_bind", "action": "deny",
-     "description": "Block network bind/listen"},
+    {
+        "rule_id": "L3-NET-BIND-001",
+        "target": "network_bind",
+        "action": "deny",
+        "description": "Block network bind/listen",
+    },
 ]
 
 # ── Strict policy: deny everything ────────────────────────────────────────
 
 STRICT_RULES: list = [
-    {"rule_id": "L3-STRICT-001", "target": "file_read", "action": "deny",
-     "description": "Deny all file reads"},
-    {"rule_id": "L3-STRICT-002", "target": "file_write", "action": "deny",
-     "description": "Deny all file writes"},
-    {"rule_id": "L3-STRICT-003", "target": "network_out", "action": "deny",
-     "description": "Deny all outbound network"},
-    {"rule_id": "L3-STRICT-004", "target": "network_in", "action": "deny",
-     "description": "Deny all inbound network"},
-    {"rule_id": "L3-STRICT-005", "target": "network_bind", "action": "deny",
-     "description": "Deny all network binding"},
-    {"rule_id": "L3-STRICT-006", "target": "process_spawn", "action": "deny",
-     "description": "Deny all process spawning"},
-    {"rule_id": "L3-STRICT-007", "target": "dns_query", "action": "deny",
-     "description": "Deny all DNS queries"},
-    {"rule_id": "L3-STRICT-008", "target": "file_exec", "action": "deny",
-     "description": "Deny all file execution"},
-    {"rule_id": "L3-STRICT-009", "target": "signal_send", "action": "deny",
-     "description": "Deny all signal sending"},
+    {"rule_id": "L3-STRICT-001", "target": "file_read", "action": "deny", "description": "Deny all file reads"},
+    {"rule_id": "L3-STRICT-002", "target": "file_write", "action": "deny", "description": "Deny all file writes"},
+    {"rule_id": "L3-STRICT-003", "target": "network_out", "action": "deny", "description": "Deny all outbound network"},
+    {"rule_id": "L3-STRICT-004", "target": "network_in", "action": "deny", "description": "Deny all inbound network"},
+    {"rule_id": "L3-STRICT-005", "target": "network_bind", "action": "deny", "description": "Deny all network binding"},
+    {
+        "rule_id": "L3-STRICT-006",
+        "target": "process_spawn",
+        "action": "deny",
+        "description": "Deny all process spawning",
+    },
+    {"rule_id": "L3-STRICT-007", "target": "dns_query", "action": "deny", "description": "Deny all DNS queries"},
+    {"rule_id": "L3-STRICT-008", "target": "file_exec", "action": "deny", "description": "Deny all file execution"},
+    {"rule_id": "L3-STRICT-009", "target": "signal_send", "action": "deny", "description": "Deny all signal sending"},
 ]
 
 # ── Node.js policy: allow npm/node operations ─────────────────────────────
 
 NODE_RULES: list = [
-    {"rule_id": "L3-NODE-R-001", "target": "file_read", "action": "allow",
-     "paths": ["/usr/lib/**", "/lib/**", "/usr/share/**", "/etc/localtime", "/proc/self/**",
-               "**/node_modules/**", "**/package.json", "**/package-lock.json", "**/.npm/**"],
-     "description": "Read Node.js system and project files"},
-    {"rule_id": "L3-NODE-R-002", "target": "file_write", "action": "allow",
-     "paths": ["/tmp/**", "/dev/null", "/dev/stdout", "/dev/stderr",
-               "**/node_modules/**", "**/package-lock.json", "**/.npm/**"],
-     "description": "Write to node_modules and npm cache"},
-    {"rule_id": "L3-NODE-NET-001", "target": "network_out", "action": "allow",
-     "description": "Allow outbound network (npm registry)"},
-    {"rule_id": "L3-NODE-DNS-001", "target": "dns_query", "action": "allow",
-     "description": "Allow DNS resolution"},
-    {"rule_id": "L3-NODE-PROC-001", "target": "process_spawn", "action": "allow",
-     "description": "Allow process spawning (node, npm)"},
-    {"rule_id": "L3-NODE-BIND-001", "target": "network_bind", "action": "deny",
-     "description": "Deny network binding"},
-    {"rule_id": "L3-NODE-EXEC-001", "target": "file_exec", "action": "allow",
-     "paths": ["/usr/bin/node", "/usr/local/bin/node", "/usr/bin/npm", "/usr/local/bin/npm",
-               "/usr/bin/npx", "/usr/local/bin/npx"],
-     "description": "Allow node/npm execution"},
+    {
+        "rule_id": "L3-NODE-R-001",
+        "target": "file_read",
+        "action": "allow",
+        "paths": [
+            "/usr/lib/**",
+            "/lib/**",
+            "/usr/share/**",
+            "/etc/localtime",
+            "/proc/self/**",
+            "**/node_modules/**",
+            "**/package.json",
+            "**/package-lock.json",
+            "**/.npm/**",
+        ],
+        "description": "Read Node.js system and project files",
+    },
+    {
+        "rule_id": "L3-NODE-R-002",
+        "target": "file_write",
+        "action": "allow",
+        "paths": [
+            "/tmp/**",
+            "/dev/null",
+            "/dev/stdout",
+            "/dev/stderr",
+            "**/node_modules/**",
+            "**/package-lock.json",
+            "**/.npm/**",
+        ],
+        "description": "Write to node_modules and npm cache",
+    },
+    {
+        "rule_id": "L3-NODE-NET-001",
+        "target": "network_out",
+        "action": "allow",
+        "description": "Allow outbound network (npm registry)",
+    },
+    {"rule_id": "L3-NODE-DNS-001", "target": "dns_query", "action": "allow", "description": "Allow DNS resolution"},
+    {
+        "rule_id": "L3-NODE-PROC-001",
+        "target": "process_spawn",
+        "action": "allow",
+        "description": "Allow process spawning (node, npm)",
+    },
+    {"rule_id": "L3-NODE-BIND-001", "target": "network_bind", "action": "deny", "description": "Deny network binding"},
+    {
+        "rule_id": "L3-NODE-EXEC-001",
+        "target": "file_exec",
+        "action": "allow",
+        "paths": [
+            "/usr/bin/node",
+            "/usr/local/bin/node",
+            "/usr/bin/npm",
+            "/usr/local/bin/npm",
+            "/usr/bin/npx",
+            "/usr/local/bin/npx",
+        ],
+        "description": "Allow node/npm execution",
+    },
 ]
 
 # ── Python policy: allow pip/python operations ────────────────────────────
 
 PYTHON_RULES: list = [
-    {"rule_id": "L3-PY-R-001", "target": "file_read", "action": "allow",
-     "paths": ["/usr/lib/**", "/lib/**", "/usr/share/**", "/etc/localtime", "/proc/self/**",
-               "**/site-packages/**", "**/*.py", "**/pyproject.toml", "**/setup.py",
-               "**/requirements.txt", "**/pip.conf", "**/.pip/**"],
-     "description": "Read Python system and project files"},
-    {"rule_id": "L3-PY-R-002", "target": "file_write", "action": "allow",
-     "paths": ["/tmp/**", "/dev/null", "/dev/stdout", "/dev/stderr",
-               "**/site-packages/**", "**/__pycache__/**", "**/*.pyc"],
-     "description": "Write to site-packages and cache"},
-    {"rule_id": "L3-PY-NET-001", "target": "network_out", "action": "allow",
-     "description": "Allow outbound network (PyPI)"},
-    {"rule_id": "L3-PY-DNS-001", "target": "dns_query", "action": "allow",
-     "description": "Allow DNS resolution"},
-    {"rule_id": "L3-PY-PROC-001", "target": "process_spawn", "action": "allow",
-     "description": "Allow process spawning (python, pip)"},
-    {"rule_id": "L3-PY-BIND-001", "target": "network_bind", "action": "deny",
-     "description": "Deny network binding"},
-    {"rule_id": "L3-PY-EXEC-001", "target": "file_exec", "action": "allow",
-     "paths": ["/usr/bin/python*", "/usr/local/bin/python*", "/usr/bin/pip*", "/usr/local/bin/pip*"],
-     "description": "Allow python/pip execution"},
+    {
+        "rule_id": "L3-PY-R-001",
+        "target": "file_read",
+        "action": "allow",
+        "paths": [
+            "/usr/lib/**",
+            "/lib/**",
+            "/usr/share/**",
+            "/etc/localtime",
+            "/proc/self/**",
+            "**/site-packages/**",
+            "**/*.py",
+            "**/pyproject.toml",
+            "**/setup.py",
+            "**/requirements.txt",
+            "**/pip.conf",
+            "**/.pip/**",
+        ],
+        "description": "Read Python system and project files",
+    },
+    {
+        "rule_id": "L3-PY-R-002",
+        "target": "file_write",
+        "action": "allow",
+        "paths": [
+            "/tmp/**",
+            "/dev/null",
+            "/dev/stdout",
+            "/dev/stderr",
+            "**/site-packages/**",
+            "**/__pycache__/**",
+            "**/*.pyc",
+        ],
+        "description": "Write to site-packages and cache",
+    },
+    {
+        "rule_id": "L3-PY-NET-001",
+        "target": "network_out",
+        "action": "allow",
+        "description": "Allow outbound network (PyPI)",
+    },
+    {"rule_id": "L3-PY-DNS-001", "target": "dns_query", "action": "allow", "description": "Allow DNS resolution"},
+    {
+        "rule_id": "L3-PY-PROC-001",
+        "target": "process_spawn",
+        "action": "allow",
+        "description": "Allow process spawning (python, pip)",
+    },
+    {"rule_id": "L3-PY-BIND-001", "target": "network_bind", "action": "deny", "description": "Deny network binding"},
+    {
+        "rule_id": "L3-PY-EXEC-001",
+        "target": "file_exec",
+        "action": "allow",
+        "paths": ["/usr/bin/python*", "/usr/local/bin/python*", "/usr/bin/pip*", "/usr/local/bin/pip*"],
+        "description": "Allow python/pip execution",
+    },
 ]
 
 # ── Named policy registry ─────────────────────────────────────────────────
@@ -129,15 +224,17 @@ def _rules_from_list(rules_data: list) -> list[PolicyRule]:
     """Convert a list of rule dicts to PolicyRule objects."""
     rules = []
     for r in rules_data:
-        rules.append(PolicyRule(
-            rule_id=r["rule_id"],
-            target=RuleTarget(r["target"]),
-            action=SyscallAction(r["action"]),
-            paths=r.get("paths", []),
-            addresses=r.get("addresses", []),
-            syscalls=r.get("syscalls", []),
-            description=r.get("description", ""),
-        ))
+        rules.append(
+            PolicyRule(
+                rule_id=r["rule_id"],
+                target=RuleTarget(r["target"]),
+                action=SyscallAction(r["action"]),
+                paths=r.get("paths", []),
+                addresses=r.get("addresses", []),
+                syscalls=r.get("syscalls", []),
+                description=r.get("description", ""),
+            )
+        )
     return rules
 
 
@@ -181,9 +278,7 @@ def load_policy(
 
             content, result = load_policy_with_companion_verification(path)
             if not content and result and not result.valid:
-                raise ValueError(
-                    f"Policy signature verification failed for {path}: {result.error}"
-                )
+                raise ValueError(f"Policy signature verification failed for {path}: {result.error}")
             data = json.loads(content)
         else:
             with open(path) as f:
@@ -275,8 +370,7 @@ def import_policy(path: Path) -> Policy:
     errors = validate_policy(policy)
     if errors:
         raise ValueError(
-            f"Policy validation failed with {len(errors)} error(s):\n"
-            + "\n".join(f"  - {e}" for e in errors)
+            f"Policy validation failed with {len(errors)} error(s):\n" + "\n".join(f"  - {e}" for e in errors)
         )
 
     logger.info("Imported and validated policy '%s' from %s", policy.name, path)
@@ -342,15 +436,17 @@ def _policy_from_dict(data: dict) -> Policy:
     """Build a Policy from a dictionary."""
     rules = []
     for r in data.get("rules", []):
-        rules.append(PolicyRule(
-            rule_id=r["rule_id"],
-            target=RuleTarget(r["target"]),
-            action=SyscallAction(r["action"]),
-            paths=r.get("paths", []),
-            addresses=r.get("addresses", []),
-            syscalls=r.get("syscalls", []),
-            description=r.get("description", ""),
-        ))
+        rules.append(
+            PolicyRule(
+                rule_id=r["rule_id"],
+                target=RuleTarget(r["target"]),
+                action=SyscallAction(r["action"]),
+                paths=r.get("paths", []),
+                addresses=r.get("addresses", []),
+                syscalls=r.get("syscalls", []),
+                description=r.get("description", ""),
+            )
+        )
     return Policy(
         name=data.get("name", "custom"),
         version=data.get("version", "1.0"),

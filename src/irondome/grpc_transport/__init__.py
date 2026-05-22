@@ -31,14 +31,12 @@ def is_grpc_available() -> bool:
     if _GRPC_AVAILABLE is None:
         try:
             import grpc  # noqa: F401
+
             _GRPC_AVAILABLE = True
             logger.debug("grpcio is available")
         except ImportError:
             _GRPC_AVAILABLE = False
-            logger.warning(
-                "grpcio is not installed — gRPC transport unavailable. "
-                "Install with: pip install grpcio"
-            )
+            logger.warning("grpcio is not installed — gRPC transport unavailable. Install with: pip install grpcio")
     return _GRPC_AVAILABLE
 
 
@@ -54,8 +52,10 @@ __all__ = [
 def __getattr__(name: str):
     if name == "IronDomeGRPCServer":
         from irondome.grpc_transport.server import IronDomeGRPCServer
+
         return IronDomeGRPCServer
     if name == "IronDomeGRPCClient":
         from irondome.grpc_transport.client import IronDomeGRPCClient
+
         return IronDomeGRPCClient
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -45,6 +45,7 @@ SUPPORTED_ALGORITHMS = frozenset({"hmac-sha256"})
 @dataclass(frozen=True)
 class PolicySignature:
     """A parsed signature block from a signed policy file."""
+
     algorithm: str
     signature: str
     timestamp: str
@@ -54,6 +55,7 @@ class PolicySignature:
 @dataclass
 class VerifyResult:
     """Result of verifying a signed policy."""
+
     valid: bool
     algorithm: str = ""
     key_id: str = ""
@@ -193,7 +195,7 @@ def parse_signature(content: str) -> PolicySignature | None:
     timestamp = ""
     key_id = "default"
 
-    for line in lines[marker_idx + 1:]:
+    for line in lines[marker_idx + 1 :]:
         stripped = line.strip()
         if not stripped or not stripped.startswith("#"):
             break
@@ -311,7 +313,9 @@ def verify_policy_file(path: Path, key: bytes, key_id: str = "default") -> Verif
     return verify_policy(content, key, key_id=key_id)
 
 
-def load_policy_with_verification(path: Path, key: bytes | None = None, key_id: str = "default") -> tuple[str, VerifyResult | None]:
+def load_policy_with_verification(
+    path: Path, key: bytes | None = None, key_id: str = "default"
+) -> tuple[str, VerifyResult | None]:
     """Load a policy file, verifying its signature if a key is provided.
 
     If no key is provided and the file is signed, a warning is logged.
@@ -339,8 +343,7 @@ def load_policy_with_verification(path: Path, key: bytes | None = None, key_id: 
         # Unsigned policy
         if effective_key is not None:
             logger.warning(
-                "Policy %s is unsigned but verification key is configured — "
-                "rejecting unsigned policy",
+                "Policy %s is unsigned but verification key is configured — rejecting unsigned policy",
                 path,
             )
             return "", VerifyResult(valid=False, error="policy is unsigned but key is configured")
@@ -350,8 +353,7 @@ def load_policy_with_verification(path: Path, key: bytes | None = None, key_id: 
     # Signed policy
     if effective_key is None:
         logger.warning(
-            "Policy %s is signed but no verification key (IRONDOME_POLICY_KEY) is configured — "
-            "cannot verify",
+            "Policy %s is signed but no verification key (IRONDOME_POLICY_KEY) is configured — cannot verify",
             path,
         )
         return strip_signature(content), VerifyResult(
@@ -366,6 +368,7 @@ def load_policy_with_verification(path: Path, key: bytes | None = None, key_id: 
 
     logger.info("Policy %s signature verified (key_id=%s)", path, result.key_id)
     return strip_signature(content), result
+
 
 # ─── Companion file approach (.sig) ────────────────────────────────────────
 
@@ -503,6 +506,7 @@ def load_policy_with_companion_verification(
         return content, VerifyResult(valid=False, error="no verification key configured for signed policy")
 
     # Both sig and key present — verify
+    assert effective_key is not None
     result = verify_policy_companion(path, effective_key, key_id=key_id)
     if not result.valid:
         logger.error("Policy %s signature verification FAILED: %s", path, result.error)

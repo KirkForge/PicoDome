@@ -19,13 +19,15 @@ def detect_entropy_anomalies(
         name = op.path.split("/")[-1] if "/" in op.path else op.path
         ent = _shannon_entropy(name)
         if ent > 4.5 and len(name) > 10:  # High entropy, long name = suspicious
-            findings.append(Finding(
-                rule_id="L4-ENTROPY-001",
-                severity=Severity.MEDIUM,
-                message=f"High-entropy filename ({ent:.1f} bits): {name}",
-                location=op.path,
-                evidence={"entropy": round(ent, 2), "path": op.path},
-            ))
+            findings.append(
+                Finding(
+                    rule_id="L4-ENTROPY-001",
+                    severity=Severity.MEDIUM,
+                    message=f"High-entropy filename ({ent:.1f} bits): {name}",
+                    location=op.path,
+                    evidence={"entropy": round(ent, 2), "path": op.path},
+                )
+            )
 
     # Check DNS hostnames for high entropy
     for dns in profile.dns_queries:
@@ -33,13 +35,15 @@ def detect_entropy_anomalies(
         if len(host_part) > 20:
             ent = _shannon_entropy(host_part)
             if ent > 3.5:
-                findings.append(Finding(
-                    rule_id="L4-ENTROPY-002",
-                    severity=Severity.HIGH,
-                    message=f"High-entropy DNS query ({ent:.1f} bits): {dns.hostname} — possible DGA or encoded C2",
-                    location=dns.hostname,
-                    evidence={"entropy": round(ent, 2), "hostname": dns.hostname},
-                ))
+                findings.append(
+                    Finding(
+                        rule_id="L4-ENTROPY-002",
+                        severity=Severity.HIGH,
+                        message=f"High-entropy DNS query ({ent:.1f} bits): {dns.hostname} — possible DGA or encoded C2",
+                        location=dns.hostname,
+                        evidence={"entropy": round(ent, 2), "hostname": dns.hostname},
+                    )
+                )
 
     return findings
 

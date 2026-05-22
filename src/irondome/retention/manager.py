@@ -40,6 +40,7 @@ _DEFAULT_SCAN_RESULTS_DIR = _DEFAULT_DATA_DIR / "scans"
 @dataclass(frozen=True)
 class RetentionPolicy:
     """Retention configuration for a single data type."""
+
     data_type: str
     ttl_days: int  # 0 = never expire
     secure_delete: bool = False
@@ -57,15 +58,31 @@ class RetentionPolicy:
 @dataclass
 class RetentionConfig:
     """Full retention configuration."""
-    scan_results: RetentionPolicy = field(default_factory=lambda: RetentionPolicy(
-        data_type="scan_results", ttl_days=90, secure_delete=True, max_size_mb=500,
-    ))
-    audit_logs: RetentionPolicy = field(default_factory=lambda: RetentionPolicy(
-        data_type="audit_logs", ttl_days=365, secure_delete=False, max_size_mb=200,
-    ))
-    baselines: RetentionPolicy = field(default_factory=lambda: RetentionPolicy(
-        data_type="baselines", ttl_days=0, secure_delete=False, max_size_mb=50,
-    ))
+
+    scan_results: RetentionPolicy = field(
+        default_factory=lambda: RetentionPolicy(
+            data_type="scan_results",
+            ttl_days=90,
+            secure_delete=True,
+            max_size_mb=500,
+        )
+    )
+    audit_logs: RetentionPolicy = field(
+        default_factory=lambda: RetentionPolicy(
+            data_type="audit_logs",
+            ttl_days=365,
+            secure_delete=False,
+            max_size_mb=200,
+        )
+    )
+    baselines: RetentionPolicy = field(
+        default_factory=lambda: RetentionPolicy(
+            data_type="baselines",
+            ttl_days=0,
+            secure_delete=False,
+            max_size_mb=50,
+        )
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -80,12 +97,16 @@ class RetentionConfig:
         for key in ("scan_results", "audit_logs", "baselines"):
             if key in data:
                 d = data[key]
-                setattr(cfg, key, RetentionPolicy(
-                    data_type=d.get("data_type", key),
-                    ttl_days=d.get("ttl_days", 0),
-                    secure_delete=d.get("secure_delete", False),
-                    max_size_mb=d.get("max_size_mb", 0),
-                ))
+                setattr(
+                    cfg,
+                    key,
+                    RetentionPolicy(
+                        data_type=d.get("data_type", key),
+                        ttl_days=d.get("ttl_days", 0),
+                        secure_delete=d.get("secure_delete", False),
+                        max_size_mb=d.get("max_size_mb", 0),
+                    ),
+                )
         return cfg
 
     @classmethod
@@ -145,7 +166,7 @@ class RetentionManager:
 
         Returns stats about what was cleaned up.
         """
-        stats = {
+        stats: dict[str, Any] = {
             "files_removed": 0,
             "bytes_freed": 0,
             "errors": [],
@@ -181,7 +202,7 @@ class RetentionManager:
 
     def get_storage_stats(self) -> dict[str, Any]:
         """Get storage usage statistics."""
-        stats = {
+        stats: dict[str, Any] = {
             "scan_results": self._dir_stats(self._scan_dir),
             "total_bytes": 0,
         }
@@ -274,7 +295,7 @@ class RetentionManager:
         now: float,
     ) -> dict[str, Any]:
         """Clean up expired files in a directory."""
-        stats = {"files_removed": 0, "bytes_freed": 0, "errors": []}
+        stats: dict[str, Any] = {"files_removed": 0, "bytes_freed": 0, "errors": []}
 
         if policy.ttl_days == 0:
             # Never expire
@@ -339,6 +360,7 @@ class RetentionManager:
                 pass
 
         return {"file_count": file_count, "total_bytes": total_bytes}
+
 
 # ─── Module-level singleton ────────────────────────────────────────────────
 

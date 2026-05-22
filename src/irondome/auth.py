@@ -16,7 +16,6 @@ import hmac
 import logging
 import os
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger("irondome.auth")
 
@@ -147,9 +146,7 @@ class TokenAuth:
         # Store plaintext tokens only for constant-time comparison
         # (needed because we compare against the bearer token directly)
         self._plaintext_tokens: list[str] = []
-        self._is_enterprise = os.environ.get(
-            "IRONDOME_ENTERPRISE_MODE", ""
-        ).lower() in ("1", "true", "yes")
+        self._is_enterprise = os.environ.get("IRONDOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes")
         self._load_tokens()
 
     @property
@@ -182,8 +179,7 @@ class TokenAuth:
         """Add a single token, validating enterprise constraints."""
         if self._is_enterprise and len(token) < MIN_TOKEN_LENGTH:
             logger.error(
-                "Enterprise mode: token '%s…' is too short "
-                "(minimum %d characters). Token rejected.",
+                "Enterprise mode: token '%s…' is too short (minimum %d characters). Token rejected.",
                 token[:4],
                 MIN_TOKEN_LENGTH,
             )
@@ -220,35 +216,22 @@ class TokenAuth:
         if self._is_enterprise:
             if not self._plaintext_tokens:
                 logger.error(
-                    "Enterprise mode: no API tokens configured — "
-                    "all requests rejected. Set IRONDOME_API_TOKENS."
+                    "Enterprise mode: no API tokens configured — all requests rejected. Set IRONDOME_API_TOKENS."
                 )
                 return False
-            # Constant-time comparison against all known tokens
-            for known in self._plaintext_tokens:
-                if _constant_time_equal(token, known):
-                    return True
-            return False
+            return any(_constant_time_equal(token, known) for known in self._plaintext_tokens)
 
         # Non-enterprise: allow dev mode bypass if no tokens configured
         if not self._plaintext_tokens:
             if os.environ.get("IRONDOME_DEV_MODE", "").lower() in ("1", "true", "yes"):
-                logger.warning(
-                    "DEV MODE: No API tokens configured — "
-                    "all requests authenticated"
-                )
+                logger.warning("DEV MODE: No API tokens configured — all requests authenticated")
                 return True
             logger.warning(
-                "No API tokens configured — rejecting all requests. "
-                "Set IRONDOME_API_TOKENS or IRONDOME_DEV_MODE=1"
+                "No API tokens configured — rejecting all requests. Set IRONDOME_API_TOKENS or IRONDOME_DEV_MODE=1"
             )
             return False
 
-        # Constant-time comparison
-        for known in self._plaintext_tokens:
-            if _constant_time_equal(token, known):
-                return True
-        return False
+        return any(_constant_time_equal(token, known) for known in self._plaintext_tokens)
 
     def get_role(self, token: str) -> str:
         """Get the role for a validated token."""

@@ -15,7 +15,6 @@ from unittest import mock
 
 import pytest
 
-from irondome.l4.baseline import SHIPPED_BASELINES
 from irondome.l4.models import Baseline
 from irondome.l4.redis_baseline import RedisBaselineStore
 
@@ -69,6 +68,7 @@ class MockRedisForBaseline:
 
     def scan_iter(self, pattern):
         import fnmatch
+
         for key in list(self._data.keys()):
             if fnmatch.fnmatch(key, pattern):
                 yield key
@@ -129,8 +129,28 @@ class TestRedisBaselineWithMock:
 
     def test_list_custom(self, store):
         for name in ["custom-a", "custom-b"]:
-            store.set(Baseline(
-                name=name,
+            store.set(
+                Baseline(
+                    name=name,
+                    package="pkg",
+                    version="1.0",
+                    expected_network_calls=0,
+                    expected_dns_queries=0,
+                    expected_fs_ops=0,
+                    expected_spawns=0,
+                    expected_runtime_ms_range=(0, 1000),
+                    allowed_domains=[],
+                    allowed_paths=[],
+                )
+            )
+        custom = store.list_custom()
+        assert "custom-a" in custom
+        assert "custom-b" in custom
+
+    def test_list_all_merges_shipped_and_custom(self, store):
+        store.set(
+            Baseline(
+                name="my-custom",
                 package="pkg",
                 version="1.0",
                 expected_network_calls=0,
@@ -140,24 +160,8 @@ class TestRedisBaselineWithMock:
                 expected_runtime_ms_range=(0, 1000),
                 allowed_domains=[],
                 allowed_paths=[],
-            ))
-        custom = store.list_custom()
-        assert "custom-a" in custom
-        assert "custom-b" in custom
-
-    def test_list_all_merges_shipped_and_custom(self, store):
-        store.set(Baseline(
-            name="my-custom",
-            package="pkg",
-            version="1.0",
-            expected_network_calls=0,
-            expected_dns_queries=0,
-            expected_fs_ops=0,
-            expected_spawns=0,
-            expected_runtime_ms_range=(0, 1000),
-            allowed_domains=[],
-            allowed_paths=[],
-        ))
+            )
+        )
         all_names = store.list_all()
         assert "npm-install" in all_names  # shipped
         assert "my-custom" in all_names  # custom

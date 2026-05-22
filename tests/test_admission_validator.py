@@ -17,10 +17,8 @@ Covers:
 
 from __future__ import annotations
 
-import pytest
-
 from irondome.admission import AdmissionRequest
-from irondome.admission.validator import PodSecurityValidator, DEFAULT_VALIDATOR
+from irondome.admission.validator import DEFAULT_VALIDATOR, PodSecurityValidator
 
 
 def _make_pod_request(pod_spec: dict, operation: str = "CREATE") -> AdmissionRequest:

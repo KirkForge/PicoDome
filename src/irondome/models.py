@@ -41,6 +41,7 @@ class Finding:
     finding_id defaults to "" (deterministic mode). Use _generate_finding_id()
     to produce a real UUID when non-deterministic output is desired.
     """
+
     rule_id: str
     severity: Severity
     message: str
@@ -68,6 +69,7 @@ class Finding:
 @dataclass(frozen=True)
 class ScanStats:
     """Aggregate statistics for a scan or analysis. Frozen for determinism."""
+
     packages_scanned: int = 0
     files_scanned: int = 0
     duration_ms: int = 0

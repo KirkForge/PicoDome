@@ -42,13 +42,31 @@ PROJECT_MARKERS = {
 }
 
 # Directories to skip during discovery
-SKIP_DIRS = frozenset({
-    "node_modules", ".git", ".svn", ".hg", "__pycache__",
-    ".venv", "venv", ".tox", "dist", "build", "out",
-    ".next", ".nuxt", "coverage", ".nyc_output",
-    ".mypy_cache", ".pytest_cache", ".ruff_cache",
-    "site-packages", ".eggs", "eggs",
-})
+SKIP_DIRS = frozenset(
+    {
+        "node_modules",
+        ".git",
+        ".svn",
+        ".hg",
+        "__pycache__",
+        ".venv",
+        "venv",
+        ".tox",
+        "dist",
+        "build",
+        "out",
+        ".next",
+        ".nuxt",
+        "coverage",
+        ".nyc_output",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        "site-packages",
+        ".eggs",
+        "eggs",
+    }
+)
 
 
 class ProjectInfo:
@@ -97,9 +115,7 @@ class WorkspaceResult:
             "total_findings": self.total_findings,
             "duration_ms": self.duration_ms,
             "errors": self.errors,
-            "projects": {
-                k: v.to_dict() for k, v in self.projects.items()
-            },
+            "projects": {k: v.to_dict() for k, v in self.projects.items()},
         }
 
 
@@ -362,12 +378,8 @@ def scan_workspace_to_json(
     data = {
         "workspace_root": str(root.resolve()),
         "summary": wr.to_dict(),
-        "sandbox_results": {
-            k: v.to_dict() for k, v in wr.sandbox_results.items()
-        },
-        "analysis_results": {
-            k: v.to_dict() for k, v in wr.analysis_results.items()
-        },
+        "sandbox_results": {k: v.to_dict() for k, v in wr.sandbox_results.items()},
+        "analysis_results": {k: v.to_dict() for k, v in wr.analysis_results.items()},
     }
 
     json_str = json.dumps(data, indent=2, sort_keys=True, default=str)

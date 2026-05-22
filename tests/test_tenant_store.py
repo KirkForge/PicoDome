@@ -10,12 +10,10 @@ Covers:
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from irondome.daemon.store import PersistentScanJobStore
-from irondome.tenant import DEFAULT_TENANT, TenantId
+from irondome.tenant import TenantId
 from irondome.tenant.store import TenantAwareScanJobStore
 
 

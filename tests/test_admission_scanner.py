@@ -15,13 +15,13 @@ from __future__ import annotations
 import json
 import os
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from unittest import mock
 
 import pytest
 
 from irondome.admission import AdmissionRequest
-from irondome.admission.scanner import ImageScanner, SEVERITY_LEVELS
+from irondome.admission.scanner import SEVERITY_LEVELS, ImageScanner
 
 
 class MockScanHandler(BaseHTTPRequestHandler):
@@ -168,10 +168,13 @@ class TestImageScannerConfig:
         assert scanner.min_severity_level == SEVERITY_LEVELS["critical"]
 
     def test_env_config(self):
-        with mock.patch.dict(os.environ, {
-            "IRONDOME_ADMISSION_SCAN_ENABLED": "true",
-            "IRONDOME_ADMISSION_DAEMON_URL": "http://mydaemon:8443",
-        }):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "IRONDOME_ADMISSION_SCAN_ENABLED": "true",
+                "IRONDOME_ADMISSION_DAEMON_URL": "http://mydaemon:8443",
+            },
+        ):
             scanner = ImageScanner()
             assert scanner.enabled
             assert scanner.daemon_url == "http://mydaemon:8443"
@@ -179,8 +182,12 @@ class TestImageScannerConfig:
     def test_empty_pod_allowed(self):
         scanner = ImageScanner(enabled=True)
         req = AdmissionRequest(
-            uid="t", kind={}, name="t", namespace="d",
-            operation="CREATE", object_raw={},
+            uid="t",
+            kind={},
+            name="t",
+            namespace="d",
+            operation="CREATE",
+            object_raw={},
         )
         allowed, _ = scanner.scan_pod(req)
         assert allowed

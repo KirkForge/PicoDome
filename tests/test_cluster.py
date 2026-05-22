@@ -40,6 +40,7 @@ from irondome.cluster.manager import (
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def memory_backend():
     """Fresh in-memory state backend."""
@@ -130,6 +131,7 @@ def manager(memory_backend):
 
 # ─── ClusterNode tests ──────────────────────────────────────────────────────
 
+
 class TestClusterNode:
     """Tests for ClusterNode dataclass."""
 
@@ -203,6 +205,7 @@ class TestClusterNode:
 
 # ─── ScanRequest tests ──────────────────────────────────────────────────────
 
+
 class TestScanRequest:
     """Tests for ScanRequest dataclass."""
 
@@ -250,6 +253,7 @@ class TestScanRequest:
 
 
 # ─── MemoryStateBackend tests ───────────────────────────────────────────────
+
 
 class TestMemoryStateBackend:
     """Tests for MemoryStateBackend."""
@@ -346,6 +350,7 @@ class TestMemoryStateBackend:
 
 # ─── SQLiteStateBackend tests ───────────────────────────────────────────────
 
+
 class TestSQLiteStateBackend:
     """Tests for SQLiteStateBackend."""
 
@@ -421,6 +426,7 @@ class TestSQLiteStateBackend:
 
 
 # ─── ClusterState tests ──────────────────────────────────────────────────────
+
 
 class TestClusterState:
     """Tests for ClusterState."""
@@ -589,12 +595,24 @@ class TestClusterState:
         """Test merging state from a peer."""
         snapshot = {
             "nodes": [
-                {"node_id": "remote-1", "address": "10.0.0.10", "port": 8444,
-                 "status": "online", "last_heartbeat": "2026-01-01T12:00:00Z", "load": 3},
+                {
+                    "node_id": "remote-1",
+                    "address": "10.0.0.10",
+                    "port": 8444,
+                    "status": "online",
+                    "last_heartbeat": "2026-01-01T12:00:00Z",
+                    "load": 3,
+                },
             ],
             "scans": [
-                {"scan_id": "remote-scan-1", "command": ["echo", "remote"],
-                 "priority": 0, "assigned_node": None, "created_at": "", "status": "pending"},
+                {
+                    "scan_id": "remote-scan-1",
+                    "command": ["echo", "remote"],
+                    "priority": 0,
+                    "assigned_node": None,
+                    "created_at": "",
+                    "status": "pending",
+                },
             ],
             "leader_id": "remote-1",
         }
@@ -615,8 +633,14 @@ class TestClusterState:
 
         snapshot = {
             "nodes": [
-                {"node_id": "node-a", "address": "10.0.0.1", "port": 8444,
-                 "status": "online", "last_heartbeat": "2026-01-02T00:00:00Z", "load": 0},
+                {
+                    "node_id": "node-a",
+                    "address": "10.0.0.1",
+                    "port": 8444,
+                    "status": "online",
+                    "last_heartbeat": "2026-01-02T00:00:00Z",
+                    "load": 0,
+                },
             ],
             "scans": [],
             "leader_id": None,
@@ -641,6 +665,7 @@ class TestClusterState:
 
 
 # ─── ClusterManager tests ───────────────────────────────────────────────────
+
 
 class TestClusterManager:
     """Tests for ClusterManager."""
@@ -795,8 +820,14 @@ class TestClusterManager:
         try:
             snapshot = {
                 "nodes": [
-                    {"node_id": "peer-1", "address": "10.0.0.5", "port": 8444,
-                     "status": "online", "last_heartbeat": "2026-01-01T12:00:00Z", "load": 0},
+                    {
+                        "node_id": "peer-1",
+                        "address": "10.0.0.5",
+                        "port": 8444,
+                        "status": "online",
+                        "last_heartbeat": "2026-01-01T12:00:00Z",
+                        "load": 0,
+                    },
                 ],
                 "scans": [],
                 "leader_id": "peer-1",
@@ -826,6 +857,7 @@ class TestClusterManager:
 
 # ─── Utility function tests ─────────────────────────────────────────────────
 
+
 class TestUtilities:
     """Tests for utility functions."""
 
@@ -852,6 +884,7 @@ class TestUtilities:
 
 
 # ─── Integration tests ──────────────────────────────────────────────────────
+
 
 class TestClusterIntegration:
     """Integration tests for full cluster workflows."""
@@ -972,6 +1005,7 @@ class TestClusterIntegration:
         """Test module-level singleton functions."""
         # Reset singleton
         import irondome.cluster.manager as mgr_mod
+
         mgr_mod._cluster_manager = None
 
         mgr1 = get_cluster_manager()

@@ -1,6 +1,5 @@
 """Tests for health check module."""
 
-
 from irondome.health import check_health, check_readiness
 
 

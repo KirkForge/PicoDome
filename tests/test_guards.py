@@ -9,8 +9,9 @@ from irondome.models import Finding, Severity, Verdict
 def _validate_findings_deterministic(findings: list) -> list:
     """Validate that findings contain no uuid4 or timestamps."""
     import re
-    uuid_pat = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', re.IGNORECASE)
-    ts_pat = re.compile(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}')
+
+    uuid_pat = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
+    ts_pat = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
     errors = []
     for f in findings:
         d = f.to_dict()
@@ -87,7 +88,9 @@ class TestValidateFindingsDeterministic:
     def test_multiple_findings_all_checked(self):
         f1 = Finding(rule_id="R1", severity=Severity.LOW, message="ok")
         f2 = Finding(
-            rule_id="R2", severity=Severity.HIGH, message="bad",
+            rule_id="R2",
+            severity=Severity.HIGH,
+            message="bad",
             evidence={"id": "550e8400-e29b-41d4-a716-446655440000"},
         )
         errors = _validate_findings_deterministic([f1, f2])
@@ -119,6 +122,7 @@ class TestValidateFindingsDeterministic:
 class TestValidateResultSorted:
     def test_sorted_dict_passes(self):
         from irondome.l3.models import SandboxResult
+
         r = SandboxResult(
             run_id="test",
             timestamp="2025-01-01T00:00:00Z",
@@ -161,6 +165,7 @@ class TestValidateNoRandomness:
     def test_two_deterministic_runs_produce_same_output(self):
         """Two SandboxResults with same explicit fields should be identical."""
         from irondome.l3.models import SandboxResult
+
         r1 = SandboxResult(
             run_id="det-001",
             timestamp="2025-01-01T00:00:00Z",
@@ -181,6 +186,7 @@ class TestValidateNoRandomness:
 
     def test_two_different_results_not_equal(self):
         from irondome.l3.models import SandboxResult
+
         r1 = SandboxResult(
             run_id="det-001",
             timestamp="2025-01-01T00:00:00Z",
@@ -200,6 +206,7 @@ class TestValidateNoRandomness:
     def test_json_hash_deterministic(self):
         """Two deterministic dicts should produce the same JSON hash."""
         from irondome.l3.models import SandboxResult
+
         r = SandboxResult(
             run_id="hash-test",
             timestamp="2025-01-01T00:00:00Z",
@@ -216,6 +223,7 @@ class TestValidateNoRandomness:
     def test_analysis_result_deterministic_hash(self):
         """AnalysisResult with explicit fields should hash deterministically."""
         from irondome.l4.models import AnalysisResult, BehavioralVerdict
+
         ar = AnalysisResult(
             target="test",
             findings=[],
@@ -230,6 +238,7 @@ class TestValidateNoRandomness:
     def test_auto_uuid_breaks_determinism(self):
         """Auto-generated finding_id makes Findings non-deterministic."""
         from irondome.models import _generate_finding_id
+
         f1 = Finding(rule_id="R1", severity=Severity.LOW, message="m", finding_id=_generate_finding_id())
         f2 = Finding(rule_id="R1", severity=Severity.LOW, message="m", finding_id=_generate_finding_id())
         # finding_id auto-generates UUIDs, so they differ
@@ -240,6 +249,7 @@ class TestGuardIntegration:
     def test_sandbox_result_deterministic_roundtrip(self):
         """Full round-trip: create → to_dict → JSON → parse → verify."""
         from irondome.l3.models import SandboxEvent, SandboxResult
+
         r = SandboxResult(
             run_id="rt-001",
             timestamp="2025-01-01T00:00:00Z",

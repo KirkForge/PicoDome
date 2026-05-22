@@ -220,6 +220,7 @@ class TestKeyManagement:
         hex_str = key_to_hex(key)
         with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY": hex_str}):
             from irondome.policy_versioned.signing import _load_key
+
             loaded = _load_key()
             assert loaded == key
 
@@ -233,12 +234,14 @@ class TestKeyManagement:
             # Remove direct key env if set
             os.environ.pop("IRONDOME_POLICY_KEY", None)
             from irondome.policy_versioned.signing import _load_key
+
             loaded = _load_key()
             assert loaded == key
 
     def test_load_key_none_when_not_configured(self):
         with mock.patch.dict(os.environ, {}, clear=True):
             from irondome.policy_versioned.signing import _load_key
+
             assert _load_key() is None
 
 
@@ -287,6 +290,8 @@ class TestLoadPolicyWithVerification:
         content, result = load_policy_with_verification(tmp_path / "nope.yaml", key=b"key")
         assert content == ""
         assert not result.valid
+
+
 # ─── Companion file tests ──────────────────────────────────────────────────
 
 

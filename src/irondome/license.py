@@ -17,6 +17,7 @@ __all__ = ["LicenseTier", "LicenseInfo", "check_license", "get_license_info"]
 
 class LicenseTier(str, Enum):
     """License tier levels."""
+
     PERSONAL = "personal"
     COMMERCIAL = "commercial"
     ENTERPRISE = "enterprise"

@@ -51,9 +51,7 @@ def sample_requirements_no_hashes(tmp_path):
     """Create a requirements.txt without hash pins."""
     req_file = tmp_path / "requirements.txt"
     req_file.write_text(
-        "setuptools>=68.0\n"
-        "wheel==0.42.0\n"
-        "pytest>=7.0\n",
+        "setuptools>=68.0\nwheel==0.42.0\npytest>=7.0\n",
         encoding="utf-8",
     )
     return str(req_file)

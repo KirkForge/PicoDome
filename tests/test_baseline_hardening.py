@@ -13,9 +13,13 @@ from irondome.l4.models import Baseline
 @pytest.fixture
 def npm_baseline():
     return Baseline(
-        name="npm-install", package="npm", version="*",
-        expected_network_calls=10, expected_dns_queries=5,
-        expected_fs_ops=500, expected_spawns=0,
+        name="npm-install",
+        package="npm",
+        version="*",
+        expected_network_calls=10,
+        expected_dns_queries=5,
+        expected_fs_ops=500,
+        expected_spawns=0,
         expected_runtime_ms_range=(1000, 120000),
         allowed_domains=["registry.npmjs.org"],
         allowed_paths=["node_modules/**"],
@@ -41,7 +45,8 @@ class TestSignedBaseline:
         # Tamper with the baseline content
         tampered = SignedBaseline(
             baseline=Baseline(
-                name="npm-install", package="npm",
+                name="npm-install",
+                package="npm",
                 expected_network_calls=999,  # changed!
             ),
             signature=signed.signature,
@@ -81,9 +86,11 @@ class TestHardenedBaselineManager:
     def test_normal_update_allowed(self, manager, npm_baseline):
         manager.apply_update("npm-install", npm_baseline)
         slightly_changed = Baseline(
-            name="npm-install", package="npm",
+            name="npm-install",
+            package="npm",
             expected_network_calls=12,  # small change
-            expected_dns_queries=5, expected_fs_ops=500,
+            expected_dns_queries=5,
+            expected_fs_ops=500,
             expected_runtime_ms_range=(1000, 120000),
         )
         check = manager.check_update_allowed("npm-install", slightly_changed)
@@ -92,9 +99,11 @@ class TestHardenedBaselineManager:
     def test_extreme_drift_blocked(self, manager, npm_baseline):
         manager.apply_update("npm-install", npm_baseline)
         extreme = Baseline(
-            name="npm-install", package="npm",
+            name="npm-install",
+            package="npm",
             expected_network_calls=1000,  # 100x change
-            expected_dns_queries=500, expected_fs_ops=50000,
+            expected_dns_queries=500,
+            expected_fs_ops=50000,
             expected_spawns=50,
             expected_runtime_ms_range=(1, 999999),
         )

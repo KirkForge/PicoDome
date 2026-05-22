@@ -83,9 +83,7 @@ def _detect_backend(
             and degraded mode is not allowed.
     """
     if allow_degraded is None:
-        allow_degraded = os.environ.get(
-            "IRONDOME_ALLOW_DEGRADED", ""
-        ).lower() in ("1", "true", "yes")
+        allow_degraded = os.environ.get("IRONDOME_ALLOW_DEGRADED", "").lower() in ("1", "true", "yes")
 
     system = platform.system()
     available: list[str] = ["subprocess"]
@@ -97,8 +95,9 @@ def _detect_backend(
     if system == "Linux":
         try:
             from irondome.l3.backends.seccomp_backend import SeccompBackend
-            sb = SeccompBackend()
-            if sb.is_available():
+
+            seccomp_backend = SeccompBackend()
+            if seccomp_backend.is_available():
                 seccomp_available = True
                 available.insert(0, "seccomp-bpf")
         except ImportError:
@@ -109,8 +108,9 @@ def _detect_backend(
     elif system == "Darwin":
         try:
             from irondome.l3.backends.seatbelt_backend import SeatbeltBackend
-            sb = SeatbeltBackend()
-            if sb.is_available():
+
+            seatbelt_backend = SeatbeltBackend()
+            if seatbelt_backend.is_available():
                 seatbelt_available = True
                 available.insert(0, "seatbelt")
         except ImportError:
@@ -125,13 +125,11 @@ def _detect_backend(
         if requested == "seccomp-bpf":
             if seccomp_available:
                 from irondome.l3.backends.seccomp_backend import SeccompBackend
+
                 logger.info("Using seccomp-bpf backend (explicitly requested)")
                 return SeccompBackend()
             if allow_degraded:
-                logger.warning(
-                    "seccomp-bpf requested but unavailable — "
-                    "degrading to subprocess (allow_degraded=True)"
-                )
+                logger.warning("seccomp-bpf requested but unavailable — degrading to subprocess (allow_degraded=True)")
                 return SubprocessBackend()
             raise BackendUnavailableError(
                 "seccomp-bpf",
@@ -142,13 +140,11 @@ def _detect_backend(
         if requested == "seatbelt":
             if seatbelt_available:
                 from irondome.l3.backends.seatbelt_backend import SeatbeltBackend
+
                 logger.info("Using seatbelt backend (explicitly requested)")
                 return SeatbeltBackend()
             if allow_degraded:
-                logger.warning(
-                    "seatbelt requested but unavailable — "
-                    "degrading to subprocess (allow_degraded=True)"
-                )
+                logger.warning("seatbelt requested but unavailable — degrading to subprocess (allow_degraded=True)")
                 return SubprocessBackend()
             raise BackendUnavailableError(
                 "seatbelt",
@@ -169,11 +165,13 @@ def _detect_backend(
     # ── Auto-detect ──────────────────────────────────────────────────
     if seccomp_available:
         from irondome.l3.backends.seccomp_backend import SeccompBackend
+
         logger.info("Using seccomp-bpf backend (auto-detected)")
         return SeccompBackend()
 
     if seatbelt_available:
         from irondome.l3.backends.seatbelt_backend import SeatbeltBackend
+
         logger.info("Using seatbelt backend (auto-detected)")
         return SeatbeltBackend()
 
@@ -312,9 +310,7 @@ def sandbox_run(
         )
 
     logger.info(
-        "L3 sandbox %s: verdict=%s exit=%d "
-        "duration=%dms events=%d backend=%s "
-        "isolation=%s enforcement=%s degraded=%s",
+        "L3 sandbox %s: verdict=%s exit=%d duration=%dms events=%d backend=%s isolation=%s enforcement=%s degraded=%s",
         result.run_id or "(deterministic)",
         result.overall_verdict.value,
         result.exit_code,

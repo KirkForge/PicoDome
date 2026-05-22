@@ -13,7 +13,6 @@ Covers:
 
 from __future__ import annotations
 
-import time
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -21,15 +20,14 @@ import pytest
 from irondome.audit import AuditEventType, AuditLogger
 from irondome.audit.logger import AuditEvent
 from irondome.audit.sinks.base import (
+    SINK_REGISTRY,
     AuditSink,
     NullSink,
     SinkConfig,
     SinkHealth,
-    SINK_REGISTRY,
     create_sink,
     register_sink,
 )
-
 
 # ─── SinkConfig ─────────────────────────────────────────────────────────────
 
@@ -99,7 +97,7 @@ class TestNullSink:
     def test_start_stop_noop(self):
         sink = NullSink()
         sink.start()  # should not raise
-        sink.stop()   # should not raise
+        sink.stop()  # should not raise
 
     def test_flush_noop(self):
         sink = NullSink()

@@ -49,12 +49,8 @@ from irondome.l3.models import SandboxResult
 from irondome.l4.models import AnalysisResult
 
 # Patterns that should never appear in deterministic output
-_UUID_PATTERN = re.compile(
-    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE
-)
-_ISO_TIMESTAMP_PATTERN = re.compile(
-    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"
-)
+_UUID_PATTERN = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
+_ISO_TIMESTAMP_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
 
 
 class DeterminismViolation(Exception):
@@ -62,10 +58,7 @@ class DeterminismViolation(Exception):
 
     def __init__(self, violations: list[str]):
         self.violations = violations
-        super().__init__(
-            f"Determinism violation(s): {len(violations)}\n"
-            + "\n".join(f"  - {v}" for v in violations)
-        )
+        super().__init__(f"Determinism violation(s): {len(violations)}\n" + "\n".join(f"  - {v}" for v in violations))
 
 
 class DeterministicGuard:
@@ -107,9 +100,7 @@ class DeterministicGuard:
         # 3. Events must not contain UUIDs in detail
         for event in result.events:
             if _UUID_PATTERN.search(event.detail):
-                violations.append(
-                    f"event {event.rule_id} contains UUID in detail: {event.detail[:80]}"
-                )
+                violations.append(f"event {event.rule_id} contains UUID in detail: {event.detail[:80]}")
 
         # 4. Verify to_dict produces sorted keys
         d = result.to_dict(deterministic=True)
@@ -125,28 +116,20 @@ class DeterministicGuard:
         # 1. Findings must not have UUID finding_ids
         for f in result.findings:
             if f.finding_id and _UUID_PATTERN.fullmatch(f.finding_id):
-                violations.append(
-                    f"finding {f.rule_id} has UUID finding_id: {f.finding_id}"
-                )
+                violations.append(f"finding {f.rule_id} has UUID finding_id: {f.finding_id}")
 
         # 2. Findings must not contain timestamps in message or evidence
         for f in result.findings:
             if _ISO_TIMESTAMP_PATTERN.search(f.message):
-                violations.append(
-                    f"finding {f.rule_id} has timestamp in message: {f.message[:80]}"
-                )
+                violations.append(f"finding {f.rule_id} has timestamp in message: {f.message[:80]}")
             evidence_str = str(f.evidence)
             if _ISO_TIMESTAMP_PATTERN.search(evidence_str):
-                violations.append(
-                    f"finding {f.rule_id} has timestamp in evidence"
-                )
+                violations.append(f"finding {f.rule_id} has timestamp in evidence")
 
         # 3. Findings must not contain random values
         for f in result.findings:
             if _UUID_PATTERN.search(f.message):
-                violations.append(
-                    f"finding {f.rule_id} has UUID in message: {f.message[:80]}"
-                )
+                violations.append(f"finding {f.rule_id} has UUID in message: {f.message[:80]}")
 
         # 4. Verify to_dict produces sorted keys
         d = result.to_dict(deterministic=True)

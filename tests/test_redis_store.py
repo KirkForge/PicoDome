@@ -10,18 +10,14 @@ Covers:
 
 from __future__ import annotations
 
-import json
 import os
-import time
 from unittest import mock
 
 import pytest
 
 from irondome.daemon.redis_store import (
-    RedisScanJobStore,
     _DEFAULT_REDIS_URL,
-    _JOB_KEY_PREFIX,
-    _JOB_LIST_KEY,
+    RedisScanJobStore,
 )
 
 
@@ -90,7 +86,7 @@ class MockRedis:
         )
         if stop == -1:
             return [item[0] for item in sorted_items[start:]]
-        return [item[0] for item in sorted_items[start:stop + 1]]
+        return [item[0] for item in sorted_items[start : stop + 1]]
 
     def from_url(self, url, **kwargs):
         return self
@@ -127,6 +123,7 @@ class MockRedis:
             def method(*args, **kwargs):
                 self._commands.append((name, args, kwargs))
                 return self
+
             return method
 
     def pipeline(self):

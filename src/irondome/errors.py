@@ -48,10 +48,7 @@ class ErrorCodes:
     # ── 403 Forbidden ─────────────────────────────────────────────────
     FORBIDDEN = ErrorCode(403, "FORBIDDEN", "Insufficient permissions")
     COMMAND_DENIED = ErrorCode(403, "COMMAND_DENIED", "Command denied by server policy")
-    ENTERPRISE_ENFORCEMENT = ErrorCode(
-        403, "ENTERPRISE_ENFORCEMENT",
-        "Enterprise mode requires enforcement backend"
-    )
+    ENTERPRISE_ENFORCEMENT = ErrorCode(403, "ENTERPRISE_ENFORCEMENT", "Enterprise mode requires enforcement backend")
 
     # ── 404 Not Found ──────────────────────────────────────────────────
     NOT_FOUND = ErrorCode(404, "NOT_FOUND", "Resource not found")

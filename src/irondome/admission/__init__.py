@@ -24,9 +24,10 @@ import base64
 import json
 import logging
 import ssl
+from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 logger = logging.getLogger("irondome.admission")
 
@@ -97,9 +98,7 @@ class AdmissionResponse:
             }
         if self.patch:
             result["patchType"] = self.patch_type
-            result["patch"] = base64.b64encode(
-                json.dumps(self.patch).encode("utf-8")
-            ).decode("utf-8")
+            result["patch"] = base64.b64encode(json.dumps(self.patch).encode("utf-8")).decode("utf-8")
         return result
 
 
@@ -113,7 +112,7 @@ class AdmissionHandler(BaseHTTPRequestHandler):
     """
 
     # Overrideable validator function
-    validator = None  # type: ignore
+    validator: ClassVar[Callable[[AdmissionRequest], tuple[bool, str]] | None] = None
 
     def do_POST(self) -> None:
         """Handle admission review requests."""
@@ -224,21 +223,17 @@ class AdmissionWebhookServer:
         if self._cert_file and self._key_file:
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             ctx.load_cert_chain(self._cert_file, self._key_file)
-            self._server.socket = ctx.wrap_socket(
-                self._server.socket, server_side=True
-            )
-            logger.info(
-                "Admission webhook started with TLS on port %d", self._port
-            )
+            self._server.socket = ctx.wrap_socket(self._server.socket, server_side=True)
+            logger.info("Admission webhook started with TLS on port %d", self._port)
         else:
             logger.warning(
-                "Admission webhook started WITHOUT TLS on port %d "
-                "(K8s requires TLS — use --cert-file and --key-file)",
+                "Admission webhook started WITHOUT TLS on port %d (K8s requires TLS — use --cert-file and --key-file)",
                 self._port,
             )
 
         if background:
             import threading
+
             thread = threading.Thread(target=self._server.serve_forever, daemon=True)
             thread.start()
             logger.info("Admission webhook running in background")

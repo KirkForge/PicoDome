@@ -1,6 +1,5 @@
 """Tests for the versioned policy store."""
 
-
 import pytest
 
 from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction

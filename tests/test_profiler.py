@@ -1,6 +1,5 @@
 """Tests for L4 profiler — extracting behavioral profiles from sandbox results and traces."""
 
-
 from irondome.l3.models import SandboxResult, Verdict
 from irondome.l4.profiler import (
     _extract_dns_queries,
@@ -199,25 +198,25 @@ class TestExtractFileOperations:
         assert any(op.operation == "read" for op in ops)
 
     def test_write_extraction(self):
-        output = 'writing to /tmp/output.log'
+        output = "writing to /tmp/output.log"
         ops = _extract_file_operations(output)
         assert len(ops) >= 1
         assert any(op.operation == "write" for op in ops)
 
     def test_create_extraction(self):
-        output = 'create /tmp/newfile.txt'
+        output = "create /tmp/newfile.txt"
         ops = _extract_file_operations(output)
         assert len(ops) >= 1
         assert any(op.operation == "create" for op in ops)
 
     def test_delete_extraction(self):
-        output = 'delete /tmp/oldfile.txt'
+        output = "delete /tmp/oldfile.txt"
         ops = _extract_file_operations(output)
         assert len(ops) >= 1
         assert any(op.operation == "delete" for op in ops)
 
     def test_skip_dev_files(self):
-        output = 'open /dev/null'
+        output = "open /dev/null"
         ops = _extract_file_operations(output)
         dev_ops = [op for op in ops if op.path.startswith("/dev/")]
         assert len(dev_ops) == 0

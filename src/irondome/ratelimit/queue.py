@@ -25,6 +25,7 @@ logger = logging.getLogger("irondome.ratelimit.queue")
 
 class JobPriority(IntEnum):
     """Job priority levels (lower number = higher priority)."""
+
     CRITICAL = 0
     HIGH = 1
     NORMAL = 2
@@ -34,6 +35,7 @@ class JobPriority(IntEnum):
 @dataclass(order=False)
 class QueuedJob:
     """A job in the priority queue."""
+
     job_id: str
     command: list[str]
     actor: str
@@ -205,10 +207,7 @@ class JobQueue:
         with self._lock:
             by_priority = {}
             for p in JobPriority:
-                by_priority[p.name] = sum(
-                    1 for j in self._jobs.values()
-                    if j.priority == p and j.status == "queued"
-                )
+                by_priority[p.name] = sum(1 for j in self._jobs.values() if j.priority == p and j.status == "queued")
             return {
                 "queue_size": len(self._heap),
                 "max_size": self._max_size,
@@ -223,10 +222,7 @@ class JobQueue:
         """Remove jobs that have been queued too long."""
         with self._lock:
             cutoff = time.monotonic() - max_age_seconds
-            expired_ids = [
-                j.job_id for j in self._heap
-                if j.created_at < cutoff and j.status == "queued"
-            ]
+            expired_ids = [j.job_id for j in self._heap if j.created_at < cutoff and j.status == "queued"]
             for job_id in expired_ids:
                 self._jobs[job_id].status = "expired"
                 self._stats["expired"] += 1

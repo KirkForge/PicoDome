@@ -17,15 +17,12 @@ import threading
 from http.server import HTTPServer
 from typing import Any
 
-import pytest
-
 from irondome.admission import (
     AdmissionHandler,
     AdmissionRequest,
     AdmissionResponse,
     AdmissionWebhookServer,
 )
-
 
 SAMPLE_ADMISSION_REVIEW = {
     "apiVersion": "admission.k8s.io/v1",
@@ -102,8 +99,8 @@ class TestAdmissionHandler:
         validator=None,
     ) -> dict[str, Any]:
         """Send a request to the admission handler and return the response."""
-        import urllib.request
         import urllib.error
+        import urllib.request
 
         # Start a test server
         AdmissionHandler.validator = validator
@@ -147,8 +144,8 @@ class TestAdmissionHandler:
         assert result["response"]["allowed"] is True
 
     def test_invalid_json_returns_error(self):
-        import urllib.request
         import urllib.error
+        import urllib.request
 
         AdmissionHandler.validator = None
         server = HTTPServer(("127.0.0.1", 0), AdmissionHandler)

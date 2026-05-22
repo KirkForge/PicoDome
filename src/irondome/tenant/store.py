@@ -84,7 +84,9 @@ class TenantAwareScanJobStore:
         if job_tenant != tid.normalized:
             logger.warning(
                 "Cross-tenant access denied: tenant=%s tried to access job %s (owner=%s)",
-                tid, job_id[:8], job_tenant,
+                tid,
+                job_id[:8],
+                job_tenant,
             )
             return None
         return job
@@ -119,10 +121,7 @@ class TenantAwareScanJobStore:
         """
         tid = tenant_id or self._default_tenant
         all_jobs = self._store.list_recent(limit=1000)  # get plenty, then filter
-        tenant_jobs = [
-            j for j in all_jobs
-            if j.get("tenant_id", DEFAULT_TENANT.normalized) == tid.normalized
-        ]
+        tenant_jobs = [j for j in all_jobs if j.get("tenant_id", DEFAULT_TENANT.normalized) == tid.normalized]
         return tenant_jobs[:limit]
 
     @property

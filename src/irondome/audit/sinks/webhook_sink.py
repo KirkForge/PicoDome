@@ -109,7 +109,7 @@ class WebhookSink(AuditSink):
 
             # Exponential backoff (skip on last attempt)
             if attempt < self._config.max_retries:
-                backoff = self._config.retry_backoff * (2 ** attempt)
+                backoff = self._config.retry_backoff * (2**attempt)
                 time.sleep(min(backoff, 30.0))  # cap at 30s
 
         # All retries exhausted

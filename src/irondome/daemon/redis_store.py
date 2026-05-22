@@ -55,6 +55,7 @@ class RedisScanJobStore:
 
         try:
             import redis
+
             self._client = redis.from_url(self._redis_url, decode_responses=True)
             # Test connection
             self._client.ping()

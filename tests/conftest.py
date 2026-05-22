@@ -193,6 +193,7 @@ def npm_baseline():
 def default_policy():
     """The built-in default policy."""
     from irondome.l3.policy import default_policy
+
     return default_policy()
 
 

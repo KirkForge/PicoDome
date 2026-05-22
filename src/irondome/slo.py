@@ -24,6 +24,7 @@ logger = logging.getLogger("irondome.slo")
 @dataclass(frozen=True)
 class SLODefinition:
     """A single SLO definition with target and threshold."""
+
     name: str
     description: str
     target: float  # e.g., 0.999 for 99.9%
@@ -43,6 +44,7 @@ class SLODefinition:
 @dataclass(frozen=True)
 class SLOMeasurement:
     """A single SLO measurement."""
+
     name: str
     measured_value: float
     target_value: float
@@ -59,6 +61,7 @@ class SLOMeasurement:
             "target_value": self.target_value,
             "timestamp": self.timestamp,
         }
+
 
 # ─── Enterprise SLO definitions ─────────────────────────────────────────────
 
@@ -178,14 +181,16 @@ class SLOTracker:
         # Availability
         if self._health_checks > 0:
             avail = self._health_ok / self._health_checks
-            measurements.append(SLOMeasurement(
-                name="availability",
-                measured_value=round(avail, 6),
-                target_value=SLO_AVAILABILITY.target,
-                compliant=avail >= SLO_AVAILABILITY.target,
-                timestamp=now,
-                detail=f"{self._health_ok}/{self._health_checks} healthy",
-            ))
+            measurements.append(
+                SLOMeasurement(
+                    name="availability",
+                    measured_value=round(avail, 6),
+                    target_value=SLO_AVAILABILITY.target,
+                    compliant=avail >= SLO_AVAILABILITY.target,
+                    timestamp=now,
+                    detail=f"{self._health_ok}/{self._health_checks} healthy",
+                )
+            )
 
         # Latency
         if self._latency_samples:
@@ -194,63 +199,75 @@ class SLOTracker:
             p95 = sorted_lat[int(len(sorted_lat) * 0.95)] if len(sorted_lat) > 1 else sorted_lat[0]
             p99 = sorted_lat[int(len(sorted_lat) * 0.99)] if len(sorted_lat) > 1 else sorted_lat[0]
 
-            measurements.append(SLOMeasurement(
-                name="latency_p50",
-                measured_value=round(p50, 1),
-                target_value=SLO_LATENCY_P50.target,
-                compliant=p50 <= SLO_LATENCY_P50.target,
-                timestamp=now,
-            ))
-            measurements.append(SLOMeasurement(
-                name="latency_p95",
-                measured_value=round(p95, 1),
-                target_value=SLO_LATENCY_P95.target,
-                compliant=p95 <= SLO_LATENCY_P95.target,
-                timestamp=now,
-            ))
-            measurements.append(SLOMeasurement(
-                name="latency_p99",
-                measured_value=round(p99, 1),
-                target_value=SLO_LATENCY_P99.target,
-                compliant=p99 <= SLO_LATENCY_P99.target,
-                timestamp=now,
-            ))
+            measurements.append(
+                SLOMeasurement(
+                    name="latency_p50",
+                    measured_value=round(p50, 1),
+                    target_value=SLO_LATENCY_P50.target,
+                    compliant=p50 <= SLO_LATENCY_P50.target,
+                    timestamp=now,
+                )
+            )
+            measurements.append(
+                SLOMeasurement(
+                    name="latency_p95",
+                    measured_value=round(p95, 1),
+                    target_value=SLO_LATENCY_P95.target,
+                    compliant=p95 <= SLO_LATENCY_P95.target,
+                    timestamp=now,
+                )
+            )
+            measurements.append(
+                SLOMeasurement(
+                    name="latency_p99",
+                    measured_value=round(p99, 1),
+                    target_value=SLO_LATENCY_P99.target,
+                    compliant=p99 <= SLO_LATENCY_P99.target,
+                    timestamp=now,
+                )
+            )
 
         # Throughput
         elapsed_min = (time.monotonic() - self._start_time) / 60.0
         if elapsed_min >= 1.0:
             throughput = self._total_scans / elapsed_min
-            measurements.append(SLOMeasurement(
-                name="throughput",
-                measured_value=round(throughput, 2),
-                target_value=SLO_THROUGHPUT.target,
-                compliant=throughput >= SLO_THROUGHPUT.target,
-                timestamp=now,
-            ))
+            measurements.append(
+                SLOMeasurement(
+                    name="throughput",
+                    measured_value=round(throughput, 2),
+                    target_value=SLO_THROUGHPUT.target,
+                    compliant=throughput >= SLO_THROUGHPUT.target,
+                    timestamp=now,
+                )
+            )
 
         # Error rate
         if self._total_scans > 0:
             error_rate = self._failed_scans / self._total_scans
-            measurements.append(SLOMeasurement(
-                name="error_rate",
-                measured_value=round(error_rate, 6),
-                target_value=SLO_ERROR_RATE.target,
-                compliant=error_rate <= SLO_ERROR_RATE.target,
-                timestamp=now,
-                detail=f"{self._failed_scans}/{self._total_scans} failed",
-            ))
+            measurements.append(
+                SLOMeasurement(
+                    name="error_rate",
+                    measured_value=round(error_rate, 6),
+                    target_value=SLO_ERROR_RATE.target,
+                    compliant=error_rate <= SLO_ERROR_RATE.target,
+                    timestamp=now,
+                    detail=f"{self._failed_scans}/{self._total_scans} failed",
+                )
+            )
 
         # Determinism
         if self._determinism_checks > 0:
             det_rate = self._determinism_ok / self._determinism_checks
-            measurements.append(SLOMeasurement(
-                name="determinism",
-                measured_value=round(det_rate, 6),
-                target_value=SLO_DETERMINISM.target,
-                compliant=det_rate >= SLO_DETERMINISM.target,
-                timestamp=now,
-                detail=f"{self._determinism_ok}/{self._determinism_checks} passed",
-            ))
+            measurements.append(
+                SLOMeasurement(
+                    name="determinism",
+                    measured_value=round(det_rate, 6),
+                    target_value=SLO_DETERMINISM.target,
+                    compliant=det_rate >= SLO_DETERMINISM.target,
+                    timestamp=now,
+                    detail=f"{self._determinism_ok}/{self._determinism_checks} passed",
+                )
+            )
 
         return measurements
 

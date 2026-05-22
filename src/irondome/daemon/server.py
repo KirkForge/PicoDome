@@ -57,55 +57,50 @@ API_VERSION = "v1"
 # ─── Scan job tracker ───────────────────────────────────────────────────────
 
 
-class ScanJob:
-    """Track an in-flight or completed scan job."""
-
-    def __init__(self, job_id: str, command: list[str], actor: str) -> None:
-        self.job_id = job_id
-        self.command = command
-        self.actor = actor
-        self.status = "pending"
-        self.created_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        self.completed_at: str | None = None
-        self.result: dict | None = None
-        self.error: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        d = {
-            "command": self.command,
-            "created_at": self.created_at,
-            "job_id": self.job_id,
-            "status": self.status,
-        }
-        if self.completed_at:
-            d["completed_at"] = self.completed_at
-        if self.result:
-            d["result"] = self.result
-        if self.error:
-            d["error"] = self.error
-        return d
-
-
 class ScanJobStore:
-    """In-memory store of recent scan jobs (bounded)."""
+    """In-memory store of recent scan jobs (bounded).
+
+    Matches the interface of ``PersistentScanJobStore`` so the handler
+    can treat both stores uniformly.
+    """
 
     def __init__(self, max_jobs: int = 1000) -> None:
-        self._jobs: dict[str, ScanJob] = {}
+        self._jobs: dict[str, dict[str, Any]] = {}
         self._max_jobs = max_jobs
 
-    def add(self, job: ScanJob) -> None:
-        self._jobs[job.job_id] = job
-        # Evict oldest if over limit
+    def add(self, job_id: str, command: list[str], actor: str) -> dict[str, Any]:
+        job: dict[str, Any] = {
+            "job_id": job_id,
+            "command": command,
+            "actor": actor,
+            "status": "pending",
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "completed_at": None,
+            "result": None,
+            "error": None,
+        }
+        self._jobs[job_id] = job
+
         if len(self._jobs) > self._max_jobs:
-            oldest_key = min(self._jobs, key=lambda k: self._jobs[k].created_at)
+            oldest_key = min(self._jobs, key=lambda k: str(self._jobs[k].get("created_at", "")))
             del self._jobs[oldest_key]
 
-    def get(self, job_id: str) -> ScanJob | None:
+        return job
+
+    def update(self, job_id: str, **kwargs: Any) -> dict[str, Any] | None:
+        job = self._jobs.get(job_id)
+        if job is None:
+            return None
+        job.update(kwargs)
+        return job
+
+    def get(self, job_id: str) -> dict[str, Any] | None:
         return self._jobs.get(job_id)
 
-    def list_recent(self, limit: int = 50) -> list[ScanJob]:
-        jobs = sorted(self._jobs.values(), key=lambda j: j.created_at, reverse=True)
+    def list_recent(self, limit: int = 50) -> list[dict[str, Any]]:
+        jobs = sorted(self._jobs.values(), key=lambda j: str(j.get("created_at", "")), reverse=True)
         return jobs[:limit]
+
 
 # ─── HTTP handler ────────────────────────────────────────────────────────────
 
@@ -122,20 +117,51 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     # Commands that are always rejected regardless of policy.
     # Prevents privilege escalation via the daemon API.
     DENIED_COMMANDS: set[str] = {
-        "rm", "rmdir", "mkfs", "dd", "format",
-        "shutdown", "reboot", "halt", "poweroff",
-        "passwd", "useradd", "userdel", "usermod",
-        "groupadd", "groupdel",
-        "iptables", "ip6tables", "nft",
-        "systemctl", "service",
-        "mount", "umount",
+        "rm",
+        "rmdir",
+        "mkfs",
+        "dd",
+        "format",
+        "shutdown",
+        "reboot",
+        "halt",
+        "poweroff",
+        "passwd",
+        "useradd",
+        "userdel",
+        "usermod",
+        "groupadd",
+        "groupdel",
+        "iptables",
+        "ip6tables",
+        "nft",
+        "systemctl",
+        "service",
+        "mount",
+        "umount",
         "crontab",
-        "ssh", "telnet", "nc", "ncat",
-        "curl", "wget",  # network exfil vectors
-        "bash", "sh", "zsh", "fish",  # shell injection
-        "python", "python3", "perl", "ruby", "node",  # script injection
-        "sudo", "su", "doas",  # privilege escalation
-        "chmod", "chown", "chgrp", "chattr",
+        "ssh",
+        "telnet",
+        "nc",
+        "ncat",
+        "curl",
+        "wget",  # network exfil vectors
+        "bash",
+        "sh",
+        "zsh",
+        "fish",  # shell injection
+        "python",
+        "python3",
+        "perl",
+        "ruby",
+        "node",  # script injection
+        "sudo",
+        "su",
+        "doas",  # privilege escalation
+        "chmod",
+        "chown",
+        "chgrp",
+        "chattr",
     }
 
     def _validate_command(self, command: list[str]) -> str | None:
@@ -148,6 +174,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         base = command[0]
         # Strip path prefix — /usr/bin/rm → rm
         import os as _os
+
         base_name = _os.path.basename(base)
         if base_name in self.DENIED_COMMANDS:
             return f"Command '{base_name}' is denied by server policy"
@@ -156,7 +183,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     # Set by the server at creation time
     rbac: RBAC = RBAC()
     auth: TokenAuth = TokenAuth(rbac=rbac)
-    job_store: ScanJobStore = ScanJobStore()
+    job_store: PersistentScanJobStore | ScanJobStore = PersistentScanJobStore()
     rate_limiter: TokenBucketLimiter = TokenBucketLimiter()
     _start_time: float = time.time()
     _scan_count: int = 0
@@ -239,6 +266,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         token_hash = ""
         if token and token != "no-auth-dev-mode":
             import hashlib
+
             token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
 
         return registry.resolve_tenant(token_hash, header_tenant=header_tenant)
@@ -434,40 +462,43 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         redis_health = {}
         try:
             from irondome.redis_health import check_redis_health
+
             redis_health = check_redis_health()
         except Exception:
             redis_health = {"connected": False, "mode": "in-memory"}
 
-        self._send_json({
-            "status": "healthy",
-            "version": __version__,
-            "api_version": API_VERSION,
-            "uptime_seconds": uptime,
-            "redis": redis_health,
-        })
+        self._send_json(
+            {
+                "status": "healthy",
+                "version": __version__,
+                "api_version": API_VERSION,
+                "uptime_seconds": uptime,
+                "redis": redis_health,
+            }
+        )
 
     def _handle_ready(self) -> None:
         # Check that sandbox backend works
         try:
             from irondome.l3.engine import get_backend
+
             backend = get_backend()
             # For enterprise mode, refuse ready if backend is observational only
-            enterprise_mode = os.environ.get(
-                "IRONDOME_ENTERPRISE_MODE", ""
-            ).lower() in ("1", "true", "yes")
+            enterprise_mode = os.environ.get("IRONDOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes")
             if enterprise_mode and backend.isolation_level == "observational_only":
                 self._send_error(
                     ErrorCodes.ENTERPRISE_ENFORCEMENT,
-                    detail=f"Only '{backend.name}' backend available — "
-                           "install libseccomp2 (Linux) or use macOS",
+                    detail=f"Only '{backend.name}' backend available — install libseccomp2 (Linux) or use macOS",
                 )
                 return
-            self._send_json({
-                "status": "ready",
-                "backend": backend.name,
-                "isolation_level": backend.isolation_level,
-                "enforcement_guarantee": backend.enforcement_guarantee,
-            })
+            self._send_json(
+                {
+                    "status": "ready",
+                    "backend": backend.name,
+                    "isolation_level": backend.isolation_level,
+                    "enforcement_guarantee": backend.enforcement_guarantee,
+                }
+            )
         except Exception as e:
             self._send_error(ErrorCodes.NOT_READY, detail=str(e))
 
@@ -494,7 +525,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             f"irondome_uptime_seconds {uptime}",
             "",
             "# HELP irondome_version IronDome version info",
-            '# TYPE irondome_version gauge',
+            "# TYPE irondome_version gauge",
             f'irondome_version{{version="{__version__}"}} 1',
         ]
 
@@ -551,12 +582,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         # Resolve tenant
         tenant_id = self._resolve_tenant(token)
 
-        # Create job in persistent store
-        if isinstance(self.job_store, PersistentScanJobStore):
-            self.job_store.add(job_id, command, actor)
-        else:
-            job = ScanJob(job_id=job_id, command=command, actor=actor)
-            self.job_store.add(job)
+        self.job_store.add(job_id, command, actor)
 
         # Audit
         try:
@@ -578,9 +604,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
                 try:
                     policy = load_policy(name=policy_name)
                 except Exception:
-                    logger.warning(
-                        "Policy '%s' not found, using default", policy_name
-                    )
+                    logger.warning("Policy '%s' not found, using default", policy_name)
                     policy = default_policy()
             else:
                 policy = default_policy()
@@ -640,19 +664,12 @@ class IronDomeHandler(BaseHTTPRequestHandler):
                 "policy_version": policy.version,
             }
 
-            # Update job in store
-            if isinstance(self.job_store, PersistentScanJobStore):
-                self.job_store.update(
-                    job_id,
-                    status="completed",
-                    result=result,
-                )
-            else:
-                job = self.job_store.get(job_id)
-                if job:
-                    job.status = "completed"
-                    job.completed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-                    job.result = result
+            self.job_store.update(
+                job_id,
+                status="completed",
+                completed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                result=result,
+            )
 
             # Update metrics
             self._scan_count += 1
@@ -685,23 +702,17 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             self._send_json(result, status=201)
 
         except Exception as e:
-            if isinstance(self.job_store, PersistentScanJobStore):
-                self.job_store.update(job_id, status="failed", error=str(e))
-            else:
-                job = self.job_store.get(job_id)
-                if job:
-                    job.status = "failed"
-                    job.error = str(e)
+            self.job_store.update(
+                job_id,
+                status="failed",
+                completed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                error=str(e),
+            )
             logger.exception("Scan job %s failed", job_id)
             self._send_error(ErrorCodes.SCAN_FAILED, detail=str(e))
 
     def _handle_get_scan(self, job_id: str) -> None:
-        if isinstance(self.job_store, PersistentScanJobStore):
-            job = self.job_store.get(job_id)
-        else:
-            job = self.job_store.get(job_id)
-            if job and hasattr(job, "to_dict"):
-                job = job.to_dict()
+        job = self.job_store.get(job_id)
         if job:
             self._send_json(job)
         else:
@@ -709,23 +720,24 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
     def _handle_list_scans(self, query: dict) -> None:
         limit = int(query.get("limit", ["50"])[0])
-        if isinstance(self.job_store, PersistentScanJobStore):
-            jobs = self.job_store.list_recent(limit=limit)
-        else:
-            jobs = [j.to_dict() for j in self.job_store.list_recent(limit=limit)]
-        self._send_json({
-            "scans": jobs,
-            "count": len(jobs),
-        })
+        jobs = self.job_store.list_recent(limit=limit)
+        self._send_json(
+            {
+                "scans": jobs,
+                "count": len(jobs),
+            }
+        )
 
     def _handle_list_policies(self) -> None:
         from irondome.policy_versioned import get_policy_store
+
         store = get_policy_store()
         names = store.list_policies()
         self._send_json({"policies": names, "count": len(names)})
 
     def _handle_get_policy(self, name: str) -> None:
         from irondome.policy_versioned import get_policy_store
+
         store = get_policy_store()
         pv = store.load(name)
         if pv:
@@ -758,14 +770,18 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
     def _handle_list_baselines(self) -> None:
         from irondome.l4.baseline import load_all_baselines
+
         baselines = load_all_baselines()
-        self._send_json({
-            "baselines": {k: v.to_dict() for k, v in baselines.items()},
-            "count": len(baselines),
-        })
+        self._send_json(
+            {
+                "baselines": {k: v.to_dict() for k, v in baselines.items()},
+                "count": len(baselines),
+            }
+        )
 
     def _handle_audit_query(self, query: dict) -> None:
         from irondome.audit import AuditEventType, get_audit_logger
+
         audit = get_audit_logger()
 
         event_type = None
@@ -783,10 +799,12 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             until=query.get("until", [None])[0],
             limit=int(query.get("limit", ["100"])[0]),
         )
-        self._send_json({
-            "events": [e.to_dict() for e in events],
-            "count": len(events),
-        })
+        self._send_json(
+            {
+                "events": [e.to_dict() for e in events],
+                "count": len(events),
+            }
+        )
 
     def _handle_list_tenants(self) -> None:
         """List registered tenants (admin endpoint)."""
@@ -794,17 +812,19 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
         registry = get_tenant_registry()
         tenants = registry.list_tenants()
-        self._send_json({
-            "tenants": [
-                {
-                    "tenant_id": str(ctx.tenant_id),
-                    "display_name": ctx.display_name,
-                    "is_default": ctx.is_default,
-                }
-                for ctx in tenants
-            ],
-            "count": len(tenants),
-        })
+        self._send_json(
+            {
+                "tenants": [
+                    {
+                        "tenant_id": str(ctx.tenant_id),
+                        "display_name": ctx.display_name,
+                        "is_default": ctx.is_default,
+                    }
+                    for ctx in tenants
+                ],
+                "count": len(tenants),
+            }
+        )
 
     def _handle_stats(self) -> None:
         rm = get_retention_manager()
@@ -812,15 +832,18 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         audit = get_audit_logger()
         audit_stats = audit.get_stats()
 
-        self._send_json({
-            "version": __version__,
-            "uptime_seconds": int(time.time() - self._start_time),
-            "scans_total": self._scan_count,
-            "scans_avg_ms": self._scan_total_ms / max(self._scan_count, 1),
-            "alerts_total": self._alert_count,
-            "storage": storage,
-            "audit": audit_stats,
-        })
+        self._send_json(
+            {
+                "version": __version__,
+                "uptime_seconds": int(time.time() - self._start_time),
+                "scans_total": self._scan_count,
+                "scans_avg_ms": self._scan_total_ms / max(self._scan_count, 1),
+                "alerts_total": self._alert_count,
+                "storage": storage,
+                "audit": audit_stats,
+            }
+        )
+
 
 # ─── Daemon class ────────────────────────────────────────────────────────────
 
@@ -860,9 +883,7 @@ class IronDomeDaemon:
         self._host = host or os.environ.get("IRONDOME_DAEMON_HOST", "127.0.0.1")
         self._port = port or int(os.environ.get("IRONDOME_DAEMON_PORT", "8443"))
         self._metrics_port = metrics_port or (
-            int(os.environ["IRONDOME_METRICS_PORT"])
-            if "IRONDOME_METRICS_PORT" in os.environ
-            else None
+            int(os.environ["IRONDOME_METRICS_PORT"]) if "IRONDOME_METRICS_PORT" in os.environ else None
         )
         self._server: HTTPServer | None = None
         self._metrics_server: HTTPServer | None = None
@@ -872,6 +893,7 @@ class IronDomeDaemon:
         from pathlib import Path as _Path
 
         from irondome.daemon.store import PersistentScanJobStore
+
         store_dir = _Path(self._job_store_dir) if self._job_store_dir else None
         IronDomeHandler.job_store = PersistentScanJobStore(store_dir=store_dir)
 
@@ -900,29 +922,35 @@ class IronDomeDaemon:
                     sinks.append(NullSink(config=config))
                 elif sink_type == "file":
                     sink_dir = os.environ.get("IRONDOME_FILE_SINK_DIR")
-                    sinks.append(FileSink(
-                        config=config,
-                        output_dir=sink_dir,
-                    ))
+                    sinks.append(
+                        FileSink(
+                            config=config,
+                            output_dir=sink_dir,
+                        )
+                    )
                 elif sink_type == "webhook":
                     url = os.environ.get("IRONDOME_WEBHOOK_URL", "")
                     token = os.environ.get("IRONDOME_WEBHOOK_TOKEN")
                     if not url:
                         logger.warning("WebhookSink: IRONDOME_WEBHOOK_URL not set, skipping")
                         continue
-                    sinks.append(WebhookSink(
-                        config=config,
-                        url=url,
-                        auth_token=token,
-                    ))
+                    sinks.append(
+                        WebhookSink(
+                            config=config,
+                            url=url,
+                            auth_token=token,
+                        )
+                    )
                 elif sink_type == "syslog":
                     syslog_host = os.environ.get("IRONDOME_SYSLOG_HOST", "127.0.0.1")
                     syslog_port = int(os.environ.get("IRONDOME_SYSLOG_PORT", "514"))
-                    sinks.append(SyslogSink(
-                        config=config,
-                        host=syslog_host,
-                        port=syslog_port,
-                    ))
+                    sinks.append(
+                        SyslogSink(
+                            config=config,
+                            host=syslog_host,
+                            port=syslog_port,
+                        )
+                    )
                 else:
                     logger.warning("Unknown audit sink type: '%s', skipping", sink_type)
             except Exception as exc:
@@ -971,19 +999,18 @@ class IronDomeDaemon:
             )
             if background:
                 import threading
-                metrics_thread = threading.Thread(
-                    target=self._metrics_server.serve_forever, daemon=True
-                )
+
+                metrics_thread = threading.Thread(target=self._metrics_server.serve_forever, daemon=True)
                 metrics_thread.start()
             else:
                 import threading
-                metrics_thread = threading.Thread(
-                    target=self._metrics_server.serve_forever, daemon=True
-                )
+
+                metrics_thread = threading.Thread(target=self._metrics_server.serve_forever, daemon=True)
                 metrics_thread.start()
 
         if background:
             import threading
+
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
         else:

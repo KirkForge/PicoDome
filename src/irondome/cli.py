@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--version", action="version", version=f"irondome {__version__}")
 
-    sub = parser.add_subparsers(dest="command", help="sub-commands")
+    sub = parser.add_subparsers(dest="subcommand", help="sub-commands")
 
     # ── version ─────────────────────────────────────────────────────
     _version_parser = sub.add_parser("version", help="Print version and exit")  # noqa: F841
@@ -58,7 +58,8 @@ def main(argv: list[str] | None = None) -> int:
     sandbox_parser.add_argument("--policy", "-p", type=Path, help="Policy file (default: built-in)")
     sandbox_parser.add_argument("--timeout", "-t", type=float, default=30.0, help="Timeout in seconds")
     sandbox_parser.add_argument(
-        "--backend", "-b",
+        "--backend",
+        "-b",
         choices=["auto", "seccomp-bpf", "seatbelt", "subprocess"],
         default="auto",
         help="Sandbox backend: auto (default), seccomp-bpf, seatbelt, subprocess",
@@ -70,7 +71,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     sandbox_parser.add_argument("--cwd", "-C", help="Working directory")
     sandbox_parser.add_argument(
-        "--format", "-f",
+        "--format",
+        "-f",
         choices=["json", "sari", "table", "ml-context", "github", "cyclonedx"],
         default="table",
     )
@@ -85,7 +87,8 @@ def main(argv: list[str] | None = None) -> int:
     analyze_parser = sub.add_parser("analyze", help="Run L4 behavioral analysis on L3 output")
     analyze_parser.add_argument("--input", "-i", type=Path, help="JSON file from 'irondome sandbox --format json'")
     analyze_parser.add_argument(
-        "--format", "-f",
+        "--format",
+        "-f",
         choices=["json", "sari", "table", "ml-context", "github", "cyclonedx"],
         default="table",
     )
@@ -98,7 +101,8 @@ def main(argv: list[str] | None = None) -> int:
     pipeline_parser.add_argument("--policy", "-p", type=Path, help="Policy file")
     pipeline_parser.add_argument("--timeout", "-t", type=float, default=30.0, help="Timeout in seconds")
     pipeline_parser.add_argument(
-        "--backend", "-b",
+        "--backend",
+        "-b",
         choices=["auto", "seccomp-bpf", "seatbelt", "subprocess"],
         default="auto",
         help="Sandbox backend: auto (default), seccomp-bpf, seatbelt, subprocess",
@@ -110,7 +114,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     pipeline_parser.add_argument("--cwd", "-C", help="Working directory")
     pipeline_parser.add_argument(
-        "--format", "-f",
+        "--format",
+        "-f",
         choices=["json", "sari", "table", "ml-context", "github", "cyclonedx"],
         default="table",
     )
@@ -133,18 +138,15 @@ def main(argv: list[str] | None = None) -> int:
         help="Transport protocol: http (default) or grpc",
     )
     daemon_parser.add_argument(
-        "--grpc-port",
-        type=int,
-        default=50051,
-        help="gRPC port (default: 50051, only used with --transport grpc)")
+        "--grpc-port", type=int, default=50051, help="gRPC port (default: 50051, only used with --transport grpc)"
+    )
 
     # ── scan-grpc ─────────────────────────────────────────────────────
     scan_grpc_parser = sub.add_parser("scan-grpc", help="Scan via gRPC client")
     scan_grpc_parser.add_argument("target", nargs=argparse.REMAINDER, help="Command to scan")
     scan_grpc_parser.add_argument(
-        "--address",
-        default="localhost:50051",
-        help="gRPC server address (default: localhost:50051)")
+        "--address", default="localhost:50051", help="gRPC server address (default: localhost:50051)"
+    )
     scan_grpc_parser.add_argument("--policy", "-p", help="Policy name")
     scan_grpc_parser.add_argument("--timeout", "-t", type=float, default=30.0, help="Timeout in seconds")
     scan_grpc_parser.add_argument("--cwd", "-C", help="Working directory")
@@ -183,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
     policy_v_parser.add_argument("--author", default="cli-user", help="Author for rollback")
 
     # ── diff ──────────────────────────────────────────────────────────
-    diff_parser = sub.add_parser("dif", help="Compare two result JSON files")
+    diff_parser = sub.add_parser("diff", help="Compare two result JSON files")
     diff_parser.add_argument("file_a", type=Path, help="First result JSON file")
     diff_parser.add_argument("file_b", type=Path, help="Second result JSON file")
     diff_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed diff")
@@ -232,15 +234,18 @@ def main(argv: list[str] | None = None) -> int:
         default="memory",
         help="State backend (default: memory)",
     )
-    cluster_join.add_argument("--heartbeat-interval", type=int, default=10,
-                              help="Heartbeat interval in seconds (default: 10)")
-    cluster_join.add_argument("--heartbeat-timeout", type=int, default=30,
-                              help="Heartbeat timeout in seconds (default: 30)")
+    cluster_join.add_argument(
+        "--heartbeat-interval", type=int, default=10, help="Heartbeat interval in seconds (default: 10)"
+    )
+    cluster_join.add_argument(
+        "--heartbeat-timeout", type=int, default=30, help="Heartbeat timeout in seconds (default: 30)"
+    )
 
     # cluster status
     cluster_status = cluster_sub.add_parser("status", help="Show cluster node status")
-    cluster_status.add_argument("--format", "-", choices=["json", "table"], default="table",
-                                help="Output format (default: table)")
+    cluster_status.add_argument(
+        "--format", "-", choices=["json", "table"], default="table", help="Output format (default: table)"
+    )
 
     # cluster leave
     _cluster_leave = cluster_sub.add_parser("leave", help="Gracefully leave the cluster")  # noqa: F841
@@ -255,7 +260,8 @@ def main(argv: list[str] | None = None) -> int:
     sign_sign.add_argument("--key-file", type=Path, help="File containing hex-encoded HMAC key")
     sign_sign.add_argument("--key-id", default="default", help="Key identifier for rotation (default: default)")
     sign_sign.add_argument(
-        "--companion", action="store_true",
+        "--companion",
+        action="store_true",
         help="Write signature to a companion .sig file instead of inline",
     )
 
@@ -265,7 +271,8 @@ def main(argv: list[str] | None = None) -> int:
     sign_verify.add_argument("--key-file", type=Path, help="File containing hex-encoded HMAC key")
     sign_verify.add_argument("--key-id", default="default", help="Expected key identifier (default: default)")
     sign_verify.add_argument(
-        "--companion", action="store_true",
+        "--companion",
+        action="store_true",
         help="Verify companion .sig file instead of inline signature",
     )
 
@@ -278,39 +285,39 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    if args.command == "version":
+    if args.subcommand == "version":
         print(f"irondome {__version__}")
         return 0
-    elif args.command == "sandbox":
+    elif args.subcommand == "sandbox":
         return _cmd_sandbox(args)
-    elif args.command == "analyze":
+    elif args.subcommand == "analyze":
         return _cmd_analyze(args)
-    elif args.command == "pipeline":
+    elif args.subcommand == "pipeline":
         return _cmd_pipeline(args)
-    elif args.command == "rules":
+    elif args.subcommand == "rules":
         return _cmd_rules(args)
-    elif args.command == "diff":
+    elif args.subcommand == "diff":
         return _cmd_diff(args)
-    elif args.command == "init":
+    elif args.subcommand == "init":
         return _cmd_init(args)
 
-    elif args.command == "cluster":
+    elif args.subcommand == "cluster":
         return _cmd_cluster(args)
-    elif args.command == "daemon":
+    elif args.subcommand == "daemon":
         return _cmd_daemon(args)
-    elif args.command == "scan-grpc":
+    elif args.subcommand == "scan-grpc":
         return _cmd_scan_grpc(args)
-    elif args.command == "health":
+    elif args.subcommand == "health":
         return _cmd_health(args)
-    elif args.command == "audit":
+    elif args.subcommand == "audit":
         return _cmd_audit(args)
-    elif args.command == "retention":
+    elif args.subcommand == "retention":
         return _cmd_retention(args)
-    elif args.command == "policy-versions":
+    elif args.subcommand == "policy-versions":
         return _cmd_policy_versions(args)
-    elif args.command == "sign-policy":
+    elif args.subcommand == "sign-policy":
         return _cmd_sign_policy(args)
-    elif args.command == "notary":
+    elif args.subcommand == "notary":
         return _cmd_notary(args)
     else:
         parser.print_help()
@@ -320,7 +327,8 @@ def main(argv: list[str] | None = None) -> int:
 def _add_common_flags(parser: argparse.ArgumentParser) -> None:
     """Add common flags to a subcommand parser."""
     parser.add_argument(
-        "--deterministic-output", "-D",
+        "--deterministic-output",
+        "-D",
         action="store_true",
         help="Produce deterministic output (no timestamps, random IDs, or timing)",
     )
@@ -335,7 +343,8 @@ def _add_common_flags(parser: argparse.ArgumentParser) -> None:
         help="Exit 1 if any finding at or above this severity",
     )
     parser.add_argument(
-        "--quiet", "-q",
+        "--quiet",
+        "-q",
         action="store_true",
         help="Suppress all output except exit code",
     )
@@ -345,7 +354,8 @@ def _add_common_flags(parser: argparse.ArgumentParser) -> None:
         help="One-line summary output",
     )
     parser.add_argument(
-        "--verbose", "-v",
+        "--verbose",
+        "-v",
         action="store_true",
         help="Verbose output with full details",
     )
@@ -368,6 +378,7 @@ def _cmd_sandbox(args) -> int:
 
     # Resolve backend
     from irondome.l3.engine import BackendUnavailableError, _detect_backend
+
     backend_name = getattr(args, "backend", "auto") or "auto"
     allow_degraded = getattr(args, "allow_degraded", False)
 
@@ -401,7 +412,7 @@ def _cmd_sandbox(args) -> int:
                 print(f"DETERMINISM VIOLATION: {v}", file=sys.stderr)
 
     # Verify determinism if requested
-    if hasattr(args, 'verify_determinism') and args.verify_determinism:
+    if hasattr(args, "verify_determinism") and args.verify_determinism:
         is_match, hash_a, hash_b = verify_determinism(
             args.command,
             policy=policy,
@@ -435,6 +446,7 @@ def _cmd_analyze(args) -> int:
 
     # Reconstruct SandboxResult from JSON
     from irondome.l3.models import SandboxEvent, Verdict
+
     events = [
         SandboxEvent(
             rule_id=e["rule_id"],
@@ -447,6 +459,7 @@ def _cmd_analyze(args) -> int:
         for e in data.get("events", [])
     ]
     from irondome.l3.models import SandboxResult
+
     sandbox = SandboxResult(
         run_id=data.get("run_id", ""),
         command=data.get("command", []),
@@ -490,6 +503,7 @@ def _cmd_pipeline(args) -> int:
 
     # Resolve backend
     from irondome.l3.engine import BackendUnavailableError, _detect_backend
+
     backend_name = getattr(args, "backend", "auto") or "auto"
     allow_degraded = getattr(args, "allow_degraded", False)
 
@@ -614,7 +628,7 @@ def _cmd_init(args) -> int:
 
 def _cmd_daemon(args) -> int:
     """Start the Iron Dome daemon."""
-    transport = getattr(args, 'transport', 'http')
+    transport = getattr(args, "transport", "http")
 
     if transport == "grpc":
         from irondome.grpc_transport import IronDomeGRPCServer, is_grpc_available
@@ -623,13 +637,14 @@ def _cmd_daemon(args) -> int:
             print("Error: grpcio is not installed. Install with: pip install grpcio", file=sys.stderr)
             return 1
 
-        grpc_port = getattr(args, 'grpc_port', 50051)
+        grpc_port = getattr(args, "grpc_port", 50051)
         host = args.host
 
         # Check for mTLS config
         mtls_config = None
         try:
             from irondome.mtls.context import MTLSConfig
+
             mtls_config = MTLSConfig.from_env()
             if not mtls_config.is_configured:
                 mtls_config = None
@@ -654,6 +669,7 @@ def _cmd_daemon(args) -> int:
     else:
         # HTTP daemon (default)
         from irondome.daemon import IronDomeDaemon
+
         daemon = IronDomeDaemon(host=args.host, port=args.port)
         try:
             daemon.start(background=args.background)
@@ -688,6 +704,7 @@ def _cmd_scan_grpc(args) -> int:
     if args.tls_cert or args.tls_key or args.tls_ca:
         try:
             from irondome.mtls.context import MTLSConfig
+
             mtls_config = MTLSConfig(
                 cert_path=args.tls_cert or "",
                 key_path=args.tls_key or "",
@@ -748,6 +765,7 @@ def _cmd_scan_grpc(args) -> int:
 def _cmd_health(args) -> int:
     """Run health checks."""
     from irondome.health import check_health
+
     checks = check_health()
     all_healthy = all(c.healthy for c in checks)
 
@@ -770,6 +788,7 @@ def _cmd_health(args) -> int:
 def _cmd_audit(args) -> int:
     """Query the audit log."""
     from irondome.audit import AuditEventType, get_audit_logger
+
     audit = get_audit_logger()
 
     if args.verify:
@@ -816,13 +835,14 @@ def _cmd_audit(args) -> int:
 def _cmd_retention(args) -> int:
     """Manage data retention."""
     from irondome.retention import get_retention_manager
+
     rm = get_retention_manager()
 
     if args.action == "cleanup":
         stats = rm.run_cleanup()
         print(f"Cleanup: removed {stats['files_removed']} files, freed {stats['bytes_freed']} bytes")
-        if stats['errors']:
-            for err in stats['errors']:
+        if stats["errors"]:
+            for err in stats["errors"]:
                 print(f"  Error: {err}")
         return 0
     elif args.action == "stats":
@@ -840,6 +860,7 @@ def _cmd_retention(args) -> int:
 def _cmd_policy_versions(args) -> int:
     """Manage versioned policies."""
     from irondome.policy_versioned import get_policy_store
+
     store = get_policy_store()
 
     if args.action == "list":
@@ -894,7 +915,9 @@ def _cmd_policy_versions(args) -> int:
 
 def _cmd_notary(args) -> int:
     """Handle notary subcommands (submit, verify)."""
-    from irondome.notary import NullNotary, RekorNotary, sign_entry
+    from irondome.notary import AuditNotary, NullNotary, RekorNotary, sign_entry
+
+    notary: AuditNotary
 
     if args.notary_command == "submit":
         if not args.entry or not args.entry.exists():
@@ -1039,6 +1062,7 @@ def _cmd_cluster(args) -> int:
         # Try to get running cluster manager, or create a read-only one
         try:
             from irondome.cluster.manager import _cluster_manager
+
             manager = _cluster_manager or ClusterManager()
         except Exception:
             manager = ClusterManager()
@@ -1057,7 +1081,8 @@ def _cmd_cluster(args) -> int:
             print(
                 f"  Scans:      {status['scans_pending']} pending /"
                 f" {status['scans_running']} running /"
-                f" {status['scans_completed']} completed")
+                f" {status['scans_completed']} completed"
+            )
             print()
             if status["nodes"]:
                 print(f"  {'Node ID':<30} {'Address':<20} {'Port':<6} {'Status':<10} {'Load':<5} {'Last HB'}")
@@ -1069,13 +1094,15 @@ def _cmd_cluster(args) -> int:
                         f"{n['port']:<6} "
                         f"{n['status']:<10} "
                         f"{n['load']:<5} "
-                        f"{n['last_heartbeat']}")
+                        f"{n['last_heartbeat']}"
+                    )
             print()
         return 0
 
     elif action == "leave":
         try:
             from irondome.cluster.manager import _cluster_manager
+
             manager = _cluster_manager or ClusterManager()
         except Exception:
             manager = ClusterManager()
@@ -1292,6 +1319,7 @@ def _resolve_signing_key(args) -> bytes | None:
 
     # Fall back to env
     from irondome.policy_versioned.signing import _load_key
+
     key = _load_key()
     if key is None:
         print("Error: no signing key provided. Use --key, --key-file, or set IRONDOME_POLICY_KEY", file=sys.stderr)

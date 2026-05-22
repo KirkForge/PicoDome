@@ -22,19 +22,16 @@ import hashlib
 import io
 import json
 import os
-import time
 import threading
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from irondome.audit import AuditEventType, AuditLogger, setup_audit_logger
 import irondome.audit.logger as audit_logger_mod
+from irondome.audit import AuditEventType, AuditLogger
 from irondome.auth import RBAC, TokenAuth
 from irondome.daemon.server import IronDomeHandler
-from irondome.ratelimit import TokenBucketLimiter, RateLimitConfig
-
+from irondome.ratelimit import RateLimitConfig, TokenBucketLimiter
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -115,9 +112,7 @@ class TestAuditEventTypeCoverage:
         """Emit locations should not reference removed event types."""
         defined = set(AuditEventType)
         for event_type in self.EMIT_LOCATIONS:
-            assert event_type in defined, (
-                f"Emit location references {event_type!r} which is not in AuditEventType enum"
-            )
+            assert event_type in defined, f"Emit location references {event_type!r} which is not in AuditEventType enum"
 
 
 # ─── Part B: Direct emission tests — prove each event type can be recorded ──
@@ -174,9 +169,7 @@ class TestDirectAuditEmission:
         # Verify all event types appear in the log
         log_path = audit.log_path
         lines = [line.strip() for line in log_path.read_text().splitlines() if line.strip()]
-        assert len(lines) == len(AuditEventType), (
-            f"Expected {len(AuditEventType)} log lines, got {len(lines)}"
-        )
+        assert len(lines) == len(AuditEventType), f"Expected {len(AuditEventType)} log lines, got {len(lines)}"
 
         # Verify each line parses as valid JSON with correct event_type
         recorded_types = set()
@@ -185,9 +178,7 @@ class TestDirectAuditEmission:
             recorded_types.add(data["event_type"])
 
         expected_types = {et.value for et in AuditEventType}
-        assert recorded_types == expected_types, (
-            f"Missing event types in log: {expected_types - recorded_types}"
-        )
+        assert recorded_types == expected_types, f"Missing event types in log: {expected_types - recorded_types}"
 
     def test_new_event_types_dont_break_chain(self, audit):
         """Adding a new AuditEventType should not break existing chain logic.
@@ -291,8 +282,7 @@ class TestDaemonAuditEmission:
         assert result is None, "Auth should fail with no token"
         events = audit.query(event_type=AuditEventType.AUTH_FAILURE)
         assert len(events) >= 1, (
-            f"AUTH_FAILURE event should be emitted when no token provided. "
-            f"Got {len(events)} events."
+            f"AUTH_FAILURE event should be emitted when no token provided. Got {len(events)} events."
         )
         assert events[0].actor == "anonymous"
         assert "No Authorization" in events[0].detail
@@ -312,10 +302,7 @@ class TestDaemonAuditEmission:
 
         assert result is None, "Auth should fail with wrong token"
         events = audit.query(event_type=AuditEventType.AUTH_FAILURE)
-        assert len(events) >= 1, (
-            f"AUTH_FAILURE event should be emitted for invalid token. "
-            f"Got {len(events)} events."
-        )
+        assert len(events) >= 1, f"AUTH_FAILURE event should be emitted for invalid token. Got {len(events)} events."
         assert "Invalid token" in events[0].detail
 
     def test_rate_limited_emitted(self, tmp_path):
@@ -397,8 +384,7 @@ class TestDaemonAuditEmission:
         assert result is None, "Reader should not have scan:submit permission"
         events = audit.query(event_type=AuditEventType.AUTH_FAILURE)
         assert len(events) >= 1, (
-            f"AUTH_FAILURE should be emitted for insufficient permissions. "
-            f"Got {len(events)} events."
+            f"AUTH_FAILURE should be emitted for insufficient permissions. Got {len(events)} events."
         )
         assert "Insufficient permissions" in events[0].detail
 
@@ -460,10 +446,7 @@ class TestAuditChainIntegrity:
             except Exception as e:
                 errors.append(e)
 
-        threads = [
-            threading.Thread(target=write_events, args=(f"thread-{t}", 20))
-            for t in range(5)
-        ]
+        threads = [threading.Thread(target=write_events, args=(f"thread-{t}", 20)) for t in range(5)]
         for t in threads:
             t.start()
         for t in threads:
@@ -474,8 +457,7 @@ class TestAuditChainIntegrity:
         # Verify chain integrity
         violations = audit.verify_chain()
         assert violations == [], (
-            f"Chain integrity violated under concurrent writes. "
-            f"This indicates a locking bug: {violations}"
+            f"Chain integrity violated under concurrent writes. This indicates a locking bug: {violations}"
         )
 
     def test_rapid_sequential_writes(self, audit_dir):
@@ -546,8 +528,7 @@ class TestAuditChainIntegrity:
             prev_line_hash = hashlib.sha256(lines[i - 1].encode("utf-8")).hexdigest()
             current_data = json.loads(lines[i])
             assert current_data["prev_hash"] == prev_line_hash, (
-                f"Chain break at line {i + 1}: prev_hash doesn't match "
-                f"hash of line {i}"
+                f"Chain break at line {i + 1}: prev_hash doesn't match hash of line {i}"
             )
 
 

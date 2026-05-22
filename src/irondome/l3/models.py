@@ -37,6 +37,7 @@ class RuleTarget(str, Enum):
 @dataclass(frozen=True)
 class PolicyRule:
     """A single rule in a sandbox policy. Frozen for determinism."""
+
     rule_id: str
     target: RuleTarget
     action: SyscallAction
@@ -60,6 +61,7 @@ class PolicyRule:
 @dataclass(frozen=True)
 class Policy:
     """Sandbox execution policy. Frozen for determinism."""
+
     name: str
     version: str = "1.0"
     default_action: SyscallAction = SyscallAction.DENY
@@ -90,6 +92,7 @@ class Policy:
 @dataclass(frozen=True)
 class SandboxEvent:
     """A single event from a sandbox run. Frozen for determinism."""
+
     rule_id: str
     verdict: Verdict
     operation: str
@@ -125,6 +128,7 @@ class SandboxResult:
                          "observational_only"
         enforcement_guarantee: "hard" | "best_effort"
     """
+
     run_id: str = ""
     timestamp: str = ""
     command: list[str] = field(default_factory=list)

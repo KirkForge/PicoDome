@@ -17,7 +17,7 @@ class TestErrorCode:
         # Frozen dataclass should not allow attribute assignment
         try:
             code.status = 500
-            assert False, "Should have raised FrozenInstanceError"
+            raise AssertionError("Should have raised FrozenInstanceError")
         except AttributeError:
             pass
 

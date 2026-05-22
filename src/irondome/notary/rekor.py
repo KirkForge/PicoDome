@@ -29,6 +29,7 @@ from typing import Any
 try:
     import urllib.error
     import urllib.request
+
     _HAS_URLLIB = True
 except ImportError:  # pragma: no cover
     _HAS_URLLIB = False
@@ -66,6 +67,7 @@ class NotaryConnectionError(NotaryError):
 
 class NotaryVerificationError(NotaryError):
     """Raised when entry verification fails."""
+
 
 # ─── HMAC-SHA256 Signing ────────────────────────────────────────────────────
 
@@ -109,17 +111,20 @@ def verify_entry_signature(
     expected = sign_entry(entry, key=key)
     return hmac.compare_digest(expected, signature)
 
+
 # ─── Data Models ─────────────────────────────────────────────────────────────
 
 
 @dataclass(frozen=True)
 class NotaryResult:
     """Result of a notary submission."""
+
     uuid: str
     entry: dict[str, Any]
     hmac_signature: str
     submitted_at: str = ""
     rekor_uuid: str = ""
+
 
 # ─── AuditNotary ABC ────────────────────────────────────────────────────────
 
@@ -170,6 +175,7 @@ class AuditNotary(ABC):
             this includes the inclusion proof from the Merkle tree.
         """
 
+
 # ─── NullNotary (offline/air-gapped) ────────────────────────────────────────
 
 
@@ -186,8 +192,7 @@ class NullNotary(AuditNotary):
         self._entries: dict[str, dict[str, Any]] = {}
         if not _os.environ.get("IRONDOME_NOTARY_HMAC_KEY"):
             logger.warning(
-                "NullNotary: Using process-local HMAC key. "
-                "Set IRONDOME_NOTARY_HMAC_KEY for persistent verification."
+                "NullNotary: Using process-local HMAC key. Set IRONDOME_NOTARY_HMAC_KEY for persistent verification."
             )
 
     def submit_entry(self, entry: dict[str, Any]) -> str:
@@ -238,6 +243,7 @@ class NullNotary(AuditNotary):
             "note": "No external transparency proof — NullNotary mode",
         }
 
+
 # ─── RekorNotary (Sigstore transparency log) ───────────────────────────────
 
 
@@ -264,8 +270,7 @@ class RekorNotary(AuditNotary):
         self._entries: dict[str, dict[str, Any]] = {}
         if not _os.environ.get("IRONDOME_NOTARY_HMAC_KEY"):
             logger.warning(
-                "RekorNotary: Using process-local HMAC key. "
-                "Set IRONDOME_NOTARY_HMAC_KEY for persistent verification."
+                "RekorNotary: Using process-local HMAC key. Set IRONDOME_NOTARY_HMAC_KEY for persistent verification."
             )
 
     def submit_entry(self, entry: dict[str, Any]) -> str:
@@ -430,9 +435,7 @@ class RekorNotary(AuditNotary):
                     # Fallback: generate local UUID
                     return str(uuid.uuid4())
                 else:
-                    raise NotaryConnectionError(
-                        f"Rekor returned status {resp.status}"
-                    )
+                    raise NotaryConnectionError(f"Rekor returned status {resp.status}")
         except NotaryError:
             raise
         except urllib.error.URLError as exc:
@@ -506,6 +509,7 @@ class RekorNotary(AuditNotary):
             raise NotaryTimeoutError(f"Rekor proof retrieval timed out after {self._timeout}s") from None
         except Exception as exc:
             raise NotaryConnectionError(f"Rekor proof retrieval error: {exc}") from exc
+
 
 # ─── Module-level default notary ─────────────────────────────────────────────
 

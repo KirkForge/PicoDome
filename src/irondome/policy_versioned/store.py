@@ -40,6 +40,7 @@ _DEFAULT_STORE_DIR = Path.home() / ".irondome" / "policies"
 @dataclass(frozen=True)
 class PolicyVersion:
     """A versioned snapshot of a Policy with provenance metadata."""
+
     policy: Policy
     version: int
     author: str
@@ -227,9 +228,7 @@ class VersionedPolicyStore:
         if not self._store_dir.exists():
             return []
         return sorted(
-            d.name
-            for d in self._store_dir.iterdir()
-            if d.is_dir() and any(f.suffix == ".json" for f in d.iterdir())
+            d.name for d in self._store_dir.iterdir() if d.is_dir() and any(f.suffix == ".json" for f in d.iterdir())
         )
 
     def list_versions(self, name: str) -> list[PolicyVersion]:
@@ -281,9 +280,8 @@ class VersionedPolicyStore:
     def _hash_policy(policy: Policy) -> str:
         """SHA-256 hash of the policy's deterministic JSON representation."""
         data = policy.to_dict()
-        return hashlib.sha256(
-            json.dumps(data, sort_keys=True).encode()
-        ).hexdigest()
+        return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
+
 
 # ─── Module-level singleton ────────────────────────────────────────────────
 

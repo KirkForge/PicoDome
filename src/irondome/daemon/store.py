@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import threading
 import time
 from pathlib import Path
@@ -56,7 +55,7 @@ class PersistentScanJobStore:
             return
         with self._lock:
             if self._loaded:
-                return
+                return  # type: ignore[unreachable]
             try:
                 self._load_from_disk()
             except Exception:
@@ -81,7 +80,7 @@ class PersistentScanJobStore:
         # Load all jobs
         jobs: dict[str, dict[str, Any]] = {}
         try:
-            with open(self._store_file, "r", encoding="utf-8") as f:
+            with open(self._store_file, encoding="utf-8") as f:
                 for line_num, line in enumerate(f, 1):
                     line = line.strip()
                     if not line:
@@ -116,7 +115,7 @@ class PersistentScanJobStore:
         # Load all jobs
         jobs: dict[str, dict[str, Any]] = {}
         try:
-            with open(self._store_file, "r", encoding="utf-8") as f:
+            with open(self._store_file, encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if not line:

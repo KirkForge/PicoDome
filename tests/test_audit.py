@@ -134,6 +134,7 @@ class TestAuditLogger:
 
     def test_prev_hash_chain(self, audit):
         import hashlib
+
         e1 = audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="first")  # noqa: F841
         e2 = audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", detail="second")  # noqa: F841
 

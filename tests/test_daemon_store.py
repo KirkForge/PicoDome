@@ -1,8 +1,6 @@
 """Tests for irondome.daemon.store — persistent scan job store."""
 
 import json
-import tempfile
-from pathlib import Path
 
 import pytest
 

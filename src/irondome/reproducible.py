@@ -50,6 +50,7 @@ _WHEEL_HASH_CHUNK_SIZE = 65536  # 64KB chunks for hashing
 class ReproducibleBuildError(Exception):
     """Raised when a reproducible build check fails."""
 
+
 # ─── ReproducibleBuild class ──────────────────────────────────────────────────
 
 
@@ -106,6 +107,7 @@ class ReproducibleBuild:
             args.append("--offline")
         return args
 
+
 # ─── Core functions ────────────────────────────────────────────────────────────
 
 
@@ -131,13 +133,9 @@ def get_source_date_epoch(fallback_timestamp: int | None = None) -> int:
         try:
             epoch = int(env_val)
         except (ValueError, TypeError) as exc:
-            raise ReproducibleBuildError(
-                f"SOURCE_DATE_EPOCH must be an integer, got: {env_val!r}"
-            ) from exc
+            raise ReproducibleBuildError(f"SOURCE_DATE_EPOCH must be an integer, got: {env_val!r}") from exc
         if epoch < 0:
-            raise ReproducibleBuildError(
-                f"SOURCE_DATE_EPOCH must be non-negative, got: {epoch}"
-            )
+            raise ReproducibleBuildError(f"SOURCE_DATE_EPOCH must be non-negative, got: {epoch}")
         return epoch
 
     # No env var: use fallback or default
@@ -179,9 +177,7 @@ def pin_dependencies(lockfile_path: str) -> dict:
             continue
 
         # Parse package==version or package>=version with optional --hash specs
-        match = re.match(
-            r"^(?P<name>[a-zA-Z0-9_.-]+)(?P<op>==|>=|<=|~=|!=|>|<)(?P<version>[^;\s]+)", line
-        )
+        match = re.match(r"^(?P<name>[a-zA-Z0-9_.-]+)(?P<op>==|>=|<=|~=|!=|>|<)(?P<version>[^;\s]+)", line)
         if not match:
             continue
 
@@ -191,25 +187,25 @@ def pin_dependencies(lockfile_path: str) -> dict:
 
         # Extract all --hash=algo:hash pairs from the line
         hashes: list[dict[str, str]] = []
-        for hmatch in re.finditer(
-            r"--hash=(?P<algo>sha\d+):(?P<hash_val>[a-f0-9]+)", line
-        ):
-            hashes.append({
-                "algorithm": hmatch.group("algo"),
-                "hash": hmatch.group("hash_val"),
-            })
+        for hmatch in re.finditer(r"--hash=(?P<algo>sha\d+):(?P<hash_val>[a-f0-9]+)", line):
+            hashes.append(
+                {
+                    "algorithm": hmatch.group("algo"),
+                    "hash": hmatch.group("hash_val"),
+                }
+            )
 
-        packages.append({
-            "name": name,
-            "version": version,
-            "version_op": version_op,
-            "hashes": hashes,
-        })
+        packages.append(
+            {
+                "name": name,
+                "version": version,
+                "version_op": version_op,
+                "hashes": hashes,
+            }
+        )
 
     if not packages:
-        raise ReproducibleBuildError(
-            f"No valid package entries found in lockfile: {lockfile_path}"
-        )
+        raise ReproducibleBuildError(f"No valid package entries found in lockfile: {lockfile_path}")
 
     return {
         "packages": packages,
@@ -246,9 +242,7 @@ def verify_reproducible_build(wheel_path: str) -> dict:
         raise ReproducibleBuildError(f"Wheel file not found: {wheel_path}")
 
     if not path.suffix == ".whl":
-        raise ReproducibleBuildError(
-            f"Not a wheel file (expected .whl extension): {wheel_path}"
-        )
+        raise ReproducibleBuildError(f"Not a wheel file (expected .whl extension): {wheel_path}")
 
     violations: list[str] = []
     checks: list[dict] = []
@@ -257,11 +251,13 @@ def verify_reproducible_build(wheel_path: str) -> dict:
     try:
         with zipfile.ZipFile(path, "r") as zf:
             namelist = zf.namelist()
-            checks.append({
-                "check": "valid_zip",
-                "passed": True,
-                "detail": f"{len(namelist)} entries",
-            })
+            checks.append(
+                {
+                    "check": "valid_zip",
+                    "passed": True,
+                    "detail": f"{len(namelist)} entries",
+                }
+            )
     except zipfile.BadZipFile as exc:
         checks.append({"check": "valid_zip", "passed": False, "detail": str(exc)})
         violations.append(f"Invalid zip file: {exc}")
@@ -287,9 +283,7 @@ def verify_reproducible_build(wheel_path: str) -> dict:
             # which in zip format appears as 1980-01-01 00:00:00
             if dt != (1980, 1, 1, 0, 0, 0) and dt != (1970, 1, 1, 0, 0, 0):
                 timestamp_violations.append(
-                    f"{info.filename}: "
-                    f"{dt[0]:04d}-{dt[1]:02d}-{dt[2]:02d}T"
-                    f"{dt[3]:02d}:{dt[4]:02d}:{dt[5]:02d}"
+                    f"{info.filename}: {dt[0]:04d}-{dt[1]:02d}-{dt[2]:02d}T{dt[3]:02d}:{dt[4]:02d}:{dt[5]:02d}"
                 )
 
         if timestamp_violations:
@@ -297,11 +291,13 @@ def verify_reproducible_build(wheel_path: str) -> dict:
             violations.extend(timestamp_violations)
         else:
             passed = True
-        checks.append({
-            "check": "no_embedded_timestamps",
-            "passed": passed,
-            "detail": f"{len(timestamp_violations)} entries with non-epoch timestamps",
-        })
+        checks.append(
+            {
+                "check": "no_embedded_timestamps",
+                "passed": passed,
+                "detail": f"{len(timestamp_violations)} entries with non-epoch timestamps",
+            }
+        )
 
         # Check 3: No non-deterministic files
         nondeterministic = []
@@ -314,16 +310,16 @@ def verify_reproducible_build(wheel_path: str) -> dict:
 
         if nondeterministic:
             passed = False
-            violations.extend(
-                f"Non-deterministic file: {f}" for f in nondeterministic
-            )
+            violations.extend(f"Non-deterministic file: {f}" for f in nondeterministic)
         else:
             passed = True
-        checks.append({
-            "check": "no_nondeterministic_files",
-            "passed": passed,
-            "detail": f"{len(nondeterministic)} non-deterministic files",
-        })
+        checks.append(
+            {
+                "check": "no_nondeterministic_files",
+                "passed": passed,
+                "detail": f"{len(nondeterministic)} non-deterministic files",
+            }
+        )
 
         # Check 4: WHEEL metadata file should reference SOURCE_DATE_EPOCH
         wheel_meta = [n for n in namelist if n.endswith("/WHEEL")]
@@ -341,19 +337,23 @@ def verify_reproducible_build(wheel_path: str) -> dict:
         else:
             passed = True
             detail = "No WHEEL metadata file"
-        checks.append({
-            "check": "wheel_metadata_clean",
-            "passed": passed,
-            "detail": detail,
-        })
+        checks.append(
+            {
+                "check": "wheel_metadata_clean",
+                "passed": passed,
+                "detail": detail,
+            }
+        )
 
     # Check 5: Wheel file hash (for reference)
     wheel_hash = _file_sha256(path)
-    checks.append({
-        "check": "wheel_hash",
-        "passed": True,
-        "detail": wheel_hash,
-    })
+    checks.append(
+        {
+            "check": "wheel_hash",
+            "passed": True,
+            "detail": wheel_hash,
+        }
+    )
 
     reproducible = len(violations) == 0
     return {
@@ -463,6 +463,7 @@ def generate_build_manifest(output_dir: str) -> str:
         encoding="utf-8",
     )
     return str(manifest_path)
+
 
 # ─── Helper functions ──────────────────────────────────────────────────────────
 

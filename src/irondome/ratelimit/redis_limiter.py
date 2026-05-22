@@ -91,6 +91,7 @@ class RedisTokenBucketLimiter:
 
         try:
             import redis
+
             self._client = redis.from_url(self._redis_url, decode_responses=True)
             self._client.ping()
             self._lua_script = self._client.register_script(_LUA_TOKEN_BUCKET)
@@ -134,7 +135,9 @@ class RedisTokenBucketLimiter:
         try:
             key = f"irondome:ratelimit:{actor}"
             now = time.time()
-            result = self._lua_script(
+            lua_script = self._lua_script
+            assert lua_script is not None
+            result = lua_script(
                 keys=[key],
                 args=[
                     str(self._config.rate_per_second),

@@ -46,6 +46,7 @@ class TestDefaultPolicy:
     def test_default_policy_is_frozen(self):
         policy = default_policy()
         from dataclasses import FrozenInstanceError
+
         with pytest.raises(FrozenInstanceError):
             policy.name = "changed"
 

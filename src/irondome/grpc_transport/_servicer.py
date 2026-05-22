@@ -41,10 +41,10 @@ class IronDomeServicer:
 
         try:
             # Extract fields from request
-            command = list(request.command) if hasattr(request, 'command') else []
-            policy_name = request.policy if hasattr(request, 'policy') else ""
-            timeout = request.timeout if hasattr(request, 'timeout') and request.timeout else 30.0
-            cwd = request.cwd if hasattr(request, 'cwd') and request.cwd else None
+            command = list(request.command) if hasattr(request, "command") else []
+            policy_name = request.policy if hasattr(request, "policy") else ""
+            timeout = request.timeout if hasattr(request, "timeout") and request.timeout else 30.0
+            cwd = request.cwd if hasattr(request, "cwd") and request.cwd else None
 
             # Load policy if specified
             policy = None
@@ -53,6 +53,7 @@ class IronDomeServicer:
                     from pathlib import Path
 
                     from irondome.l3.policy import load_policy
+
                     policy = load_policy(Path(policy_name))
                 except Exception:
                     logger.debug("Policy '%s' not found, using default", policy_name)
@@ -83,7 +84,7 @@ class IronDomeServicer:
             }
 
             # Increment scan counter
-            if hasattr(self._scan_count_ref, '_scan_count'):
+            if hasattr(self._scan_count_ref, "_scan_count"):
                 self._scan_count_ref._scan_count += 1
 
             self._audit_log(
@@ -94,6 +95,7 @@ class IronDomeServicer:
             # Try to use proto response, fall back to manual
             try:
                 from irondome.grpc_transport.proto import irondome_pb2 as pb2
+
                 return pb2.ScanResponse(
                     result_json=json.dumps(result, sort_keys=True, default=str),
                     exit_code=sandbox_result.exit_code,
@@ -105,15 +107,17 @@ class IronDomeServicer:
                 )
             except ImportError:
                 # Return a dict-like response for manual handling
-                return _DictProxy({
-                    "result_json": json.dumps(result, sort_keys=True, default=str),
-                    "exit_code": sandbox_result.exit_code,
-                    "verdict": analysis_result.overall_verdict.value,
-                    "job_id": result["job_id"],
-                    "l3_verdict": sandbox_result.overall_verdict.value,
-                    "l4_verdict": analysis_result.overall_verdict.value,
-                    "findings_count": len(analysis_result.findings),
-                })
+                return _DictProxy(
+                    {
+                        "result_json": json.dumps(result, sort_keys=True, default=str),
+                        "exit_code": sandbox_result.exit_code,
+                        "verdict": analysis_result.overall_verdict.value,
+                        "job_id": result["job_id"],
+                        "l3_verdict": sandbox_result.overall_verdict.value,
+                        "l4_verdict": analysis_result.overall_verdict.value,
+                        "findings_count": len(analysis_result.findings),
+                    }
+                )
 
         except Exception as e:
             logger.exception("Scan RPC failed: %s", e)
@@ -132,6 +136,7 @@ class IronDomeServicer:
 
             try:
                 from irondome.grpc_transport.proto import irondome_pb2 as pb2
+
                 return pb2.ScanResponse(
                     result_json=error_result["result_json"],
                     exit_code=error_result["exit_code"],
@@ -151,6 +156,7 @@ class IronDomeServicer:
 
         try:
             from irondome.health import check_health
+
             checks = check_health()
             all_healthy = all(c.healthy for c in checks)
         except Exception:
@@ -158,6 +164,7 @@ class IronDomeServicer:
 
         try:
             from irondome.grpc_transport.proto import irondome_pb2 as pb2
+
             return pb2.HealthCheckResponse(
                 healthy=all_healthy,
                 version=__version__,
@@ -165,21 +172,24 @@ class IronDomeServicer:
                 uptime_seconds=uptime,
             )
         except ImportError:
-            return _DictProxy({
-                "healthy": all_healthy,
-                "version": __version__,
-                "detail": f"Uptime: {uptime}s",
-                "uptime_seconds": uptime,
-            })
+            return _DictProxy(
+                {
+                    "healthy": all_healthy,
+                    "version": __version__,
+                    "detail": f"Uptime: {uptime}s",
+                    "uptime_seconds": uptime,
+                }
+            )
 
     def GetPolicy(self, request, context):
         """Handle a GetPolicy RPC."""
-        name = request.name if hasattr(request, 'name') else ""
+        name = request.name if hasattr(request, "name") else ""
 
         try:
             from irondome.policy_versioned import get_policy_store
+
             store = get_policy_store()
-            version = request.version if hasattr(request, 'version') and request.version else None
+            version = request.version if hasattr(request, "version") and request.version else None
             pv = store.load(name, version=version if version and version > 0 else None)
             if pv:
                 policy_json = json.dumps(pv.to_dict(), sort_keys=True)
@@ -193,29 +203,33 @@ class IronDomeServicer:
 
         try:
             from irondome.grpc_transport.proto import irondome_pb2 as pb2
+
             return pb2.PolicyGetResponse(
                 policy_json=policy_json,
                 name=name,
                 version=policy_version,
             )
         except ImportError:
-            return _DictProxy({
-                "policy_json": policy_json,
-                "name": name,
-                "version": policy_version,
-            })
+            return _DictProxy(
+                {
+                    "policy_json": policy_json,
+                    "name": name,
+                    "version": policy_version,
+                }
+            )
 
     def QueryAudit(self, request, context):
         """Handle a QueryAudit RPC."""
-        event_type = request.event_type if hasattr(request, 'event_type') else ""
-        actor = request.actor if hasattr(request, 'actor') else ""
-        target = request.target if hasattr(request, 'target') else ""
-        since = request.since if hasattr(request, 'since') else ""
-        until = request.until if hasattr(request, 'until') else ""
-        limit = request.limit if hasattr(request, 'limit') and request.limit else 100
+        event_type = request.event_type if hasattr(request, "event_type") else ""
+        actor = request.actor if hasattr(request, "actor") else ""
+        target = request.target if hasattr(request, "target") else ""
+        since = request.since if hasattr(request, "since") else ""
+        until = request.until if hasattr(request, "until") else ""
+        limit = request.limit if hasattr(request, "limit") and request.limit else 100
 
         try:
             from irondome.audit import AuditEventType, get_audit_logger
+
             audit = get_audit_logger()
 
             et = None
@@ -241,20 +255,24 @@ class IronDomeServicer:
 
         try:
             from irondome.grpc_transport.proto import irondome_pb2 as pb2
+
             return pb2.AuditQueryResponse(
                 events_json=events_json,
                 count=count,
             )
         except ImportError:
-            return _DictProxy({
-                "events_json": events_json,
-                "count": count,
-            })
+            return _DictProxy(
+                {
+                    "events_json": events_json,
+                    "count": count,
+                }
+            )
 
     def _audit_log(self, event_type: str, detail: str = "") -> None:
         """Log an event to the audit module."""
         try:
             from irondome.audit import AuditEventType, get_audit_logger
+
             audit = get_audit_logger()
             # Map string event type to enum
             try:
@@ -280,7 +298,7 @@ class _DictProxy:
         self._data = data
 
     def __getattr__(self, name: str):
-        if name.startswith('_'):
+        if name.startswith("_"):
             return super().__getattribute__(name)
         return self._data.get(name, "")
 

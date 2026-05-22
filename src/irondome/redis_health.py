@@ -27,6 +27,7 @@ class RedisConfig:
         socket_connect_timeout: Connection timeout in seconds.
         retry_on_timeout: Whether to retry on timeout.
     """
+
     url: str = ""
     enabled: bool | None = None  # None = auto-detect
     socket_timeout: float = 5.0
@@ -74,6 +75,7 @@ def check_redis_health(config: RedisConfig | None = None) -> dict[str, Any]:
 
     try:
         import redis
+
         client = redis.from_url(
             config.url,
             socket_timeout=config.socket_timeout,
@@ -83,6 +85,7 @@ def check_redis_health(config: RedisConfig | None = None) -> dict[str, Any]:
 
         # Measure latency
         import time
+
         start = time.monotonic()
         client.ping()
         latency = (time.monotonic() - start) * 1000  # ms

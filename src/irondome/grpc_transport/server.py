@@ -40,6 +40,7 @@ class _ScanEngine:
         if self._scan_fn:
             return self._scan_fn(command=command, policy=policy, timeout=timeout, cwd=cwd, deterministic=deterministic)
         from irondome.l3.engine import sandbox_run
+
         return sandbox_run(command=command, policy=policy, timeout=timeout, cwd=cwd, deterministic=deterministic)
 
     def analyze(self, sandbox_result, rules=None, deterministic=False):
@@ -48,6 +49,7 @@ class _ScanEngine:
             return self._analyze_fn(sandbox_result, rules=rules, deterministic=deterministic)
         from irondome.l4.engine import create_default_engine
         from irondome.l4.profiler import profile_from_sandbox_result
+
         engine = create_default_engine()
         profile = profile_from_sandbox_result(sandbox_result)
         return engine.analyze(profile, rules=rules, deterministic=deterministic)
@@ -98,9 +100,7 @@ class IronDomeGRPCServer:
             ImportError: If grpcio is not installed.
         """
         if not is_grpc_available():
-            raise ImportError(
-                "grpcio is not installed. Install it with: pip install grpcio"
-            )
+            raise ImportError("grpcio is not installed. Install it with: pip install grpcio")
 
         import grpc
 
@@ -116,6 +116,7 @@ class IronDomeGRPCServer:
         # otherwise fall back to manual registration
         try:
             from irondome.grpc_transport.proto import irondome_pb2_grpc as pb2_grpc
+
             pb2_grpc.add_IronDomeServiceServicer_to_server(self._servicer, self._server)
         except ImportError:
             # Manual registration for when proto compilation is not done
@@ -128,6 +129,7 @@ class IronDomeGRPCServer:
             )
             # Use generic handler registration
             from irondome.grpc_transport._servicer import add_servicer_manually
+
             add_servicer_manually(self._servicer, self._server)
 
         # Configure TLS if provided
@@ -146,6 +148,7 @@ class IronDomeGRPCServer:
         # Audit log
         try:
             from irondome.audit import AuditEventType, get_audit_logger
+
             audit = get_audit_logger()
             audit.record(
                 event_type=AuditEventType.DAEMON_START,
@@ -171,6 +174,7 @@ class IronDomeGRPCServer:
             # Audit log
             try:
                 from irondome.audit import AuditEventType, get_audit_logger
+
                 audit = get_audit_logger()
                 audit.record(
                     event_type=AuditEventType.DAEMON_STOP,

@@ -56,8 +56,7 @@ def _l3_table(result: SandboxResult) -> str:
     verdict_icon = _verdict_icon(result.overall_verdict)
     verdict_text = result.overall_verdict.value
     verdict_pad = width - 23 - len(verdict_text)
-    lines.append(
-        f"║ {'Verdict:':<16} {verdict_icon} {verdict_text}{'':<{verdict_pad}} ║")
+    lines.append(f"║ {'Verdict:':<16} {verdict_icon} {verdict_text}{'':<{verdict_pad}} ║")
 
     if result.events:
         lines.append("╠" + "═" * (width - 2) + "╣")
@@ -66,7 +65,7 @@ def _l3_table(result: SandboxResult) -> str:
 
         for event in result.events[:20]:
             icon = _verdict_icon(event.verdict)
-            detail = event.detail[:width - 30] if len(event.detail) > width - 30 else event.detail
+            detail = event.detail[: width - 30] if len(event.detail) > width - 30 else event.detail
             lines.append(f"║ {icon} {event.rule_id:<16} {detail:<{width - 21}} ║")
 
         if len(result.events) > 20:
@@ -99,9 +98,8 @@ def _l4_table(result: AnalysisResult) -> str:
 
     if result.stats.duration_ms:
         lines.append(
-            f"║ {'Duration:':<16}"
-            f" {result.stats.duration_ms}ms"
-            f"{'':<{width - 20 - len(str(result.stats.duration_ms))}} ║")
+            f"║ {'Duration:':<16} {result.stats.duration_ms}ms{'':<{width - 20 - len(str(result.stats.duration_ms))}} ║"
+        )
 
     # Severity summary with dome labels
     if result.stats.findings_by_severity:
@@ -120,7 +118,7 @@ def _l4_table(result: AnalysisResult) -> str:
 
         for finding in result.findings[:20]:
             label = _DOME_LABELS.get(finding.severity, finding.severity.value[:4])
-            msg = finding.message[:width - 30] if len(finding.message) > width - 30 else finding.message
+            msg = finding.message[: width - 30] if len(finding.message) > width - 30 else finding.message
             lines.append(f"║ [{label:<16s}] {finding.rule_id:<10} {msg:<{width - 32}} ║")
 
         if len(result.findings) > 20:
@@ -147,7 +145,7 @@ def _verdict_icon(verdict: Verdict) -> str:
         return "🚫"
     if verdict == Verdict.KILL:
         return "💀"
-    return "❓"
+    return "❓"  # type: ignore[unreachable]
 
 
 def _behavioral_icon(verdict: BehavioralVerdict) -> str:
@@ -157,4 +155,4 @@ def _behavioral_icon(verdict: BehavioralVerdict) -> str:
         return "⚠️"
     if verdict == BehavioralVerdict.MALICIOUS:
         return "🚫"
-    return "❓"
+    return "❓"  # type: ignore[unreachable]

@@ -5,12 +5,8 @@ import hmac
 import os
 from unittest.mock import patch
 
-import pytest
-
 from irondome.auth import (
-    MIN_TOKEN_LENGTH,
     RBAC,
-    AuthError,
     Role,
     TokenAuth,
     _constant_time_equal,
@@ -58,7 +54,7 @@ class TestHashToken:
         assert len(_hash_token("test")) == 64
 
     def test_is_sha256(self):
-        expected = hashlib.sha256("test".encode("utf-8")).hexdigest()
+        expected = hashlib.sha256(b"test").hexdigest()
         assert _hash_token("test") == expected
 
 
@@ -128,9 +124,7 @@ class TestTokenAuth:
             assert auth.validate("wrong-token") is False
 
     def test_multiple_tokens(self):
-        with patch.dict(os.environ, {
-            "IRONDOME_API_TOKENS": "token-1,token-2,token-3"
-        }, clear=False):
+        with patch.dict(os.environ, {"IRONDOME_API_TOKENS": "token-1,token-2,token-3"}, clear=False):
             auth = TokenAuth()
             assert auth.validate("token-1") is True
             assert auth.validate("token-2") is True
@@ -138,92 +132,120 @@ class TestTokenAuth:
             assert auth.validate("token-4") is False
 
     def test_role_extraction_from_token(self):
-        with patch.dict(os.environ, {
-            "IRONDOME_API_TOKENS": "irondome-admin-secret123,irondome-reader-abc456"
-        }, clear=False):
+        with patch.dict(
+            os.environ, {"IRONDOME_API_TOKENS": "irondome-admin-secret123,irondome-reader-abc456"}, clear=False
+        ):
             auth = TokenAuth()
             assert auth.get_role("irondome-admin-secret123") == "admin"
             assert auth.get_role("irondome-reader-abc456") == "reader"
 
     def test_token_without_prefix_gets_reader(self):
-        with patch.dict(os.environ, {
-            "IRONDOME_API_TOKENS": "my-simple-token"
-        }, clear=False):
+        with patch.dict(os.environ, {"IRONDOME_API_TOKENS": "my-simple-token"}, clear=False):
             auth = TokenAuth()
             assert auth.get_role("my-simple-token") == Role.READER
 
     def test_dev_mode_all_requests(self):
-        with patch.dict(os.environ, {
-            "IRONDOME_API_TOKENS": "",
-            "IRONDOME_DEV_MODE": "1",
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "IRONDOME_API_TOKENS": "",
+                "IRONDOME_DEV_MODE": "1",
+            },
+            clear=False,
+        ):
             auth = TokenAuth()
             assert auth.validate("any-token") is True
             assert auth.is_configured is True
 
     def test_no_tokens_no_dev_mode_rejects(self):
-        with patch.dict(os.environ, {
-            "IRONDOME_API_TOKENS": "",
-            "IRONDOME_DEV_MODE": "",
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "IRONDOME_API_TOKENS": "",
+                "IRONDOME_DEV_MODE": "",
+            },
+            clear=False,
+        ):
             auth = TokenAuth()
             assert auth.validate("any-token") is False
 
     def test_enterprise_mode_rejects_short_tokens(self):
-        with patch.dict(os.environ, {
-            "IRONDOME_ENTERPRISE_MODE": "1",
-            "IRONDOME_API_TOKENS": "short",
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "IRONDOME_ENTERPRISE_MODE": "1",
+                "IRONDOME_API_TOKENS": "short",
+            },
+            clear=False,
+        ):
             auth = TokenAuth()
             assert auth.validate("short") is False
 
     def test_enterprise_mode_requires_tokens(self):
-        with patch.dict(os.environ, {
-            "IRONDOME_ENTERPRISE_MODE": "1",
-            "IRONDOME_API_TOKENS": "",
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "IRONDOME_ENTERPRISE_MODE": "1",
+                "IRONDOME_API_TOKENS": "",
+            },
+            clear=False,
+        ):
             auth = TokenAuth()
             assert auth.validate("any-token") is False
             assert auth.is_configured is False
 
     def test_enterprise_mode_accepts_long_token(self):
         long_token = "irondome-admin-" + "a" * 50
-        with patch.dict(os.environ, {
-            "IRONDOME_ENTERPRISE_MODE": "1",
-            "IRONDOME_API_TOKENS": long_token,
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "IRONDOME_ENTERPRISE_MODE": "1",
+                "IRONDOME_API_TOKENS": long_token,
+            },
+            clear=False,
+        ):
             auth = TokenAuth()
             assert auth.validate(long_token) is True
 
     def test_enterprise_mode_no_dev_bypass(self):
-        with patch.dict(os.environ, {
-            "IRONDOME_ENTERPRISE_MODE": "1",
-            "IRONDOME_DEV_MODE": "1",
-            "IRONDOME_API_TOKENS": "",
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "IRONDOME_ENTERPRISE_MODE": "1",
+                "IRONDOME_DEV_MODE": "1",
+                "IRONDOME_API_TOKENS": "",
+            },
+            clear=False,
+        ):
             auth = TokenAuth()
             # Enterprise mode should NOT allow dev bypass
             assert auth.validate("any-token") is False
 
     def test_has_permission(self):
-        with patch.dict(os.environ, {
-            "IRONDOME_API_TOKENS": "irondome-admin-secret123"
-        }, clear=False):
+        with patch.dict(os.environ, {"IRONDOME_API_TOKENS": "irondome-admin-secret123"}, clear=False):
             auth = TokenAuth()
             assert auth.has_permission("irondome-admin-secret123", "scan:submit") is True
             assert auth.has_permission("irondome-admin-secret123", "any:thing") is True
 
     def test_is_enterprise(self):
-        with patch.dict(os.environ, {
-            "IRONDOME_ENTERPRISE_MODE": "1",
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "IRONDOME_ENTERPRISE_MODE": "1",
+            },
+            clear=False,
+        ):
             auth = TokenAuth()
             assert auth.is_enterprise is True
 
     def test_is_not_enterprise(self):
-        with patch.dict(os.environ, {
-            "IRONDOME_ENTERPRISE_MODE": "",
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "IRONDOME_ENTERPRISE_MODE": "",
+            },
+            clear=False,
+        ):
             auth = TokenAuth()
             assert auth.is_enterprise is False
 
@@ -231,11 +253,16 @@ class TestTokenAuth:
         """Verify that validation doesn't use simple string comparison."""
         # This is a structural test — we can't prove timing safety in pytest,
         # but we can verify the implementation uses hmac.compare_digest.
-        with patch.dict(os.environ, {
-            "IRONDOME_API_TOKENS": "test-token-123",
-        }, clear=False):
-            auth = TokenAuth()
+        with patch.dict(
+            os.environ,
+            {
+                "IRONDOME_API_TOKENS": "test-token-123",
+            },
+            clear=False,
+        ):
+            TokenAuth()
             # _constant_time_equal should be used, not `==`
             # Verify by checking that the auth module imports hmac.compare_digest
             from irondome import auth as auth_module
-            assert hasattr(auth_module, '_constant_time_equal')
+
+            assert hasattr(auth_module, "_constant_time_equal")

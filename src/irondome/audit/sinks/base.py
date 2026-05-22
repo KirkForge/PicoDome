@@ -26,9 +26,10 @@ logger = logging.getLogger("irondome.audit.sink")
 
 class SinkHealth(str, Enum):
     """Health status of a sink."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"  # recent failures but still trying
-    FAILED = "failed"       # permanently failed (will not retry)
+    FAILED = "failed"  # permanently failed (will not retry)
 
 
 # ─── Configuration ──────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ class SinkConfig:
         retry_backoff: Base seconds for exponential backoff on retries.
         timeout: Seconds to wait for I/O operations before giving up.
     """
+
     enabled: bool = True
     batch_size: int = 1
     flush_interval: float = 0.0

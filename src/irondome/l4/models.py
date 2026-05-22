@@ -18,6 +18,7 @@ from irondome.models import (
 @dataclass(frozen=True)
 class NetworkCall:
     """A single network call observed during execution."""
+
     address: str
     port: int = 0
     protocol: str = "tcp"
@@ -41,6 +42,7 @@ class NetworkCall:
 @dataclass(frozen=True)
 class DnsQuery:
     """A DNS query observed during execution."""
+
     hostname: str
     resolved_ips: list[str] = field(default_factory=list)
     timestamp_ms: int = 0
@@ -58,6 +60,7 @@ class DnsQuery:
 @dataclass(frozen=True)
 class FileOperation:
     """A filesystem operation observed during execution."""
+
     path: str
     operation: str  # read, write, delete, create, chmod, chown
     success: bool = True
@@ -79,6 +82,7 @@ class FileOperation:
 @dataclass(frozen=True)
 class ProcessSpawn:
     """A child process spawned during execution."""
+
     executable: str
     args: list[str] = field(default_factory=list)
     pid: int = 0
@@ -100,6 +104,7 @@ class ProcessSpawn:
 @dataclass(frozen=True)
 class TimingPoint:
     """A timing measurement during execution."""
+
     label: str
     elapsed_ms: int
     timestamp_ms: int = 0
@@ -117,6 +122,7 @@ class TimingPoint:
 @dataclass(frozen=True)
 class BehavioralProfile:
     """Full behavioral profile of a sandbox execution."""
+
     package: str
     timing_points: list[TimingPoint] = field(default_factory=list)
     network_calls: list[NetworkCall] = field(default_factory=list)
@@ -150,6 +156,7 @@ class BehavioralProfile:
 @dataclass(frozen=True)
 class Baseline:
     """A known-good behavioral baseline for a package."""
+
     name: str
     package: str
     version: str = ""
@@ -181,6 +188,7 @@ class Baseline:
 @dataclass(frozen=True)
 class DriftResult:
     """Result of comparing a profile against a baseline."""
+
     baseline_name: str
     score: float  # 0.0 = identical, 1.0 = completely different
     network_drift: bool = False
@@ -206,6 +214,7 @@ class DriftResult:
 @dataclass(frozen=True)
 class AnalysisResult:
     """Complete L4 behavioral analysis result."""
+
     target: str
     findings: list[Finding] = field(default_factory=list)
     profile: BehavioralProfile | None = None

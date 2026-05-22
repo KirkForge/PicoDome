@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 import pytest
@@ -116,12 +116,14 @@ class TestWebhookSinkBasic:
     def test_event_payload_structure(self, mock_server):
         sink = WebhookSink(config=SinkConfig(max_retries=0), url=mock_server)
         sink.start()
-        sink.send(_make_event(
-            actor="bob",
-            detail="scan complete",
-            target="package-x",
-            metadata={"verdict": "DENY"},
-        ))
+        sink.send(
+            _make_event(
+                actor="bob",
+                detail="scan complete",
+                target="package-x",
+                metadata={"verdict": "DENY"},
+            )
+        )
         data = _MockHandler.received[0]
         assert data["actor"] == "bob"
         assert data["detail"] == "scan complete"

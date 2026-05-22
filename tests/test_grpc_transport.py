@@ -52,32 +52,40 @@ class FakeAnalysisResult:
 @pytest.fixture
 def fake_scan_fn():
     """A mock scan function that returns a FakeSandboxResult."""
+
     def _scan(command, policy=None, timeout=30.0, cwd=None, deterministic=False):
         return FakeSandboxResult()
+
     return _scan
 
 
 @pytest.fixture
 def fake_analyze_fn():
     """A mock analyze function that returns a FakeAnalysisResult."""
+
     def _analyze(sandbox_result, rules=None, deterministic=False):
         return FakeAnalysisResult()
+
     return _analyze
 
 
 @pytest.fixture
 def fake_deny_scan_fn():
     """A mock scan function that returns a DENY result."""
+
     def _scan(command, policy=None, timeout=30.0, cwd=None, deterministic=False):
         return FakeSandboxResult(verdict="DENY", exit_code=1)
+
     return _scan
 
 
 @pytest.fixture
 def fake_deny_analyze_fn():
     """A mock analyze function that returns a MALICIOUS result."""
+
     def _analyze(sandbox_result, rules=None, deterministic=False):
         return FakeAnalysisResult(verdict="MALICIOUS", findings_count=3)
+
     return _analyze
 
 
@@ -90,12 +98,14 @@ class TestGRPCAvailability:
     def test_is_grpc_available_returns_bool(self):
         """is_grpc_available() should return a boolean."""
         from irondome.grpc_transport import is_grpc_available
+
         result = is_grpc_available()
         assert isinstance(result, bool)
 
     def test_module_import_does_not_crash(self):
         """Importing the module should not crash even without grpcio."""
         import importlib
+
         mod = importlib.import_module("irondome.grpc_transport")
         assert hasattr(mod, "is_grpc_available")
         assert hasattr(mod, "IronDomeGRPCServer")
@@ -104,16 +114,19 @@ class TestGRPCAvailability:
     def test_lazy_import_server(self):
         """IronDomeGRPCServer should be importable via lazy import."""
         from irondome.grpc_transport import IronDomeGRPCServer
+
         assert IronDomeGRPCServer is not None
 
     def test_lazy_import_client(self):
         """IronDomeGRPCClient should be importable via lazy import."""
         from irondome.grpc_transport import IronDomeGRPCClient
+
         assert IronDomeGRPCClient is not None
 
     def test_invalid_attribute_raises(self):
         """Accessing invalid attribute should raise AttributeError."""
         from irondome import grpc_transport
+
         with pytest.raises(AttributeError):
             _ = grpc_transport.nonexistent_attribute
 
@@ -127,6 +140,7 @@ class TestGRPCServer:
     def test_server_creation_with_defaults(self):
         """Server should be creatable with default settings."""
         from irondome.grpc_transport.server import IronDomeGRPCServer
+
         server = IronDomeGRPCServer()
         assert server._host == "[::]"
         assert server._port == 50051
@@ -135,6 +149,7 @@ class TestGRPCServer:
     def test_server_creation_with_custom_settings(self):
         """Server should accept custom host, port, workers."""
         from irondome.grpc_transport.server import IronDomeGRPCServer
+
         server = IronDomeGRPCServer(
             host="0.0.0.0",
             port=9999,
@@ -147,6 +162,7 @@ class TestGRPCServer:
     def test_server_with_injected_scan_engine(self, fake_scan_fn, fake_analyze_fn):
         """Server should accept dependency-injected scan functions."""
         from irondome.grpc_transport.server import IronDomeGRPCServer
+
         server = IronDomeGRPCServer(
             scan_fn=fake_scan_fn,
             analyze_fn=fake_analyze_fn,
@@ -157,6 +173,7 @@ class TestGRPCServer:
     def test_server_start_raises_without_grpcio(self):
         """Server.start() should raise ImportError if grpcio not installed."""
         from irondome.grpc_transport.server import IronDomeGRPCServer
+
         server = IronDomeGRPCServer()
 
         with patch("irondome.grpc_transport.server.is_grpc_available", return_value=False):
@@ -166,12 +183,14 @@ class TestGRPCServer:
     def test_server_stop_without_start(self):
         """Server.stop() should be safe to call without starting."""
         from irondome.grpc_transport.server import IronDomeGRPCServer
+
         server = IronDomeGRPCServer()
         server.stop()  # Should not raise
 
     def test_server_stop_with_mock_server(self):
         """Server.stop() should call shutdown on the gRPC server."""
         from irondome.grpc_transport.server import IronDomeGRPCServer
+
         server = IronDomeGRPCServer()
         mock_grpc_server = MagicMock()
         server._server = mock_grpc_server
@@ -188,6 +207,7 @@ class TestGRPCClient:
     def test_client_creation_with_defaults(self):
         """Client should be creatable with default settings."""
         from irondome.grpc_transport.client import IronDomeGRPCClient
+
         client = IronDomeGRPCClient()
         assert client._target == "localhost:50051"
         assert client._timeout == 30.0
@@ -196,6 +216,7 @@ class TestGRPCClient:
     def test_client_creation_with_custom_settings(self):
         """Client should accept custom target, timeout, retries."""
         from irondome.grpc_transport.client import IronDomeGRPCClient
+
         client = IronDomeGRPCClient(
             target="example.com:9999",
             timeout=60.0,
@@ -209,6 +230,7 @@ class TestGRPCClient:
     def test_client_context_manager(self):
         """Client should work as a context manager."""
         from irondome.grpc_transport.client import IronDomeGRPCClient
+
         with IronDomeGRPCClient() as client:
             assert client._target == "localhost:50051"
         # After exiting, channel should be None
@@ -217,12 +239,14 @@ class TestGRPCClient:
     def test_client_close_without_connection(self):
         """Client.close() should be safe without connecting."""
         from irondome.grpc_transport.client import IronDomeGRPCClient
+
         client = IronDomeGRPCClient()
         client.close()  # Should not raise
 
     def test_client_scan_raises_without_grpcio(self):
         """Client.scan() should raise ImportError if grpcio not installed."""
         from irondome.grpc_transport.client import IronDomeGRPCClient
+
         client = IronDomeGRPCClient()
 
         with patch("irondome.grpc_transport.client.is_grpc_available", return_value=False):
@@ -232,6 +256,7 @@ class TestGRPCClient:
     def test_client_mtls_config_none(self):
         """Client with no mTLS config should use insecure channel."""
         from irondome.grpc_transport.client import IronDomeGRPCClient
+
         client = IronDomeGRPCClient(mtls_config=None)
         assert client._mtls_config is None
 
@@ -245,6 +270,7 @@ class TestScanResult:
     def test_scan_result_creation(self):
         """ScanResult should store all fields."""
         from irondome.grpc_transport.client import ScanResult
+
         result = ScanResult(
             result_json='{" verdict": "ALLOW"}',
             exit_code=0,
@@ -261,8 +287,9 @@ class TestScanResult:
     def test_scan_result_to_dict(self):
         """ScanResult.to_dict() should return all fields."""
         from irondome.grpc_transport.client import ScanResult
+
         result = ScanResult(
-            result_json='{}',
+            result_json="{}",
             exit_code=0,
             verdict="ALLOW",
             job_id="test-456",
@@ -278,6 +305,7 @@ class TestScanResult:
     def test_scan_result_from_dict(self):
         """ScanResult.from_dict() should reconstruct from a dict."""
         from irondome.grpc_transport.client import ScanResult
+
         d = {
             "result_json": '{"verdict": "DENY"}',
             "exit_code": 1,
@@ -295,6 +323,7 @@ class TestScanResult:
     def test_scan_result_defaults(self):
         """ScanResult should have sensible defaults."""
         from irondome.grpc_transport.client import ScanResult
+
         result = ScanResult()
         assert result.exit_code == 0
         assert result.verdict == ""
@@ -430,6 +459,7 @@ class TestScanEngine:
     def test_scan_engine_with_injected_fn(self, fake_scan_fn):
         """_ScanEngine should use the injected scan function."""
         from irondome.grpc_transport.server import _ScanEngine
+
         engine = _ScanEngine(scan_fn=fake_scan_fn)
         result = engine.scan(command=["echo", "hello"])
         assert result.overall_verdict.value == "ALLOW"
@@ -437,6 +467,7 @@ class TestScanEngine:
     def test_scan_engine_with_injected_analyze_fn(self, fake_analyze_fn):
         """_ScanEngine should use the injected analyze function."""
         from irondome.grpc_transport.server import _ScanEngine
+
         engine = _ScanEngine(analyze_fn=fake_analyze_fn)
         result = engine.analyze(sandbox_result=MagicMock())
         assert result.overall_verdict.value == "CLEAN"
@@ -444,6 +475,7 @@ class TestScanEngine:
     def test_scan_engine_defaults_to_real_functions(self):
         """_ScanEngine without injected fns should reference real engine."""
         from irondome.grpc_transport.server import _ScanEngine
+
         engine = _ScanEngine()
         assert engine._scan_fn is None
         assert engine._analyze_fn is None
@@ -458,6 +490,7 @@ class TestCLIGRPC:
     def test_daemon_transport_flag_exists(self):
         """The daemon subcommand should accept --transport flag."""
         from irondome.cli import main
+
         # This should parse without error
         with patch("sys.argv", ["irondome", "daemon", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
@@ -468,6 +501,7 @@ class TestCLIGRPC:
     def test_scan_grpc_subcommand_exists(self):
         """The scan-grpc subcommand should exist."""
         from irondome.cli import main
+
         with pytest.raises(SystemExit) as exc_info:
             main(["scan-grpc", "--help"])
         assert exc_info.value.code == 0
@@ -475,6 +509,7 @@ class TestCLIGRPC:
     def test_daemon_grpc_without_grpcio(self):
         """daemon --transport grpc should fail gracefully without grpcio."""
         from irondome.cli import main
+
         with patch("irondome.grpc_transport.is_grpc_available", return_value=False):
             exit_code = main(["daemon", "--transport", "grpc"])
             assert exit_code == 1
@@ -482,6 +517,7 @@ class TestCLIGRPC:
     def test_scan_grpc_without_grpcio(self):
         """scan-grpc should fail gracefully without grpcio."""
         from irondome.cli import main
+
         with patch("irondome.grpc_transport.is_grpc_available", return_value=False):
             exit_code = main(["scan-grpc", "echo", "hello"])
             assert exit_code == 1
@@ -489,6 +525,7 @@ class TestCLIGRPC:
     def test_scan_grpc_no_command(self):
         """scan-grpc with no command should error."""
         from irondome.cli import main
+
         with patch("irondome.grpc_transport.is_grpc_available", return_value=True):
             # Empty target list
             exit_code = main(["scan-grpc"])
@@ -504,12 +541,14 @@ class TestProtoFile:
     def test_proto_file_exists(self):
         """The proto file should exist."""
         from pathlib import Path
+
         proto_path = Path(__file__).parent.parent / "src" / "irondome" / "grpc_transport" / "proto" / "irondome.proto"
         assert proto_path.exists(), f"Proto file not found at {proto_path}"
 
     def test_proto_file_has_service(self):
         """The proto file should define IronDomeService."""
         from pathlib import Path
+
         proto_path = Path(__file__).parent.parent / "src" / "irondome" / "grpc_transport" / "proto" / "irondome.proto"
         content = proto_path.read_text()
         assert "service IronDomeService" in content
@@ -521,6 +560,7 @@ class TestProtoFile:
     def test_proto_file_has_messages(self):
         """The proto file should define all required message types."""
         from pathlib import Path
+
         proto_path = Path(__file__).parent.parent / "src" / "irondome" / "grpc_transport" / "proto" / "irondome.proto"
         content = proto_path.read_text()
         assert "message ScanRequest" in content

@@ -25,6 +25,7 @@ from irondome.notary import (
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def sample_entry():
     """A sample audit entry dict."""
@@ -78,6 +79,7 @@ def audit_dir(tmp_path):
 
 
 # ─── HMAC-SHA256 Signing Tests ───────────────────────────────────────────────
+
 
 class TestHMACSigning:
     """Tests for the HMAC-SHA256 signing functions."""
@@ -139,6 +141,7 @@ class TestHMACSigning:
 
 
 # ─── NullNotary Tests ───────────────────────────────────────────────────────
+
 
 class TestNullNotary:
     """Tests for the NullNotary (offline/air-gapped mode)."""
@@ -204,6 +207,7 @@ class TestNullNotary:
 
 # ─── RekorNotary Tests (with mocked HTTP) ────────────────────────────────────
 
+
 class TestRekorNotary:
     """Tests for the RekorNotary (mocked HTTP calls)."""
 
@@ -211,12 +215,14 @@ class TestRekorNotary:
         """Successful submission to Rekor returns a UUID."""
         mock_response = MagicMock()
         mock_response.status = 201
-        mock_response.read.return_value = json.dumps({
-            "rekor-uuid-12345": {
-                "body": "...",
-                "integratedTime": 1700000000,
+        mock_response.read.return_value = json.dumps(
+            {
+                "rekor-uuid-12345": {
+                    "body": "...",
+                    "integratedTime": 1700000000,
+                }
             }
-        }).encode("utf-8")
+        ).encode("utf-8")
         mock_response.__enter__ = lambda s: s
         mock_response.__exit__ = MagicMock(return_value=False)
 
@@ -237,6 +243,7 @@ class TestRekorNotary:
     def test_submit_fallback_on_timeout(self, rekor_notary, sample_entry):
         """RekorNotary falls back on timeout."""
         import urllib.error
+
         error = urllib.error.URLError("timed out")
         with patch("urllib.request.urlopen", side_effect=error):
             uuid = rekor_notary.submit_entry(sample_entry)
@@ -248,11 +255,13 @@ class TestRekorNotary:
         """Verify an entry that was submitted successfully."""
         mock_response = MagicMock()
         mock_response.status = 201
-        mock_response.read.return_value = json.dumps({
-            "rekor-uuid-verify": {
-                "body": "...",
+        mock_response.read.return_value = json.dumps(
+            {
+                "rekor-uuid-verify": {
+                    "body": "...",
+                }
             }
-        }).encode("utf-8")
+        ).encode("utf-8")
         mock_response.__enter__ = lambda s: s
         mock_response.__exit__ = MagicMock(return_value=False)
 
@@ -275,11 +284,13 @@ class TestRekorNotary:
         """get_proof returns proof for a successfully submitted entry."""
         mock_response = MagicMock()
         mock_response.status = 201
-        mock_response.read.return_value = json.dumps({
-            "rekor-proof-uuid": {
-                "body": "...",
+        mock_response.read.return_value = json.dumps(
+            {
+                "rekor-proof-uuid": {
+                    "body": "...",
+                }
             }
-        }).encode("utf-8")
+        ).encode("utf-8")
         mock_response.__enter__ = lambda s: s
         mock_response.__exit__ = MagicMock(return_value=False)
 
@@ -321,6 +332,7 @@ class TestRekorNotary:
 
 # ─── Exception Tests ─────────────────────────────────────────────────────────
 
+
 class TestNotaryExceptions:
     """Tests for notary exception hierarchy."""
 
@@ -342,6 +354,7 @@ class TestNotaryExceptions:
 
 
 # ─── Audit-Notary Integration Tests ─────────────────────────────────────────
+
 
 class TestAuditNotaryIntegration:
     """Tests for the integration between AuditLogger and notary."""
@@ -439,6 +452,7 @@ class TestAuditNotaryIntegration:
 
 # ─── Default Notary Module-level Tests ────────────────────────────────────────
 
+
 class TestDefaultNotary:
     """Tests for module-level default notary management."""
 
@@ -446,6 +460,7 @@ class TestDefaultNotary:
         """Default notary is NullNotary (offline mode)."""
         # Reset global state
         import irondome.notary.rekor as rekor_mod
+
         rekor_mod._default_notary = None
         notary = get_default_notary()
         assert isinstance(notary, NullNotary)
@@ -453,6 +468,7 @@ class TestDefaultNotary:
     def test_set_default_notary(self):
         """set_default_notary changes the global notary."""
         import irondome.notary.rekor as rekor_mod
+
         rekor_mod._default_notary = None
         custom = NullNotary(hmac_key="custom-key")
         set_default_notary(custom)
@@ -461,6 +477,7 @@ class TestDefaultNotary:
     def test_set_default_notary_rekor(self):
         """Can set a RekorNotary as default."""
         import irondome.notary.rekor as rekor_mod
+
         rekor_notary = RekorNotary(rekor_url="https://rekor.test.com")
         set_default_notary(rekor_notary)
         assert isinstance(get_default_notary(), RekorNotary)
@@ -469,6 +486,7 @@ class TestDefaultNotary:
 
 
 # ─── ABC Enforcement Tests ──────────────────────────────────────────────────
+
 
 class TestAuditNotaryABC:
     """Tests for the AuditNotary abstract base class."""
@@ -489,12 +507,14 @@ class TestAuditNotaryABC:
 
 # ─── Rekor HTTP Error Path Tests ────────────────────────────────────────────
 
+
 class TestRekorHTTPErrorPaths:
     """Test Rekor HTTP error handling with mocked urllib."""
 
     def test_connection_refused_fallback(self, rekor_notary, sample_entry):
         """Connection refused falls back to local UUID."""
         import urllib.error
+
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("Connection refused")):
             uuid = rekor_notary.submit_entry(sample_entry)
             assert len(uuid) == 36  # Local UUID
@@ -502,6 +522,7 @@ class TestRekorHTTPErrorPaths:
     def test_timeout_fallback(self, rekor_notary, sample_entry):
         """Timeout falls back to local UUID."""
         import urllib.error
+
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timed out")):
             uuid = rekor_notary.submit_entry(sample_entry)
             assert len(uuid) == 36
@@ -509,6 +530,7 @@ class TestRekorHTTPErrorPaths:
     def test_dns_failure_fallback(self, rekor_notary, sample_entry):
         """DNS failure falls back to local UUID."""
         import urllib.error
+
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("Name or service not known")):
             uuid = rekor_notary.submit_entry(sample_entry)
             assert len(uuid) == 36
@@ -516,6 +538,7 @@ class TestRekorHTTPErrorPaths:
     def test_verify_unknown_uuid_rekor(self, rekor_notary, sample_entry):
         """Verify unknown UUID tries Rekor then fails gracefully."""
         import urllib.error
+
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("not found")):
             result = rekor_notary.verify_entry("unknown-uuid", sample_entry)
             assert result is False
@@ -523,6 +546,7 @@ class TestRekorHTTPErrorPaths:
     def test_get_proof_unknown_uuid_rekor(self, rekor_notary):
         """get_proof for unknown UUID returns error."""
         import urllib.error
+
         with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("not found")):
             proof = rekor_notary.get_proof("unknown-uuid")
             assert "error" in proof

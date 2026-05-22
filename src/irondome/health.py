@@ -23,6 +23,7 @@ logger = logging.getLogger("irondome.health")
 @dataclass(frozen=True)
 class HealthStatus:
     """Result of a health or readiness check."""
+
     healthy: bool
     component: str
     detail: str = ""
@@ -43,70 +44,86 @@ def check_health() -> list[HealthStatus]:
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     # 1. Version check
-    checks.append(HealthStatus(
-        healthy=True,
-        component="version",
-        detail=__version__,
-        timestamp=now,
-    ))
+    checks.append(
+        HealthStatus(
+            healthy=True,
+            component="version",
+            detail=__version__,
+            timestamp=now,
+        )
+    )
 
     # 2. Backend check
     try:
         backend = get_backend()
         available = backend.is_available()
-        checks.append(HealthStatus(
-            healthy=available,
-            component="sandbox_backend",
-            detail=f"backend={backend.name} available={available}",
-            timestamp=now,
-        ))
+        checks.append(
+            HealthStatus(
+                healthy=available,
+                component="sandbox_backend",
+                detail=f"backend={backend.name} available={available}",
+                timestamp=now,
+            )
+        )
     except Exception as e:
-        checks.append(HealthStatus(
-            healthy=False,
-            component="sandbox_backend",
-            detail=f"error: {e}",
-            timestamp=now,
-        ))
+        checks.append(
+            HealthStatus(
+                healthy=False,
+                component="sandbox_backend",
+                detail=f"error: {e}",
+                timestamp=now,
+            )
+        )
 
     # 3. Audit log check
     try:
         from irondome.audit import get_audit_logger
+
         audit = get_audit_logger()
         stats = audit.get_stats()
         chain_ok = stats.get("chain_intact", True)
-        checks.append(HealthStatus(
-            healthy=chain_ok,
-            component="audit_log",
-            detail=f"events={stats.get('events', 0)} chain_intact={chain_ok}",
-            timestamp=now,
-        ))
+        checks.append(
+            HealthStatus(
+                healthy=chain_ok,
+                component="audit_log",
+                detail=f"events={stats.get('events', 0)} chain_intact={chain_ok}",
+                timestamp=now,
+            )
+        )
     except Exception as e:
-        checks.append(HealthStatus(
-            healthy=False,
-            component="audit_log",
-            detail=f"error: {e}",
-            timestamp=now,
-        ))
+        checks.append(
+            HealthStatus(
+                healthy=False,
+                component="audit_log",
+                detail=f"error: {e}",
+                timestamp=now,
+            )
+        )
 
     # 4. Retention / storage check
     try:
         from irondome.retention import get_retention_manager
+
         rm = get_retention_manager()
         storage = rm.get_storage_stats()
-        checks.append(HealthStatus(
-            healthy=True,
-            component="storage",
-            detail=f"scan_files={storage.get('scan_results', {}).get('file_count', 0)} "
-            f"bytes={storage.get('total_bytes', 0)}",
-            timestamp=now,
-        ))
+        checks.append(
+            HealthStatus(
+                healthy=True,
+                component="storage",
+                detail=f"scan_files={storage.get('scan_results', {}).get('file_count', 0)} "
+                f"bytes={storage.get('total_bytes', 0)}",
+                timestamp=now,
+            )
+        )
     except Exception as e:
-        checks.append(HealthStatus(
-            healthy=False,
-            component="storage",
-            detail=f"error: {e}",
-            timestamp=now,
-        ))
+        checks.append(
+            HealthStatus(
+                healthy=False,
+                component="storage",
+                detail=f"error: {e}",
+                timestamp=now,
+            )
+        )
 
     return checks
 
