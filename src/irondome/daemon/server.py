@@ -30,10 +30,10 @@ import logging
 import os
 import time
 import uuid
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse, parse_qs
+from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 from irondome import __version__
 from irondome.audit import AuditEventType, get_audit_logger
@@ -62,7 +62,7 @@ class TokenAuth:
     Token format: ``irondome-<role>-<secret>`` (e.g., ``irondome-admin-abc123``)
     """
 
-    def __init__(self, rbac: Optional[RBAC] = None) -> None:
+    def __init__(self, rbac: RBAC | None = None) -> None:
         self._tokens: set = set()
         self._rbac = rbac
         self._load_tokens()
@@ -139,7 +139,7 @@ class RBAC:
     }
 
     def __init__(self) -> None:
-        self._token_roles: Dict[str, str] = {}
+        self._token_roles: dict[str, str] = {}
 
     def register_token(self, token: str, role: str) -> None:
         """Register a token with a specific role."""
@@ -161,17 +161,17 @@ class RBAC:
 class ScanJob:
     """Track an in-flight or completed scan job."""
 
-    def __init__(self, job_id: str, command: List[str], actor: str) -> None:
+    def __init__(self, job_id: str, command: list[str], actor: str) -> None:
         self.job_id = job_id
         self.command = command
         self.actor = actor
         self.status = "pending"
         self.created_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        self.completed_at: Optional[str] = None
-        self.result: Optional[Dict] = None
-        self.error: Optional[str] = None
+        self.completed_at: str | None = None
+        self.result: dict | None = None
+        self.error: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = {
             "command": self.command,
             "created_at": self.created_at,
@@ -191,7 +191,7 @@ class ScanJobStore:
     """In-memory store of recent scan jobs (bounded)."""
 
     def __init__(self, max_jobs: int = 1000) -> None:
-        self._jobs: Dict[str, ScanJob] = {}
+        self._jobs: dict[str, ScanJob] = {}
         self._max_jobs = max_jobs
 
     def add(self, job: ScanJob) -> None:
@@ -201,10 +201,10 @@ class ScanJobStore:
             oldest_key = min(self._jobs, key=lambda k: self._jobs[k].created_at)
             del self._jobs[oldest_key]
 
-    def get(self, job_id: str) -> Optional[ScanJob]:
+    def get(self, job_id: str) -> ScanJob | None:
         return self._jobs.get(job_id)
 
-    def list_recent(self, limit: int = 50) -> List[ScanJob]:
+    def list_recent(self, limit: int = 50) -> list[ScanJob]:
         jobs = sorted(self._jobs.values(), key=lambda j: j.created_at, reverse=True)
         return jobs[:limit]
 
@@ -239,14 +239,14 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     def _send_error(self, status: int, message: str) -> None:
         self._send_json({"error": message, "status": status}, status)
 
-    def _get_token(self) -> Optional[str]:
+    def _get_token(self) -> str | None:
         """Extract bearer token from Authorization header."""
         auth_header = self.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             return auth_header[7:].strip()
         return None
 
-    def _require_auth(self) -> Optional[str]:
+    def _require_auth(self) -> str | None:
         """Validate authentication. Returns token or sends 401."""
         token = self._get_token()
 
@@ -259,7 +259,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
         return token
 
-    def _require_permission(self, permission: str) -> Optional[str]:
+    def _require_permission(self, permission: str) -> str | None:
         """Require auth + permission. Returns token or sends 403."""
         token = self._require_auth()
         if token is None:
@@ -500,7 +500,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         else:
             self._send_error(404, f"Scan job not found: {job_id}")
 
-    def _handle_list_scans(self, query: Dict) -> None:
+    def _handle_list_scans(self, query: dict) -> None:
         limit = int(query.get("limit", ["50"])[0])
         jobs = self.job_store.list_recent(limit=limit)
         self._send_json({
@@ -554,7 +554,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             "count": len(baselines),
         })
 
-    def _handle_audit_query(self, query: Dict) -> None:
+    def _handle_audit_query(self, query: dict) -> None:
         from irondome.audit import AuditEventType, get_audit_logger
         audit = get_audit_logger()
 
@@ -615,12 +615,12 @@ class IronDomeDaemon:
 
     def __init__(
         self,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
+        host: str | None = None,
+        port: int | None = None,
     ) -> None:
         self._host = host or os.environ.get("IRONDOME_DAEMON_HOST", "127.0.0.1")
         self._port = port or int(os.environ.get("IRONDOME_DAEMON_PORT", "8443"))
-        self._server: Optional[HTTPServer] = None
+        self._server: HTTPServer | None = None
 
     def start(self, background: bool = False) -> None:
         """Start the daemon HTTP server."""

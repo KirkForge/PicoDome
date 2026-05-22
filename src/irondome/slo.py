@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any
 
 logger = logging.getLogger("irondome.slo")
 
@@ -30,7 +30,7 @@ class SLODefinition:
     unit: str = ""  # e.g., "%", "ms", "req/min"
     window_hours: int = 720  # 30 days rolling window
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "description": self.description,
             "name": self.name,
@@ -50,7 +50,7 @@ class SLOMeasurement:
     timestamp: str = ""
     detail: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "compliant": self.compliant,
             "detail": self.detail,
@@ -140,7 +140,7 @@ class SLOTracker:
     """
 
     def __init__(self) -> None:
-        self._latency_samples: List[float] = []
+        self._latency_samples: list[float] = []
         self._total_scans: int = 0
         self._failed_scans: int = 0
         self._health_checks: int = 0
@@ -170,10 +170,10 @@ class SLOTracker:
         if passed:
             self._determinism_ok += 1
 
-    def measure(self) -> List[SLOMeasurement]:
+    def measure(self) -> list[SLOMeasurement]:
         """Compute current SLO measurements."""
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        measurements: List[SLOMeasurement] = []
+        measurements: list[SLOMeasurement] = []
 
         # Availability
         if self._health_checks > 0:
@@ -254,7 +254,7 @@ class SLOTracker:
 
         return measurements
 
-    def get_report(self) -> Dict[str, Any]:
+    def get_report(self) -> dict[str, Any]:
         """Generate a full SLO compliance report."""
         measurements = self.measure()
         all_compliant = all(m.compliant for m in measurements) if measurements else True

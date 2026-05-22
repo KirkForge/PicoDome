@@ -3,13 +3,13 @@
 
 from irondome.l3.models import SandboxResult, Verdict
 from irondome.l4.profiler import (
-    profile_from_sandbox_result,
-    profile_from_trace,
     _extract_dns_queries,
     _extract_file_operations,
     _extract_network_calls,
     _extract_spawns,
     _extract_timing_points,
+    profile_from_sandbox_result,
+    profile_from_trace,
 )
 
 

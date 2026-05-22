@@ -11,7 +11,6 @@ import logging
 import os
 import re
 import subprocess
-from typing import List, Optional
 
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.models import (
@@ -48,19 +47,27 @@ class SubprocessBackend(SandboxBackend):
     def name(self) -> str:
         return "subprocess"
 
+    @property
+    def isolation_level(self) -> str:
+        return "observational_only"
+
+    @property
+    def enforcement_guarantee(self) -> str:
+        return "best_effort"
+
     def is_available(self) -> bool:
         return True
 
     def run(
         self,
-        command: List[str],
+        command: list[str],
         policy: Policy,
-        timeout: Optional[float] = None,
-        cwd: Optional[str] = None,
-        env: Optional[dict] = None,
+        timeout: float | None = None,
+        cwd: str | None = None,
+        env: dict | None = None,
     ) -> SandboxResult:
         start_ms = _now_ms()
-        events: List[SandboxEvent] = []
+        events: list[SandboxEvent] = []
         exit_code = -1
         stdout = ""
         stderr = ""
@@ -128,6 +135,10 @@ class SubprocessBackend(SandboxBackend):
             duration_ms=duration_ms,
             events=events,
             policy_name=policy.name,
+            backend_name=self.name,
+            isolation_level=self.isolation_level,
+            enforcement_guarantee=self.enforcement_guarantee,
+            degraded=False,
             stdout=stdout,
             stderr=stderr,
         )
@@ -137,10 +148,10 @@ class SubprocessBackend(SandboxBackend):
         stdout: str,
         stderr: str,
         policy: Policy,
-        command: List[str],
-    ) -> List[SandboxEvent]:
+        command: list[str],
+    ) -> list[SandboxEvent]:
         """Post-hoc analysis of command output against policy rules."""
-        events: List[SandboxEvent] = []
+        events: list[SandboxEvent] = []
         combined = stdout + "\n" + stderr
 
         for rule in policy.rules:
@@ -158,10 +169,10 @@ class SubprocessBackend(SandboxBackend):
         return events
 
     def _check_network(
-        self, output: str, rule: PolicyRule, command: List[str]
-    ) -> List[SandboxEvent]:
+        self, output: str, rule: PolicyRule, command: list[str]
+    ) -> list[SandboxEvent]:
         """Check for network activity in output."""
-        events: List[SandboxEvent] = []
+        events: list[SandboxEvent] = []
         ip_pattern = re.compile(
             r'(?:(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\.){3}'
             r'(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})'
@@ -194,9 +205,9 @@ class SubprocessBackend(SandboxBackend):
 
     def _check_file_write(
         self, output: str, rule: PolicyRule
-    ) -> List[SandboxEvent]:
+    ) -> list[SandboxEvent]:
         """Check for file write indicators."""
-        events: List[SandboxEvent] = []
+        events: list[SandboxEvent] = []
         write_indicators = [
             (r'writing to ([^\s]+)', "file_write_indicator"),
             (r'wrote (\d+) bytes to ([^\s]+)', "file_write_bytes"),
@@ -219,9 +230,9 @@ class SubprocessBackend(SandboxBackend):
 
     def _check_process_spawn(
         self, output: str, rule: PolicyRule
-    ) -> List[SandboxEvent]:
+    ) -> list[SandboxEvent]:
         """Check for process spawn indicators."""
-        events: List[SandboxEvent] = []
+        events: list[SandboxEvent] = []
         spawn_patterns = [
             r'executing: ([^\s]+)',
             r'spawning ([^\s]+)',
@@ -242,9 +253,9 @@ class SubprocessBackend(SandboxBackend):
 
     def _check_suspicious_patterns(
         self, stdout: str, stderr: str
-    ) -> List[SandboxEvent]:
+    ) -> list[SandboxEvent]:
         """Check for suspicious behavioral patterns."""
-        events: List[SandboxEvent] = []
+        events: list[SandboxEvent] = []
         combined = stdout + stderr
 
         patterns = [
@@ -274,7 +285,7 @@ class SubprocessBackend(SandboxBackend):
         return events
 
     def _compute_verdict(
-        self, events: List[SandboxEvent], exit_code: int
+        self, events: list[SandboxEvent], exit_code: int
     ) -> Verdict:
         """Compute overall verdict from events."""
         if exit_code == -1 and any(e.rule_id == "L3-TIMEOUT-001" for e in events):

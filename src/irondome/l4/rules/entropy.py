@@ -2,18 +2,17 @@
 
 import math
 from collections import Counter
-from typing import Dict, List, Optional
 
-from irondome.l4.models import BehavioralProfile, Baseline, Finding
+from irondome.l4.models import Baseline, BehavioralProfile, Finding
 from irondome.models import Severity
 
 
 def detect_entropy_anomalies(
     profile: BehavioralProfile,
-    baselines: Optional[Dict[str, Baseline]] = None,
-) -> List[Finding]:
+    baselines: dict[str, Baseline] | None = None,
+) -> list[Finding]:
     """Detect high-entropy strings indicative of encoded/encrypted payloads."""
-    findings: List[Finding] = []
+    findings: list[Finding] = []
 
     # Check file paths for high-entropy names
     for op in profile.fs_ops:

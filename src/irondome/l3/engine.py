@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import platform
-from typing import List, Optional
 
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.backends.subprocess_backend import SubprocessBackend
@@ -53,7 +52,7 @@ def _detect_backend() -> SandboxBackend:
     return SubprocessBackend()
 
 
-_default_backend: Optional[SandboxBackend] = None
+_default_backend: SandboxBackend | None = None
 
 
 def get_backend() -> SandboxBackend:
@@ -71,12 +70,12 @@ def set_backend(backend: SandboxBackend) -> None:
 
 
 def sandbox_run(
-    command: List[str],
-    policy: Optional[Policy] = None,
-    timeout: Optional[float] = None,
-    cwd: Optional[str] = None,
-    env: Optional[dict] = None,
-    backend: Optional[SandboxBackend] = None,
+    command: list[str],
+    policy: Policy | None = None,
+    timeout: float | None = None,
+    cwd: str | None = None,
+    env: dict | None = None,
+    backend: SandboxBackend | None = None,
     deterministic: bool = True,
 ) -> SandboxResult:
     """
@@ -142,7 +141,7 @@ def sandbox_run(
 class SandboxEngine:
     """High-level sandbox engine interface."""
 
-    def __init__(self, backend: Optional[SandboxBackend] = None):
+    def __init__(self, backend: SandboxBackend | None = None):
         self._backend = backend
 
     @property
@@ -153,11 +152,11 @@ class SandboxEngine:
 
     def run(
         self,
-        command: List[str],
-        policy: Optional[Policy] = None,
-        timeout: Optional[float] = None,
-        cwd: Optional[str] = None,
-        env: Optional[dict] = None,
+        command: list[str],
+        policy: Policy | None = None,
+        timeout: float | None = None,
+        cwd: str | None = None,
+        env: dict | None = None,
         deterministic: bool = True,
     ) -> SandboxResult:
         return sandbox_run(

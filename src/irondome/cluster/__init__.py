@@ -13,12 +13,12 @@ Design principles:
 from __future__ import annotations
 
 from irondome.cluster.manager import (
+    ClusterManager,
     ClusterNode,
     ClusterState,
-    ClusterManager,
     MemoryStateBackend,
-    SQLiteStateBackend,
     NodeStatus,
+    SQLiteStateBackend,
 )
 
 __all__ = [

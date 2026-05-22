@@ -17,12 +17,12 @@ from __future__ import annotations
 
 from irondome.notary.rekor import (
     AuditNotary,
-    NullNotary,
-    RekorNotary,
+    NotaryConnectionError,
     NotaryError,
     NotaryTimeoutError,
-    NotaryConnectionError,
     NotaryVerificationError,
+    NullNotary,
+    RekorNotary,
     get_default_notary,
     set_default_notary,
     sign_entry,

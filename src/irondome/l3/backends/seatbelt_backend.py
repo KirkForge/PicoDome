@@ -11,7 +11,6 @@ import os
 import platform
 import subprocess
 import tempfile
-from typing import List, Optional
 
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.models import (
@@ -35,6 +34,14 @@ class SeatbeltBackend(SandboxBackend):
     def name(self) -> str:
         return "seatbelt"
 
+    @property
+    def isolation_level(self) -> str:
+        return "os_policy_enforced"
+
+    @property
+    def enforcement_guarantee(self) -> str:
+        return "hard"
+
     def is_available(self) -> bool:
         """Check if seatbelt is available (macOS only, sandbox-exec present)."""
         if platform.system() != "Darwin":
@@ -51,14 +58,14 @@ class SeatbeltBackend(SandboxBackend):
 
     def run(
         self,
-        command: List[str],
+        command: list[str],
         policy: Policy,
-        timeout: Optional[float] = None,
-        cwd: Optional[str] = None,
-        env: Optional[dict] = None,
+        timeout: float | None = None,
+        cwd: str | None = None,
+        env: dict | None = None,
     ) -> SandboxResult:
         start_ms = _now_ms()
-        events: List[SandboxEvent] = []
+        events: list[SandboxEvent] = []
         effective_timeout = timeout or 30.0
 
         if not self.is_available():
@@ -157,6 +164,10 @@ class SeatbeltBackend(SandboxBackend):
             duration_ms=duration_ms,
             events=events,
             policy_name=policy.name,
+            backend_name=self.name,
+            isolation_level=self.isolation_level,
+            enforcement_guarantee=self.enforcement_guarantee,
+            degraded=False,
             stdout=stdout,
             stderr=stderr,
         )
@@ -164,8 +175,8 @@ class SeatbeltBackend(SandboxBackend):
     def _generate_profile(
         self,
         policy: Policy,
-        command: List[str],
-        cwd: Optional[str] = None,
+        command: list[str],
+        cwd: str | None = None,
     ) -> str:
         """Generate a macOS sandbox-exec profile from Iron Dome Policy."""
         lines = ["(version 1)"]
@@ -188,7 +199,7 @@ class SeatbeltBackend(SandboxBackend):
 
         return "\n".join(lines)
 
-    def _rule_to_allow_clause(self, rule: PolicyRule, cwd: Optional[str]) -> Optional[str]:
+    def _rule_to_allow_clause(self, rule: PolicyRule, cwd: str | None) -> str | None:
         """Convert an ALLOW rule to a seatbelt allow clause."""
         parts = ["(allow"]
 
@@ -237,7 +248,7 @@ class SeatbeltBackend(SandboxBackend):
 
         return f'({" ".join(parts)})'
 
-    def _rule_to_deny_clause(self, rule: PolicyRule) -> Optional[str]:
+    def _rule_to_deny_clause(self, rule: PolicyRule) -> str | None:
         """Convert a DENY/KILL rule to a seatbelt deny clause."""
         parts = ["(deny"]
 
@@ -266,7 +277,7 @@ class SeatbeltBackend(SandboxBackend):
 
         return f'({" ".join(parts)})'
 
-    def _normalize_path(self, path: str, cwd: Optional[str]) -> str:
+    def _normalize_path(self, path: str, cwd: str | None) -> str:
         """Normalize a path for the seatbelt profile DSL."""
         if path == "**":
             return "/"
@@ -276,7 +287,7 @@ class SeatbeltBackend(SandboxBackend):
             return os.path.join(cwd, path)
         return os.path.abspath(path)
 
-    def _compute_verdict(self, events: List[SandboxEvent], exit_code: int) -> Verdict:
+    def _compute_verdict(self, events: list[SandboxEvent], exit_code: int) -> Verdict:
         for event in events:
             if event.verdict == Verdict.KILL:
                 return Verdict.KILL
@@ -284,7 +295,73 @@ class SeatbeltBackend(SandboxBackend):
                 return Verdict.DENY
         return Verdict.ALLOW
 
-    def _fallback_run(self, command, policy, timeout, cwd, env) -> SandboxResult:
-        logger.warning("Seatbelt not available — falling back to subprocess")
+    def _fallback_run(
+        self,
+        command: list[str],
+        policy: Policy,
+        timeout: float | None,
+        cwd: str | None,
+        env: dict | None,
+        reason: str = "seatbelt not available",
+    ) -> SandboxResult:
+        """Handle backend failure.
+
+        If policy.fail_closed is True (default), return a KILL verdict
+        instead of degrading to the unconfined subprocess backend.
+        Only falls back to subprocess when fail_closed=False.
+        """
+        if policy.fail_closed:
+            logger.error(
+                "FAIL-CLOSED: %s — refusing fallback to "
+                "unconfined subprocess backend",
+                reason,
+            )
+            return SandboxResult(
+                command=command,
+                overall_verdict=Verdict.KILL,
+                exit_code=-1,
+                events=[
+                    SandboxEvent(
+                        rule_id="L3-SANDBOX-DEGRADE",
+                        verdict=Verdict.KILL,
+                        operation="sandbox_degradation_blocked",
+                        detail=(
+                            f"Sandbox backend failed: {reason}. "
+                            "Fail-closed policy prevents "
+                            "unconfined execution."
+                        ),
+                    ),
+                ],
+                policy_name=policy.name,
+                backend_name=self.name,
+                isolation_level="none",
+                enforcement_guarantee="none",
+                degraded=True,
+            )
+
+        logger.warning(
+            "FAIL-OPEN: %s — falling back to subprocess "
+            "(no real sandboxing)",
+            reason,
+        )
         from irondome.l3.backends.subprocess_backend import SubprocessBackend
-        return SubprocessBackend().run(command, policy, timeout=timeout, cwd=cwd, env=env)
+        result = SubprocessBackend().run(
+            command, policy, timeout=timeout, cwd=cwd, env=env,
+        )
+        # Mark as degraded — observational when kernel was expected
+        return SandboxResult(
+            run_id=result.run_id,
+            timestamp=result.timestamp,
+            command=result.command,
+            overall_verdict=result.overall_verdict,
+            exit_code=result.exit_code,
+            duration_ms=result.duration_ms,
+            events=result.events,
+            policy_name=result.policy_name,
+            backend_name=self.name,
+            isolation_level="observational_only",
+            enforcement_guarantee="best_effort",
+            degraded=True,
+            stdout=result.stdout,
+            stderr=result.stderr,
+        )

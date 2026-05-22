@@ -24,7 +24,7 @@ import shutil
 import ssl
 import tempfile
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger("irondome.mtls")
 
@@ -45,7 +45,7 @@ class MTLSConfig:
     # Whether to verify client certificates
     verify_client: bool = True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "ca_path": self.ca_path,
             "cert_path": self.cert_path,
@@ -56,7 +56,7 @@ class MTLSConfig:
         }
 
     @classmethod
-    def from_env(cls) -> "MTLSConfig":
+    def from_env(cls) -> MTLSConfig:
         """Create config from environment variables."""
         return cls(
             cert_path=os.environ.get("IRONDOME_TLS_CERT", ""),
@@ -72,7 +72,7 @@ class MTLSConfig:
         return bool(self.cert_path and self.key_path) or self.dev_mode
 
 
-def create_ssl_context(config: Optional[MTLSConfig] = None) -> Optional[ssl.SSLContext]:
+def create_ssl_context(config: MTLSConfig | None = None) -> ssl.SSLContext | None:
     """Create an ssl.SSLContext for the daemon with mTLS.
 
     Args:

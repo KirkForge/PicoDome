@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger("irondome.config")
 
@@ -64,13 +64,13 @@ class IronDomeConfig:
         self.deterministic_output: bool = False
 
         # Failure thresholds
-        self.fail_on: Optional[str] = None  # None means no threshold
+        self.fail_on: str | None = None  # None means no threshold
 
         # Baseline
-        self.baseline: Optional[str] = None
+        self.baseline: str | None = None
 
         # Severity overrides (rule_id → severity)
-        self.severity_overrides: Dict[str, str] = {}
+        self.severity_overrides: dict[str, str] = {}
 
         # Token budget for LLM context output
         self.token_budget: int = 4096
@@ -79,15 +79,15 @@ class IronDomeConfig:
         self.timeout: float = 30.0
 
         # Policy file path
-        self.policy: Optional[str] = None
+        self.policy: str | None = None
 
         # Specific rules to run (None = all)
-        self.rules: Optional[List[str]] = None
+        self.rules: list[str] | None = None
 
         # Logging
         self.log_format: str = "text"
 
-    def merge_from_cli(self, args: Any) -> "IronDomeConfig":
+    def merge_from_cli(self, args: Any) -> IronDomeConfig:
         """Merge CLI args into this config. CLI flags override config file values.
 
         Uses attribute presence detection to determine if a CLI flag was
@@ -181,7 +181,7 @@ class IronDomeConfig:
             overridden.append(f)
         return overridden
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize config to dict for JSON output."""
         return {
             "format": self.format,
@@ -404,7 +404,7 @@ def load_config(target_dir: Path) -> IronDomeConfig:
     return config
 
 
-def _find_config(target_dir: Path) -> Optional[Path]:
+def _find_config(target_dir: Path) -> Path | None:
     """Search for config file in target directory.
 
     Returns first match in precedence order:

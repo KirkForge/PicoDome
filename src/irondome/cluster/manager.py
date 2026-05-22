@@ -24,7 +24,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from irondome.audit import AuditEventType, get_audit_logger
 
@@ -67,7 +67,7 @@ class ClusterNode:
         if isinstance(self.status, str):
             self.status = NodeStatus(self.status)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "node_id": self.node_id,
             "address": self.address,
@@ -78,7 +78,7 @@ class ClusterNode:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ClusterNode":
+    def from_dict(cls, data: dict[str, Any]) -> ClusterNode:
         return cls(
             node_id=data["node_id"],
             address=data["address"],
@@ -107,13 +107,13 @@ class ClusterNode:
 class ScanRequest:
     """A scan request to be assigned to a cluster node."""
     scan_id: str
-    command: List[str]
+    command: list[str]
     priority: int = 0  # higher = more urgent
-    assigned_node: Optional[str] = None
+    assigned_node: str | None = None
     created_at: str = ""
     status: str = "pending"  # pending, running, completed, failed
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "scan_id": self.scan_id,
             "command": self.command,
@@ -124,7 +124,7 @@ class ScanRequest:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ScanRequest":
+    def from_dict(cls, data: dict[str, Any]) -> ScanRequest:
         return cls(
             scan_id=data["scan_id"],
             command=data["command"],
@@ -143,10 +143,10 @@ class StateBackend:
     def save_node(self, node: ClusterNode) -> None:
         raise NotImplementedError
 
-    def load_node(self, node_id: str) -> Optional[ClusterNode]:
+    def load_node(self, node_id: str) -> ClusterNode | None:
         raise NotImplementedError
 
-    def load_all_nodes(self) -> List[ClusterNode]:
+    def load_all_nodes(self) -> list[ClusterNode]:
         raise NotImplementedError
 
     def delete_node(self, node_id: str) -> None:
@@ -155,16 +155,16 @@ class StateBackend:
     def save_scan(self, scan: ScanRequest) -> None:
         raise NotImplementedError
 
-    def load_scan(self, scan_id: str) -> Optional[ScanRequest]:
+    def load_scan(self, scan_id: str) -> ScanRequest | None:
         raise NotImplementedError
 
-    def load_all_scans(self) -> List[ScanRequest]:
+    def load_all_scans(self) -> list[ScanRequest]:
         raise NotImplementedError
 
     def delete_scan(self, scan_id: str) -> None:
         raise NotImplementedError
 
-    def get_leader_id(self) -> Optional[str]:
+    def get_leader_id(self) -> str | None:
         raise NotImplementedError
 
     def set_leader_id(self, node_id: str) -> None:
@@ -178,20 +178,20 @@ class MemoryStateBackend(StateBackend):
     """
 
     def __init__(self) -> None:
-        self._nodes: Dict[str, ClusterNode] = {}
-        self._scans: Dict[str, ScanRequest] = {}
-        self._leader_id: Optional[str] = None
+        self._nodes: dict[str, ClusterNode] = {}
+        self._scans: dict[str, ScanRequest] = {}
+        self._leader_id: str | None = None
         self._lock = threading.Lock()
 
     def save_node(self, node: ClusterNode) -> None:
         with self._lock:
             self._nodes[node.node_id] = node
 
-    def load_node(self, node_id: str) -> Optional[ClusterNode]:
+    def load_node(self, node_id: str) -> ClusterNode | None:
         with self._lock:
             return self._nodes.get(node_id)
 
-    def load_all_nodes(self) -> List[ClusterNode]:
+    def load_all_nodes(self) -> list[ClusterNode]:
         with self._lock:
             return list(self._nodes.values())
 
@@ -203,11 +203,11 @@ class MemoryStateBackend(StateBackend):
         with self._lock:
             self._scans[scan.scan_id] = scan
 
-    def load_scan(self, scan_id: str) -> Optional[ScanRequest]:
+    def load_scan(self, scan_id: str) -> ScanRequest | None:
         with self._lock:
             return self._scans.get(scan_id)
 
-    def load_all_scans(self) -> List[ScanRequest]:
+    def load_all_scans(self) -> list[ScanRequest]:
         with self._lock:
             return list(self._scans.values())
 
@@ -215,7 +215,7 @@ class MemoryStateBackend(StateBackend):
         with self._lock:
             self._scans.pop(scan_id, None)
 
-    def get_leader_id(self) -> Optional[str]:
+    def get_leader_id(self) -> str | None:
         with self._lock:
             return self._leader_id
 
@@ -231,7 +231,7 @@ class SQLiteStateBackend(StateBackend):
     Thread-safe via connection-per-operation with WAL mode.
     """
 
-    def __init__(self, db_path: Optional[Path] = None) -> None:
+    def __init__(self, db_path: Path | None = None) -> None:
         if db_path is None:
             db_path = Path.home() / ".irondome" / "cluster" / "cluster.db"
         self._db_path = db_path
@@ -296,7 +296,7 @@ class SQLiteStateBackend(StateBackend):
         finally:
             conn.close()
 
-    def load_node(self, node_id: str) -> Optional[ClusterNode]:
+    def load_node(self, node_id: str) -> ClusterNode | None:
         conn = self._get_conn()
         try:
             cursor = conn.execute(
@@ -310,7 +310,7 @@ class SQLiteStateBackend(StateBackend):
         finally:
             conn.close()
 
-    def load_all_nodes(self) -> List[ClusterNode]:
+    def load_all_nodes(self) -> list[ClusterNode]:
         conn = self._get_conn()
         try:
             cursor = conn.execute("SELECT data FROM cluster_nodes")
@@ -347,7 +347,7 @@ class SQLiteStateBackend(StateBackend):
         finally:
             conn.close()
 
-    def load_scan(self, scan_id: str) -> Optional[ScanRequest]:
+    def load_scan(self, scan_id: str) -> ScanRequest | None:
         conn = self._get_conn()
         try:
             cursor = conn.execute(
@@ -361,7 +361,7 @@ class SQLiteStateBackend(StateBackend):
         finally:
             conn.close()
 
-    def load_all_scans(self) -> List[ScanRequest]:
+    def load_all_scans(self) -> list[ScanRequest]:
         conn = self._get_conn()
         try:
             cursor = conn.execute("SELECT data FROM cluster_scans")
@@ -377,7 +377,7 @@ class SQLiteStateBackend(StateBackend):
         finally:
             conn.close()
 
-    def get_leader_id(self) -> Optional[str]:
+    def get_leader_id(self) -> str | None:
         conn = self._get_conn()
         try:
             cursor = conn.execute(
@@ -412,7 +412,7 @@ class ClusterState:
     - Leader election (simple: lowest node_id wins)
     """
 
-    def __init__(self, backend: Optional[StateBackend] = None) -> None:
+    def __init__(self, backend: StateBackend | None = None) -> None:
         self._backend = backend or MemoryStateBackend()
         self._lock = threading.Lock()
 
@@ -436,11 +436,11 @@ class ClusterState:
         if node:
             logger.info("Node removed: %s", node_id)
 
-    def get_node(self, node_id: str) -> Optional[ClusterNode]:
+    def get_node(self, node_id: str) -> ClusterNode | None:
         """Get a node by ID."""
         return self._backend.load_node(node_id)
 
-    def list_nodes(self, status: Optional[NodeStatus] = None) -> List[ClusterNode]:
+    def list_nodes(self, status: NodeStatus | None = None) -> list[ClusterNode]:
         """List all nodes, optionally filtered by status."""
         nodes = self._backend.load_all_nodes()
         if status is not None:
@@ -460,7 +460,7 @@ class ClusterState:
             self._backend.save_scan(scan)
         logger.info("Scan queued: %s", scan.scan_id)
 
-    def assign_scan(self, scan_id: str) -> Optional[ClusterNode]:
+    def assign_scan(self, scan_id: str) -> ClusterNode | None:
         """Assign a scan to the least-loaded online node.
 
         Deterministic: nodes sorted by (load, node_id) so the same
@@ -539,19 +539,19 @@ class ClusterState:
 
         logger.info("Scan %s failed (was on node %s), reassigned to pending", scan_id, old_node)
 
-    def get_pending_scans(self) -> List[ScanRequest]:
+    def get_pending_scans(self) -> list[ScanRequest]:
         """Get all pending (unassigned) scans."""
         scans = self._backend.load_all_scans()
         return [s for s in scans if s.status == "pending"]
 
-    def get_scans_for_node(self, node_id: str) -> List[ScanRequest]:
+    def get_scans_for_node(self, node_id: str) -> list[ScanRequest]:
         """Get all scans assigned to a specific node."""
         scans = self._backend.load_all_scans()
         return [s for s in scans if s.assigned_node == node_id]
 
     # ── Leader election ─────────────────────────────────────────────────
 
-    def elect_leader(self) -> Optional[str]:
+    def elect_leader(self) -> str | None:
         """Elect a leader: lowest node_id among online nodes wins.
 
         Deterministic: same set of online nodes always produces same leader.
@@ -566,13 +566,13 @@ class ClusterState:
         logger.info("Leader elected: %s", leader.node_id)
         return leader.node_id
 
-    def get_leader_id(self) -> Optional[str]:
+    def get_leader_id(self) -> str | None:
         """Get the current leader node ID."""
         return self._backend.get_leader_id()
 
     # ── State sync ──────────────────────────────────────────────────────
 
-    def get_state_snapshot(self) -> Dict[str, Any]:
+    def get_state_snapshot(self) -> dict[str, Any]:
         """Get a full snapshot of cluster state for synchronization."""
         with self._lock:
             nodes = self._backend.load_all_nodes()
@@ -585,7 +585,7 @@ class ClusterState:
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             }
 
-    def merge_state(self, snapshot: Dict[str, Any]) -> None:
+    def merge_state(self, snapshot: dict[str, Any]) -> None:
         """Merge a state snapshot from a peer (gossip-style).
 
         For nodes: keep the one with the most recent heartbeat.
@@ -643,8 +643,8 @@ class ClusterManager:
         self,
         address: str = "127.0.0.1",
         port: int = DEFAULT_CLUSTER_PORT,
-        node_id: Optional[str] = None,
-        backend: Optional[StateBackend] = None,
+        node_id: str | None = None,
+        backend: StateBackend | None = None,
         heartbeat_interval: int = DEFAULT_HEARTBEAT_INTERVAL,
         heartbeat_timeout: int = DEFAULT_HEARTBEAT_TIMEOUT,
         max_missed_heartbeats: int = DEFAULT_MAX_MISSED_HEARTBEATS,
@@ -657,8 +657,8 @@ class ClusterManager:
         self._heartbeat_timeout = heartbeat_timeout
         self._max_missed_heartbeats = max_missed_heartbeats
         self._running = False
-        self._heartbeat_thread: Optional[threading.Thread] = None
-        self._health_check_thread: Optional[threading.Thread] = None
+        self._heartbeat_thread: threading.Thread | None = None
+        self._health_check_thread: threading.Thread | None = None
 
     @property
     def node_id(self) -> str:
@@ -771,7 +771,7 @@ class ClusterManager:
 
     # ── Scan assignment ──────────────────────────────────────────────────
 
-    def assign_scan(self, scan_request: ScanRequest) -> Optional[ClusterNode]:
+    def assign_scan(self, scan_request: ScanRequest) -> ClusterNode | None:
         """Find the best node for a scan (least-loaded online node).
 
         Returns the assigned ClusterNode, or None if no nodes available.
@@ -800,14 +800,14 @@ class ClusterManager:
 
     # ── State synchronization ───────────────────────────────────────────
 
-    def sync_state(self) -> Dict[str, Any]:
+    def sync_state(self) -> dict[str, Any]:
         """Get cluster state snapshot for synchronization with peers.
 
         Returns a dict that can be serialized and sent to other nodes.
         """
         return self._state.get_state_snapshot()
 
-    def merge_peer_state(self, snapshot: Dict[str, Any]) -> None:
+    def merge_peer_state(self, snapshot: dict[str, Any]) -> None:
         """Merge state from a peer node.
 
         Gossip-style: last-writer-wins for nodes, status-priority for scans.
@@ -816,7 +816,7 @@ class ClusterManager:
 
     # ── Heartbeat handling ──────────────────────────────────────────────
 
-    def handle_heartbeat(self, node_id: str, status: str = "online", load: int = 0) -> Optional[ClusterNode]:
+    def handle_heartbeat(self, node_id: str, status: str = "online", load: int = 0) -> ClusterNode | None:
         """Process a heartbeat from a peer node.
 
         Updates the node's status, last_heartbeat, and load.
@@ -837,7 +837,7 @@ class ClusterManager:
 
     # ── Node failure handling ────────────────────────────────────────────
 
-    def handle_node_failure(self, node_id: str) -> List[str]:
+    def handle_node_failure(self, node_id: str) -> list[str]:
         """Handle a node failure: redistribute its scans to other nodes.
 
         Returns list of scan IDs that were redistributed.
@@ -888,7 +888,7 @@ class ClusterManager:
 
     # ── Cluster status ──────────────────────────────────────────────────
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get cluster status summary."""
         nodes = self._state.list_nodes()
         online_nodes = [n for n in nodes if n.status == NodeStatus.ONLINE]
@@ -970,7 +970,7 @@ class ClusterManager:
 # ─── Utility functions ──────────────────────────────────────────────────────
 
 
-def _parse_iso_timestamp(ts: str) -> Optional[float]:
+def _parse_iso_timestamp(ts: str) -> float | None:
     """Parse an ISO 8601 timestamp to seconds since epoch.
 
     Returns None if parsing fails.
@@ -993,7 +993,7 @@ def _parse_iso_timestamp(ts: str) -> Optional[float]:
 # ─── Module-level singleton ─────────────────────────────────────────────────
 
 
-_cluster_manager: Optional[ClusterManager] = None
+_cluster_manager: ClusterManager | None = None
 
 
 def get_cluster_manager() -> ClusterManager:
@@ -1007,8 +1007,8 @@ def get_cluster_manager() -> ClusterManager:
 def setup_cluster_manager(
     address: str = "127.0.0.1",
     port: int = DEFAULT_CLUSTER_PORT,
-    node_id: Optional[str] = None,
-    backend: Optional[StateBackend] = None,
+    node_id: str | None = None,
+    backend: StateBackend | None = None,
     heartbeat_interval: int = DEFAULT_HEARTBEAT_INTERVAL,
     heartbeat_timeout: int = DEFAULT_HEARTBEAT_TIMEOUT,
     max_missed_heartbeats: int = DEFAULT_MAX_MISSED_HEARTBEATS,

@@ -44,7 +44,6 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
 from irondome.l3.models import SandboxResult
 from irondome.l4.models import AnalysisResult
@@ -61,7 +60,7 @@ _ISO_TIMESTAMP_PATTERN = re.compile(
 class DeterminismViolation(Exception):
     """Raised when a result violates determinism invariants."""
 
-    def __init__(self, violations: List[str]):
+    def __init__(self, violations: list[str]):
         self.violations = violations
         super().__init__(
             f"Determinism violation(s): {len(violations)}\n"
@@ -82,9 +81,9 @@ class DeterministicGuard:
             raise DeterminismViolation(violations)
     """
 
-    def check(self, result: Union[SandboxResult, AnalysisResult]) -> List[str]:
+    def check(self, result: SandboxResult | AnalysisResult) -> list[str]:
         """Validate determinism invariants. Returns list of violations (empty = pass)."""
-        violations: List[str] = []
+        violations: list[str] = []
 
         if isinstance(result, SandboxResult):
             violations.extend(self._check_sandbox(result))
@@ -93,9 +92,9 @@ class DeterministicGuard:
 
         return violations
 
-    def _check_sandbox(self, result: SandboxResult) -> List[str]:
+    def _check_sandbox(self, result: SandboxResult) -> list[str]:
         """Check L3 SandboxResult for determinism violations."""
-        violations: List[str] = []
+        violations: list[str] = []
 
         # 1. run_id must be empty (deterministic) or a valid UUID
         if result.run_id and _UUID_PATTERN.fullmatch(result.run_id):
@@ -119,9 +118,9 @@ class DeterministicGuard:
 
         return violations
 
-    def _check_analysis(self, result: AnalysisResult) -> List[str]:
+    def _check_analysis(self, result: AnalysisResult) -> list[str]:
         """Check L4 AnalysisResult for determinism violations."""
-        violations: List[str] = []
+        violations: list[str] = []
 
         # 1. Findings must not have UUID finding_ids
         for f in result.findings:
@@ -156,14 +155,14 @@ class DeterministicGuard:
 
         return violations
 
-    def assert_deterministic(self, result: Union[SandboxResult, AnalysisResult]) -> None:
+    def assert_deterministic(self, result: SandboxResult | AnalysisResult) -> None:
         """Assert that a result is deterministic. Raises DeterminismViolation if not."""
         violations = self.check(result)
         if violations:
             raise DeterminismViolation(violations)
 
 
-def validate_findings_deterministic(findings: list) -> List[str]:
+def validate_findings_deterministic(findings: list) -> list[str]:
     """Validate that a list of findings is deterministic.
 
     Checks for:
@@ -174,7 +173,7 @@ def validate_findings_deterministic(findings: list) -> List[str]:
     Returns list of violations (empty = pass).
     """
     DeterministicGuard()
-    violations: List[str] = []
+    violations: list[str] = []
 
     for f in findings:
         if f.finding_id and _UUID_PATTERN.fullmatch(f.finding_id):
@@ -188,14 +187,14 @@ def validate_findings_deterministic(findings: list) -> List[str]:
     return violations
 
 
-def validate_result_sorted(result_dict: Dict) -> List[str]:
+def validate_result_sorted(result_dict: dict) -> list[str]:
     """Validate that a result dict has sorted keys at all levels.
 
     Returns list of violations (empty = pass).
     """
-    violations: List[str] = []
+    violations: list[str] = []
 
-    def _check_sorted(d: Dict, path: str = "") -> None:
+    def _check_sorted(d: dict, path: str = "") -> None:
         keys = list(d.keys())
         if keys != sorted(keys):
             violations.append(f"keys not sorted at {path or 'root'}: {keys}")
@@ -207,14 +206,14 @@ def validate_result_sorted(result_dict: Dict) -> List[str]:
     return violations
 
 
-def validate_no_randomness(result_dict: Dict) -> List[str]:
+def validate_no_randomness(result_dict: dict) -> list[str]:
     """Validate that a result dict contains no random values.
 
     Checks for UUIDs and timestamps anywhere in the dict.
 
     Returns list of violations (empty = pass).
     """
-    violations: List[str] = []
+    violations: list[str] = []
 
     def _check_value(v, path: str = "") -> None:
         if isinstance(v, str):
@@ -233,7 +232,7 @@ def validate_no_randomness(result_dict: Dict) -> List[str]:
     return violations
 
 
-def deterministic_hash(result: Union[SandboxResult, AnalysisResult]) -> str:
+def deterministic_hash(result: SandboxResult | AnalysisResult) -> str:
     """SHA-256 hash of deterministic fields only.
 
     Excludes run_id, timestamp, and duration_ms (timing is inherently
@@ -247,10 +246,10 @@ def deterministic_hash(result: Union[SandboxResult, AnalysisResult]) -> str:
 
 
 def verify_determinism(
-    target: List[str],
+    target: list[str],
     policy=None,
-    timeout: Optional[float] = None,
-    cwd: Optional[str] = None,
+    timeout: float | None = None,
+    cwd: str | None = None,
 ) -> tuple:
     """Run sandbox twice and compare SHA-256 hashes.
 
@@ -360,7 +359,7 @@ def diff_results(
     return (1, "\n".join(lines))
 
 
-def _deterministic_hash_raw(data: Dict) -> str:
+def _deterministic_hash_raw(data: dict) -> str:
     """Hash raw result JSON data (dict), excluding timing fields."""
     det = {k: v for k, v in data.items() if k not in ("run_id", "timestamp", "duration_ms")}
     # Strip timing from nested objects

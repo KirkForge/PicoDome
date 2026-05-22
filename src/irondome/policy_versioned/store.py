@@ -27,7 +27,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from irondome.l3.models import Policy
 from irondome.l3.policy import _policy_from_dict
@@ -47,7 +47,7 @@ class PolicyVersion:
     change_description: str = ""
     content_hash: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "author": self.author,
             "change_description": self.change_description,
@@ -58,7 +58,7 @@ class PolicyVersion:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PolicyVersion":
+    def from_dict(cls, data: dict[str, Any]) -> PolicyVersion:
         policy_data = data.get("policy", {})
         policy = _policy_from_dict(policy_data)
         return cls(
@@ -85,7 +85,7 @@ class VersionedPolicyStore:
             └── v1.json
     """
 
-    def __init__(self, store_dir: Optional[Path] = None) -> None:
+    def __init__(self, store_dir: Path | None = None) -> None:
         self._store_dir = store_dir or _DEFAULT_STORE_DIR
         self._store_dir.mkdir(parents=True, exist_ok=True)
 
@@ -151,7 +151,7 @@ class VersionedPolicyStore:
 
         return pv
 
-    def load(self, name: str, version: Optional[int] = None) -> Optional[PolicyVersion]:
+    def load(self, name: str, version: int | None = None) -> PolicyVersion | None:
         """Load a policy version. None = latest."""
         if version is None:
             # Read latest
@@ -169,7 +169,7 @@ class VersionedPolicyStore:
             return None
         return self._read_version_file(path)
 
-    def rollback(self, name: str, version: int, author: str) -> Optional[PolicyVersion]:
+    def rollback(self, name: str, version: int, author: str) -> PolicyVersion | None:
         """Roll back to a previous version by re-saving it as a new version.
 
         This creates a new version (not overwriting history) so the
@@ -186,7 +186,7 @@ class VersionedPolicyStore:
             change_description=f"Rollback to v{version}",
         )
 
-    def diff(self, name: str, version_a: int, version_b: int) -> Dict[str, Any]:
+    def diff(self, name: str, version_a: int, version_b: int) -> dict[str, Any]:
         """Diff two versions of a policy.
 
         Returns a dict with added_rules, removed_rules, changed_rules.
@@ -222,7 +222,7 @@ class VersionedPolicyStore:
             "changed_rules": changed,
         }
 
-    def list_policies(self) -> List[str]:
+    def list_policies(self) -> list[str]:
         """List all policy names in the store."""
         if not self._store_dir.exists():
             return []
@@ -232,13 +232,13 @@ class VersionedPolicyStore:
             if d.is_dir() and any(f.suffix == ".json" for f in d.iterdir())
         )
 
-    def list_versions(self, name: str) -> List[PolicyVersion]:
+    def list_versions(self, name: str) -> list[PolicyVersion]:
         """List all versions of a policy."""
         return self._list_versions(name)
 
-    def verify_integrity(self, name: str) -> List[str]:
+    def verify_integrity(self, name: str) -> list[str]:
         """Verify content hash integrity for all versions."""
-        violations: List[str] = []
+        violations: list[str] = []
         versions = self._list_versions(name)
 
         for pv in versions:
@@ -253,13 +253,13 @@ class VersionedPolicyStore:
 
     # ── Internal ────────────────────────────────────────────────────────
 
-    def _list_versions(self, name: str) -> List[PolicyVersion]:
+    def _list_versions(self, name: str) -> list[PolicyVersion]:
         """Internal: list versions from disk."""
         policy_dir = self._store_dir / name
         if not policy_dir.is_dir():
             return []
 
-        versions: List[PolicyVersion] = []
+        versions: list[PolicyVersion] = []
         for f in sorted(policy_dir.iterdir()):
             if f.name.startswith("v") and f.name.endswith(".json") and f.name != "latest.json":
                 pv = self._read_version_file(f)
@@ -268,7 +268,7 @@ class VersionedPolicyStore:
 
         return versions
 
-    def _read_version_file(self, path: Path) -> Optional[PolicyVersion]:
+    def _read_version_file(self, path: Path) -> PolicyVersion | None:
         """Read a PolicyVersion from a JSON file."""
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -288,7 +288,7 @@ class VersionedPolicyStore:
 # ─── Module-level singleton ────────────────────────────────────────────────
 
 
-_policy_store: Optional[VersionedPolicyStore] = None
+_policy_store: VersionedPolicyStore | None = None
 
 
 def get_policy_store() -> VersionedPolicyStore:

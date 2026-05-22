@@ -10,22 +10,21 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import List, Optional
 
 from irondome import __version__
+from irondome.formatters.cyclonedx import format_cyclonedx
+from irondome.formatters.github import format_github
+from irondome.formatters.json_fmt import format_json, format_pipeline_json
+from irondome.formatters.ml_context import format_ml_context
+from irondome.formatters.sarif import format_sarif
+from irondome.formatters.table import format_table
+from irondome.guards import DeterministicGuard, diff_results, verify_determinism
 from irondome.l3.engine import sandbox_run
 from irondome.l3.models import SandboxResult
 from irondome.l3.policy import load_policy
 from irondome.l4.engine import create_default_engine
 from irondome.l4.models import AnalysisResult
 from irondome.l4.profiler import profile_from_sandbox_result
-from irondome.formatters.json_fmt import format_json, format_pipeline_json
-from irondome.formatters.sarif import format_sarif
-from irondome.formatters.table import format_table
-from irondome.formatters.ml_context import format_ml_context
-from irondome.formatters.github import format_github
-from irondome.formatters.cyclonedx import format_cyclonedx
-from irondome.guards import verify_determinism, diff_results, DeterministicGuard
 
 # Severity levels for --fail-on
 _SEVERITY_LEVELS = {
@@ -40,7 +39,7 @@ _SEVERITY_LEVELS = {
 _BAD_VERDICTS = {"DENY", "KILL", "MALICIOUS", "SUSPICIOUS"}
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="irondome",
@@ -531,7 +530,7 @@ def _cmd_daemon(args) -> int:
     transport = getattr(args, 'transport', 'http')
 
     if transport == "grpc":
-        from irondome.grpc_transport import is_grpc_available, IronDomeGRPCServer
+        from irondome.grpc_transport import IronDomeGRPCServer, is_grpc_available
 
         if not is_grpc_available():
             print("Error: grpcio is not installed. Install with: pip install grpcio", file=sys.stderr)
@@ -891,7 +890,11 @@ def _cmd_notary(args) -> int:
 def _cmd_cluster(args) -> int:
     """Manage daemon cluster mode."""
     from irondome.cluster import (
-        ClusterManager, ClusterNode, MemoryStateBackend, SQLiteStateBackend, NodeStatus,
+        ClusterManager,
+        ClusterNode,
+        MemoryStateBackend,
+        NodeStatus,
+        SQLiteStateBackend,
     )
 
     action = getattr(args, "cluster_action", None)
@@ -974,13 +977,12 @@ def _cmd_cluster(args) -> int:
                 print(f"  {'─' * 30} {'─' * 20} {'─' * 6} {'─' * 10} {'─' * 5} {'─' * 20}")
                 for n in status["nodes"]:
                     print(
-                        f"  {
-                            n['node_id']:<30} {
-                            n['address']:<20} {
-                            n['port']:<6} {
-                            n['status']:<10} {
-                            n['load']:<5} {
-                            n['last_heartbeat']}")
+                        f"  {n['node_id']:<30} "
+                        f"{n['address']:<20} "
+                        f"{n['port']:<6} "
+                        f"{n['status']:<10} "
+                        f"{n['load']:<5} "
+                        f"{n['last_heartbeat']}")
             print()
         return 0
 

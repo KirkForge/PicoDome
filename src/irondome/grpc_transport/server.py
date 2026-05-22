@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from concurrent import futures
-from typing import Any, Callable, Optional
+from typing import Any
 
 from irondome.grpc_transport import is_grpc_available
 
@@ -28,8 +29,8 @@ class _ScanEngine:
 
     def __init__(
         self,
-        scan_fn: Optional[Callable] = None,
-        analyze_fn: Optional[Callable] = None,
+        scan_fn: Callable | None = None,
+        analyze_fn: Callable | None = None,
     ) -> None:
         self._scan_fn = scan_fn
         self._analyze_fn = analyze_fn
@@ -75,10 +76,10 @@ class IronDomeGRPCServer:
         self,
         host: str = "[::]",
         port: int = 50051,
-        mtls_config: Optional[Any] = None,
+        mtls_config: Any | None = None,
         max_workers: int = 10,
-        scan_fn: Optional[Callable] = None,
-        analyze_fn: Optional[Callable] = None,
+        scan_fn: Callable | None = None,
+        analyze_fn: Callable | None = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -102,6 +103,7 @@ class IronDomeGRPCServer:
             )
 
         import grpc
+
         from irondome.grpc_transport._servicer import IronDomeServicer
 
         self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=self._max_workers))

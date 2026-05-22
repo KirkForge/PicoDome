@@ -1,18 +1,17 @@
 """L4 data exfiltration detector."""
 
 import re
-from typing import Dict, List, Optional
 
-from irondome.l4.models import BehavioralProfile, Baseline, Finding
+from irondome.l4.models import Baseline, BehavioralProfile, Finding
 from irondome.models import Severity
 
 
 def detect_exfiltration(
     profile: BehavioralProfile,
-    baselines: Optional[Dict[str, Baseline]] = None,
-) -> List[Finding]:
+    baselines: dict[str, Baseline] | None = None,
+) -> list[Finding]:
     """Detect potential data exfiltration patterns."""
-    findings: List[Finding] = []
+    findings: list[Finding] = []
 
     # Check for network calls to suspicious destinations
     suspicious_tlds = {".xyz", ".tk", ".ml", ".cf", ".ga", ".gq", ".top", ".pw", ".cc"}

@@ -1,9 +1,9 @@
 """Tests for L3 sandbox execution."""
 
-from irondome.l3.engine import sandbox_run, SandboxEngine
+from irondome.l3.backends.subprocess_backend import SubprocessBackend
+from irondome.l3.engine import SandboxEngine, sandbox_run
 from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction, Verdict
 from irondome.l3.policy import default_policy
-from irondome.l3.backends.subprocess_backend import SubprocessBackend
 
 
 class TestPolicy:

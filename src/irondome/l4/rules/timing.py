@@ -1,17 +1,16 @@
 """L4 timing anomaly detector."""
 
-from typing import Dict, List, Optional
 
-from irondome.l4.models import BehavioralProfile, Baseline, Finding
+from irondome.l4.models import Baseline, BehavioralProfile, Finding
 from irondome.models import Severity
 
 
 def detect_timing_anomalies(
     profile: BehavioralProfile,
-    baselines: Optional[Dict[str, Baseline]] = None,
-) -> List[Finding]:
+    baselines: dict[str, Baseline] | None = None,
+) -> list[Finding]:
     """Detect anomalous timing patterns."""
-    findings: List[Finding] = []
+    findings: list[Finding] = []
 
     # Check for unexpectedly fast execution (possible no-op or sandbox escape)
     if profile.total_runtime_ms < 5 and profile.exit_code == 0:

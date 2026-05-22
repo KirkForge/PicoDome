@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from irondome.retention import RetentionManager, RetentionConfig, RetentionPolicy
+from irondome.retention import RetentionConfig, RetentionManager, RetentionPolicy
 
 
 @pytest.fixture

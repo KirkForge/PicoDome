@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from typing import List
 
 from irondome.l3.models import SandboxResult
 from irondome.l4.models import (
@@ -54,9 +53,9 @@ def profile_from_trace(trace_text: str, package: str = "unknown") -> BehavioralP
     )
 
 
-def _extract_timing_points(output: str) -> List[TimingPoint]:
+def _extract_timing_points(output: str) -> list[TimingPoint]:
     """Extract timing annotations from output."""
-    points: List[TimingPoint] = []
+    points: list[TimingPoint] = []
     pattern = re.compile(r'\[TIMING\]\s+(\S+)\s+(\d+)\s*ms', re.IGNORECASE)
 
     for match in pattern.finditer(output):
@@ -67,9 +66,9 @@ def _extract_timing_points(output: str) -> List[TimingPoint]:
     return points
 
 
-def _extract_network_calls(output: str) -> List[NetworkCall]:
+def _extract_network_calls(output: str) -> list[NetworkCall]:
     """Extract network call indicators from output."""
-    calls: List[NetworkCall] = []
+    calls: list[NetworkCall] = []
     ip_pattern = re.compile(
         r'(?:connect|send|recv).*?'
         r'((?:(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\.){3}'
@@ -90,9 +89,9 @@ def _extract_network_calls(output: str) -> List[NetworkCall]:
     return calls
 
 
-def _extract_dns_queries(output: str) -> List[DnsQuery]:
+def _extract_dns_queries(output: str) -> list[DnsQuery]:
     """Extract DNS query indicators from output."""
-    queries: List[DnsQuery] = []
+    queries: list[DnsQuery] = []
     dns_pattern = re.compile(
         r'(?:getaddrinfo|gethostbyname|DNS|resolve).*?'
         r'([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?'
@@ -110,9 +109,9 @@ def _extract_dns_queries(output: str) -> List[DnsQuery]:
     return queries
 
 
-def _extract_file_operations(output: str) -> List[FileOperation]:
+def _extract_file_operations(output: str) -> list[FileOperation]:
     """Extract filesystem operation indicators from output."""
-    ops: List[FileOperation] = []
+    ops: list[FileOperation] = []
     fs_patterns = [
         (re.compile(r'(?:open|reading|read)\s+"?([^\s"]+)"?', re.IGNORECASE), "read"),
         (re.compile(r'(?:write|writing|wrote|saving|saved)\s+(?:to\s+)?\s*"?([^\s"]+)"?', re.IGNORECASE), "write"),
@@ -132,9 +131,9 @@ def _extract_file_operations(output: str) -> List[FileOperation]:
     return ops
 
 
-def _extract_spawns(output: str) -> List[ProcessSpawn]:
+def _extract_spawns(output: str) -> list[ProcessSpawn]:
     """Extract process spawn indicators from output."""
-    spawns: List[ProcessSpawn] = []
+    spawns: list[ProcessSpawn] = []
     spawn_patterns = [
         re.compile(r'exec(?:uting)?:\s*"?([^\s"]+)"?', re.IGNORECASE),
         re.compile(r'spawn(?:ing|ed)?:?\s*"?([^\s"]+)"?', re.IGNORECASE),

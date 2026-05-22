@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger("irondome.api_versioning")
 
@@ -30,7 +30,7 @@ CURRENT_API_VERSION = "v1"
 SUPPORTED_VERSIONS = ["v1"]
 
 # Versions that are deprecated (will be removed after 2 release cycles)
-DEPRECATED_VERSIONS: Dict[str, str] = {}  # currently none
+DEPRECATED_VERSIONS: dict[str, str] = {}  # currently none
 
 
 @dataclass(frozen=True)
@@ -41,7 +41,7 @@ class APIVersion:
     prefix: str = "v"
 
     @classmethod
-    def parse(cls, version_str: str) -> "APIVersion":
+    def parse(cls, version_str: str) -> APIVersion:
         """Parse version string like 'v1' or 'v2'."""
         version_str = version_str.strip().lower()
         if version_str.startswith("v"):
@@ -69,11 +69,11 @@ class DeprecationNotice:
     replacement: str  # the newer version or endpoint to use
     message: str = ""
 
-    def to_header(self) -> Tuple[str, str]:
+    def to_header(self) -> tuple[str, str]:
         """Return HTTP header for deprecation notice."""
         return ("Deprecation", f"version={self.version}; sunset={self.sunset_date}; replacement={self.replacement}")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "message": self.message,
             "replacement": self.replacement,
@@ -97,7 +97,7 @@ class APIVersionNegotiator:
         path: str = "",
         accept_header: str = "",
         version_header: str = "",
-    ) -> Tuple[str, Optional[DeprecationNotice]]:
+    ) -> tuple[str, DeprecationNotice | None]:
         """Negotiate the API version for a request.
 
         Returns (version_string, deprecation_notice).
@@ -119,7 +119,7 @@ class APIVersionNegotiator:
         # 4. Default
         return self._resolve(CURRENT_API_VERSION)
 
-    def _extract_from_path(self, path: str) -> Optional[str]:
+    def _extract_from_path(self, path: str) -> str | None:
         """Extract version from URL path /api/v1/..."""
         parts = path.strip("/").split("/")
         if len(parts) >= 2 and parts[0] == "api":
@@ -128,7 +128,7 @@ class APIVersionNegotiator:
                 return candidate
         return None
 
-    def _extract_from_accept(self, accept: str) -> Optional[str]:
+    def _extract_from_accept(self, accept: str) -> str | None:
         """Extract version from Accept header."""
         if "vnd.irondome" in accept:
             for part in accept.split(","):
@@ -139,7 +139,7 @@ class APIVersionNegotiator:
                     return part[start:end].lower()
         return None
 
-    def _resolve(self, version: str) -> Tuple[str, Optional[DeprecationNotice]]:
+    def _resolve(self, version: str) -> tuple[str, DeprecationNotice | None]:
         """Resolve a version string, checking for deprecation."""
         if version in DEPRECATED_VERSIONS:
             deprecation = DeprecationNotice(
@@ -159,7 +159,7 @@ class APIVersionNegotiator:
 
         return version, None
 
-    def get_version_info(self) -> Dict[str, Any]:
+    def get_version_info(self) -> dict[str, Any]:
         """Get current API version information."""
         return {
             "current": CURRENT_API_VERSION,

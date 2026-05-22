@@ -21,11 +21,11 @@ import json
 import logging
 import threading
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger("irondome.webhooks")
 
@@ -43,13 +43,13 @@ class WebhookConfig:
     """Configuration for a single webhook endpoint."""
     url: str
     secret: str = ""  # HMAC signing secret
-    events: List[str] = field(default_factory=lambda: ["scan_alert"])
+    events: list[str] = field(default_factory=lambda: ["scan_alert"])
     min_severity: str = "high"  # minimum severity to trigger
     enabled: bool = True
     timeout_seconds: float = 10.0
     max_retries: int = 3
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "enabled": self.enabled,
             "events": list(self.events),
@@ -66,7 +66,7 @@ class WebhookPayload:
     """JSON payload sent to webhook endpoints."""
     event: str
     timestamp: str
-    data: Dict[str, Any]
+    data: dict[str, Any]
     signature: str = ""
 
     def to_json(self) -> str:
@@ -106,7 +106,7 @@ class WebhookDispatcher:
     SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
     def __init__(self) -> None:
-        self._webhooks: List[WebhookConfig] = []
+        self._webhooks: list[WebhookConfig] = []
 
     def add_webhook(self, config: WebhookConfig) -> None:
         """Register a webhook endpoint."""
@@ -117,16 +117,16 @@ class WebhookDispatcher:
         """Remove a webhook by URL."""
         self._webhooks = [w for w in self._webhooks if w.url != url]
 
-    def list_webhooks(self) -> List[Dict[str, Any]]:
+    def list_webhooks(self) -> list[dict[str, Any]]:
         """List all registered webhooks."""
         return [w.to_dict() for w in self._webhooks]
 
     def notify(
         self,
         event: WebhookEvent,
-        data: Dict[str, Any],
-        severity: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        data: dict[str, Any],
+        severity: str | None = None,
+    ) -> dict[str, Any]:
         """Send notifications to matching webhooks.
 
         Args:
@@ -181,8 +181,8 @@ class WebhookDispatcher:
     def notify_async(
         self,
         event: WebhookEvent,
-        data: Dict[str, Any],
-        severity: Optional[str] = None,
+        data: dict[str, Any],
+        severity: str | None = None,
     ) -> None:
         """Fire-and-forget webhook notification (non-blocking).
 
@@ -195,7 +195,7 @@ class WebhookDispatcher:
             daemon=True,
         ).start()
 
-    def _notify_sync(self, event: WebhookEvent, data: Dict[str, Any], severity: Optional[str] = None) -> None:
+    def _notify_sync(self, event: WebhookEvent, data: dict[str, Any], severity: str | None = None) -> None:
         """Synchronous notification (runs in background thread)."""
         for wh in self._webhooks:
             if not wh.enabled:
@@ -246,7 +246,7 @@ class WebhookDispatcher:
         return False
 
     @classmethod
-    def from_config(cls, config_data: Dict[str, Any]) -> "WebhookDispatcher":
+    def from_config(cls, config_data: dict[str, Any]) -> WebhookDispatcher:
         """Create dispatcher from .irondome.yml webhooks section."""
         dispatcher = cls()
         for wh in config_data.get("webhooks", []):

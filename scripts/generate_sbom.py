@@ -19,7 +19,7 @@ import platform
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # ── IronDome version ───────────────────────────────────────────────
 try:
@@ -28,7 +28,7 @@ except ImportError:
     IRONDOME_VERSION = "unknown"
 
 
-def get_installed_packages() -> List[Dict[str, Any]]:
+def get_installed_packages() -> list[dict[str, Any]]:
     """Get list of installed Python packages via pip."""
     import subprocess
 
@@ -51,13 +51,13 @@ def get_installed_packages() -> List[Dict[str, Any]]:
         return []
 
 
-def get_irondome_dependencies() -> List[Dict[str, Any]]:
+def get_irondome_dependencies() -> list[dict[str, Any]]:
     """Get IronDome's declared dependencies from importlib.metadata."""
     try:
         from importlib.metadata import requires
 
         deps = requires("irondome") or []
-        components: List[Dict[str, Any]] = []
+        components: list[dict[str, Any]] = []
         for dep in deps:
             # Remove extras markers for clean display
             name = dep.split(">=")[0].split("==")[0].split("<")[0].split(">")[0].split("[")[0].split(";")[0].strip()
@@ -67,7 +67,7 @@ def get_irondome_dependencies() -> List[Dict[str, Any]]:
         return []
 
 
-def generate_sbom(output: Optional[str] = None, pretty: bool = True) -> str:
+def generate_sbom(output: str | None = None, pretty: bool = True) -> str:
     """Generate a CycloneDX SBOM.
 
     Args:
@@ -83,7 +83,7 @@ def generate_sbom(output: Optional[str] = None, pretty: bool = True) -> str:
     installed = get_installed_packages()
 
     # Build package lookup
-    pkg_versions: Dict[str, str] = {pkg["name"].lower(): pkg["version"] for pkg in installed}
+    pkg_versions: dict[str, str] = {pkg["name"].lower(): pkg["version"] for pkg in installed}
 
     # IronDome dependencies from pyproject.toml
     irondome_deps = [
@@ -93,7 +93,7 @@ def generate_sbom(output: Optional[str] = None, pretty: bool = True) -> str:
     ]
 
     # Build components list
-    components: List[Dict[str, Any]] = []
+    components: list[dict[str, Any]] = []
 
     # Add IronDome itself as the main component
     components.append(
@@ -141,7 +141,7 @@ def generate_sbom(output: Optional[str] = None, pretty: bool = True) -> str:
             )
 
     # Build SBOM
-    sbom: Dict[str, Any] = {
+    sbom: dict[str, Any] = {
         "$schema": "https://cyclonedx.org/schema/bom-1.5.json",
         "bomFormat": "CycloneDX",
         "specVersion": "1.5",

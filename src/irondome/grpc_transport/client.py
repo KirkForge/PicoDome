@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from irondome.grpc_transport import is_grpc_available
 
@@ -44,7 +44,7 @@ class ScanResult:
         self.l4_verdict = l4_verdict
         self.findings_count = findings_count
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "result_json": self.result_json,
             "exit_code": self.exit_code,
@@ -56,7 +56,7 @@ class ScanResult:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "ScanResult":
+    def from_dict(cls, d: dict[str, Any]) -> ScanResult:
         return cls(
             result_json=d.get("result_json", ""),
             exit_code=d.get("exit_code", 0),
@@ -89,7 +89,7 @@ class IronDomeGRPCClient:
     def __init__(
         self,
         target: str = "localhost:50051",
-        mtls_config: Optional[Any] = None,
+        mtls_config: Any | None = None,
         timeout: float = 30.0,
         max_retries: int = 3,
         retry_delay: float = 1.0,
@@ -137,6 +137,7 @@ class IronDomeGRPCClient:
             return None
 
         import grpc
+
         from irondome.mtls.context import MTLSConfig
 
         if not isinstance(mtls_config, MTLSConfig):
@@ -176,10 +177,10 @@ class IronDomeGRPCClient:
 
     def scan(
         self,
-        command: List[str],
-        policy: Optional[str] = None,
-        timeout: Optional[float] = None,
-        cwd: Optional[str] = None,
+        command: list[str],
+        policy: str | None = None,
+        timeout: float | None = None,
+        cwd: str | None = None,
     ) -> ScanResult:
         """Submit a scan request synchronously with retry logic.
 
@@ -219,10 +220,10 @@ class IronDomeGRPCClient:
 
     def _do_scan(
         self,
-        command: List[str],
-        policy: Optional[str],
+        command: list[str],
+        policy: str | None,
         timeout: float,
-        cwd: Optional[str],
+        cwd: str | None,
     ) -> ScanResult:
         """Execute a single scan RPC call."""
         try:
@@ -255,10 +256,10 @@ class IronDomeGRPCClient:
 
     def _do_scan_manual(
         self,
-        command: List[str],
-        policy: Optional[str],
+        command: list[str],
+        policy: str | None,
         timeout: float,
-        cwd: Optional[str],
+        cwd: str | None,
     ) -> ScanResult:
         """Manual scan call when proto stubs are not compiled.
 
@@ -290,10 +291,10 @@ class IronDomeGRPCClient:
 
     async def scan_async(
         self,
-        command: List[str],
-        policy: Optional[str] = None,
-        timeout: Optional[float] = None,
-        cwd: Optional[str] = None,
+        command: list[str],
+        policy: str | None = None,
+        timeout: float | None = None,
+        cwd: str | None = None,
     ) -> ScanResult:
         """Submit a scan request asynchronously (uses grpcio asyncio if available).
 
@@ -304,7 +305,7 @@ class IronDomeGRPCClient:
         logger.debug("scan_async: delegating to synchronous scan (async gRPC not yet implemented)")
         return self.scan(command=command, policy=policy, timeout=timeout, cwd=cwd)
 
-    def health(self) -> Dict[str, Any]:
+    def health(self) -> dict[str, Any]:
         """Check the health of the gRPC server."""
         self._ensure_channel()
 
@@ -337,7 +338,7 @@ class IronDomeGRPCClient:
                 logger.error("gRPC Health RPC failed: %s", e)
                 return {"healthy": False, "detail": str(e)}
 
-    def get_policy(self, name: str, version: Optional[int] = None) -> Dict[str, Any]:
+    def get_policy(self, name: str, version: int | None = None) -> dict[str, Any]:
         """Get a policy by name."""
         self._ensure_channel()
 
@@ -371,13 +372,13 @@ class IronDomeGRPCClient:
 
     def query_audit(
         self,
-        event_type: Optional[str] = None,
-        actor: Optional[str] = None,
-        target: Optional[str] = None,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
+        event_type: str | None = None,
+        actor: str | None = None,
+        target: str | None = None,
+        since: str | None = None,
+        until: str | None = None,
         limit: int = 100,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Query the audit log via gRPC."""
         self._ensure_channel()
 
@@ -432,7 +433,7 @@ class IronDomeGRPCClient:
             self._channel = None
             self._stub = None
 
-    def __enter__(self) -> "IronDomeGRPCClient":
+    def __enter__(self) -> IronDomeGRPCClient:
         return self
 
     def __exit__(self, *args) -> None:

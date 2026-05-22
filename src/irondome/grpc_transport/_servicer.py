@@ -50,8 +50,9 @@ class IronDomeServicer:
             policy = None
             if policy_name:
                 try:
-                    from irondome.l3.policy import load_policy
                     from pathlib import Path
+
+                    from irondome.l3.policy import load_policy
                     policy = load_policy(Path(policy_name))
                 except Exception:
                     logger.debug("Policy '%s' not found, using default", policy_name)

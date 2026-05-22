@@ -24,11 +24,11 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 try:
-    import urllib.request
     import urllib.error
+    import urllib.request
     _HAS_URLLIB = True
 except ImportError:  # pragma: no cover
     _HAS_URLLIB = False
@@ -70,7 +70,7 @@ class NotaryVerificationError(NotaryError):
 # ─── HMAC-SHA256 Signing ────────────────────────────────────────────────────
 
 
-def sign_entry(entry: Dict[str, Any], key: str = DEFAULT_HMAC_KEY) -> str:
+def sign_entry(entry: dict[str, Any], key: str = DEFAULT_HMAC_KEY) -> str:
     """Sign an audit entry dict with HMAC-SHA256.
 
     The entry is canonicalised as sorted JSON before signing to ensure
@@ -92,7 +92,7 @@ def sign_entry(entry: Dict[str, Any], key: str = DEFAULT_HMAC_KEY) -> str:
 
 
 def verify_entry_signature(
-    entry: Dict[str, Any],
+    entry: dict[str, Any],
     signature: str,
     key: str = DEFAULT_HMAC_KEY,
 ) -> bool:
@@ -116,7 +116,7 @@ def verify_entry_signature(
 class NotaryResult:
     """Result of a notary submission."""
     uuid: str
-    entry: Dict[str, Any]
+    entry: dict[str, Any]
     hmac_signature: str
     submitted_at: str = ""
     rekor_uuid: str = ""
@@ -133,7 +133,7 @@ class AuditNotary(ABC):
     """
 
     @abstractmethod
-    def submit_entry(self, entry: Dict[str, Any]) -> str:
+    def submit_entry(self, entry: dict[str, Any]) -> str:
         """Submit an audit entry to the notary.
 
         Args:
@@ -146,7 +146,7 @@ class AuditNotary(ABC):
         """
 
     @abstractmethod
-    def verify_entry(self, uuid: str, entry: Dict[str, Any]) -> bool:
+    def verify_entry(self, uuid: str, entry: dict[str, Any]) -> bool:
         """Verify an entry against the notary.
 
         Args:
@@ -158,7 +158,7 @@ class AuditNotary(ABC):
         """
 
     @abstractmethod
-    def get_proof(self, uuid: str) -> Dict[str, Any]:
+    def get_proof(self, uuid: str) -> dict[str, Any]:
         """Retrieve a transparency proof for a notarized entry.
 
         Args:
@@ -183,14 +183,14 @@ class NullNotary(AuditNotary):
 
     def __init__(self, hmac_key: str = DEFAULT_HMAC_KEY) -> None:
         self._hmac_key = hmac_key
-        self._entries: Dict[str, Dict[str, Any]] = {}
+        self._entries: dict[str, dict[str, Any]] = {}
         if not _os.environ.get("IRONDOME_NOTARY_HMAC_KEY"):
             logger.warning(
                 "NullNotary: Using process-local HMAC key. "
                 "Set IRONDOME_NOTARY_HMAC_KEY for persistent verification."
             )
 
-    def submit_entry(self, entry: Dict[str, Any]) -> str:
+    def submit_entry(self, entry: dict[str, Any]) -> str:
         """Sign entry locally and store it. No network call.
 
         Returns a locally-generated UUID.
@@ -206,7 +206,7 @@ class NullNotary(AuditNotary):
         logger.debug("NullNotary: signed entry %s locally", entry_uuid[:8])
         return entry_uuid
 
-    def verify_entry(self, uuid: str, entry: Dict[str, Any]) -> bool:
+    def verify_entry(self, uuid: str, entry: dict[str, Any]) -> bool:
         """Verify entry against local HMAC signature."""
         record = self._entries.get(uuid)
         if record is None:
@@ -224,7 +224,7 @@ class NullNotary(AuditNotary):
         # Verify HMAC signature
         return verify_entry_signature(entry, stored_sig, key=self._hmac_key)
 
-    def get_proof(self, uuid: str) -> Dict[str, Any]:
+    def get_proof(self, uuid: str) -> dict[str, Any]:
         """Return local proof (HMAC signature only, no Merkle proof)."""
         record = self._entries.get(uuid)
         if record is None:
@@ -261,14 +261,14 @@ class RekorNotary(AuditNotary):
         self._rekor_url = rekor_url.rstrip("/")
         self._timeout = timeout
         self._hmac_key = hmac_key
-        self._entries: Dict[str, Dict[str, Any]] = {}
+        self._entries: dict[str, dict[str, Any]] = {}
         if not _os.environ.get("IRONDOME_NOTARY_HMAC_KEY"):
             logger.warning(
                 "RekorNotary: Using process-local HMAC key. "
                 "Set IRONDOME_NOTARY_HMAC_KEY for persistent verification."
             )
 
-    def submit_entry(self, entry: Dict[str, Any]) -> str:
+    def submit_entry(self, entry: dict[str, Any]) -> str:
         """Submit an audit entry to the Rekor transparency log.
 
         First signs locally with HMAC-SHA256, then attempts to submit
@@ -310,7 +310,7 @@ class RekorNotary(AuditNotary):
             )
             return local_uuid
 
-    def verify_entry(self, uuid: str, entry: Dict[str, Any]) -> bool:
+    def verify_entry(self, uuid: str, entry: dict[str, Any]) -> bool:
         """Verify an entry against the notary.
 
         Checks both local HMAC signature and (if available) the Rekor
@@ -350,7 +350,7 @@ class RekorNotary(AuditNotary):
 
         return True
 
-    def get_proof(self, uuid: str) -> Dict[str, Any]:
+    def get_proof(self, uuid: str) -> dict[str, Any]:
         """Retrieve a transparency proof for a notarized entry.
 
         Returns both the local HMAC signature and, if available, the
@@ -364,7 +364,7 @@ class RekorNotary(AuditNotary):
             except NotaryError:
                 return {"error": f"Entry {uuid} not found locally or in Rekor"}
 
-        proof: Dict[str, Any] = {
+        proof: dict[str, Any] = {
             "uuid": uuid,
             "notary": record.get("notary", "unknown"),
             "hmac_signature": record["hmac_signature"],
@@ -384,7 +384,7 @@ class RekorNotary(AuditNotary):
 
     # ── Internal HTTP methods ───────────────────────────────────────────
 
-    def _submit_to_rekor(self, entry: Dict[str, Any], hmac_signature: str) -> str:
+    def _submit_to_rekor(self, entry: dict[str, Any], hmac_signature: str) -> str:
         """Submit an entry to the Rekor API.
 
         Uses urllib (no requests dependency) with timeout bounding.
@@ -437,14 +437,14 @@ class RekorNotary(AuditNotary):
             raise
         except urllib.error.URLError as exc:
             if "timed out" in str(exc).lower():
-                raise NotaryTimeoutError(f"Rekor request timed out: {exc}")
-            raise NotaryConnectionError(f"Rekor connection error: {exc}")
+                raise NotaryTimeoutError(f"Rekor request timed out: {exc}") from exc
+            raise NotaryConnectionError(f"Rekor connection error: {exc}") from exc
         except TimeoutError:
-            raise NotaryTimeoutError(f"Rekor request timed out after {self._timeout}s")
+            raise NotaryTimeoutError(f"Rekor request timed out after {self._timeout}s") from None
         except Exception as exc:
-            raise NotaryConnectionError(f"Rekor submission error: {exc}")
+            raise NotaryConnectionError(f"Rekor submission error: {exc}") from exc
 
-    def _verify_in_rekor(self, uuid: str, entry: Dict[str, Any]) -> bool:
+    def _verify_in_rekor(self, uuid: str, entry: dict[str, Any]) -> bool:
         """Verify an entry in the Rekor transparency log.
 
         Raises:
@@ -472,14 +472,14 @@ class RekorNotary(AuditNotary):
             raise
         except urllib.error.URLError as exc:
             if "timed out" in str(exc).lower():
-                raise NotaryTimeoutError(f"Rekor verification timed out: {exc}")
-            raise NotaryConnectionError(f"Rekor connection error: {exc}")
+                raise NotaryTimeoutError(f"Rekor verification timed out: {exc}") from exc
+            raise NotaryConnectionError(f"Rekor connection error: {exc}") from exc
         except TimeoutError:
-            raise NotaryTimeoutError(f"Rekor verification timed out after {self._timeout}s")
+            raise NotaryTimeoutError(f"Rekor verification timed out after {self._timeout}s") from None
         except Exception as exc:
-            raise NotaryConnectionError(f"Rekor verification error: {exc}")
+            raise NotaryConnectionError(f"Rekor verification error: {exc}") from exc
 
-    def _get_rekor_proof(self, uuid: str) -> Dict[str, Any]:
+    def _get_rekor_proof(self, uuid: str) -> dict[str, Any]:
         """Get a Merkle inclusion proof from Rekor.
 
         Raises:
@@ -500,17 +500,17 @@ class RekorNotary(AuditNotary):
             raise
         except urllib.error.URLError as exc:
             if "timed out" in str(exc).lower():
-                raise NotaryTimeoutError(f"Rekor proof retrieval timed out: {exc}")
-            raise NotaryConnectionError(f"Rekor connection error: {exc}")
+                raise NotaryTimeoutError(f"Rekor proof retrieval timed out: {exc}") from exc
+            raise NotaryConnectionError(f"Rekor connection error: {exc}") from exc
         except TimeoutError:
-            raise NotaryTimeoutError(f"Rekor proof retrieval timed out after {self._timeout}s")
+            raise NotaryTimeoutError(f"Rekor proof retrieval timed out after {self._timeout}s") from None
         except Exception as exc:
-            raise NotaryConnectionError(f"Rekor proof retrieval error: {exc}")
+            raise NotaryConnectionError(f"Rekor proof retrieval error: {exc}") from exc
 
 # ─── Module-level default notary ─────────────────────────────────────────────
 
 
-_default_notary: Optional[AuditNotary] = None
+_default_notary: AuditNotary | None = None
 
 
 def get_default_notary() -> AuditNotary:

@@ -28,7 +28,6 @@ import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -74,7 +73,7 @@ class ReproducibleBuild:
     no_deps: bool = False
     offline: bool = True
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Serialize to dict with sorted keys for deterministic JSON."""
         d = {
             "source_date_epoch": self.source_date_epoch,
@@ -86,7 +85,7 @@ class ReproducibleBuild:
         }
         return {k: v for k, v in sorted(d.items())}
 
-    def env_vars(self) -> Dict[str, str]:
+    def env_vars(self) -> dict[str, str]:
         """Return environment variables for the reproducible build."""
         env = {
             "SOURCE_DATE_EPOCH": str(self.source_date_epoch),
@@ -94,7 +93,7 @@ class ReproducibleBuild:
         }
         return env
 
-    def pip_install_args(self) -> List[str]:
+    def pip_install_args(self) -> list[str]:
         """Return pip install arguments for reproducible install."""
         args = []
         if self.require_hashes:
@@ -110,7 +109,7 @@ class ReproducibleBuild:
 # ─── Core functions ────────────────────────────────────────────────────────────
 
 
-def get_source_date_epoch(fallback_timestamp: Optional[int] = None) -> int:
+def get_source_date_epoch(fallback_timestamp: int | None = None) -> int:
     """Read SOURCE_DATE_EPOCH env var or use fallback timestamp.
 
     SOURCE_DATE_EPOCH is the standard environment variable for reproducible builds.
@@ -147,7 +146,7 @@ def get_source_date_epoch(fallback_timestamp: Optional[int] = None) -> int:
     return _DEFAULT_SOURCE_DATE_EPOCH
 
 
-def pin_dependencies(lockfile_path: str) -> Dict:
+def pin_dependencies(lockfile_path: str) -> dict:
     """Read requirements/pip lock and return pinned hashes.
 
     Parses a requirements.txt or pip-compatible lock file and extracts
@@ -170,7 +169,7 @@ def pin_dependencies(lockfile_path: str) -> Dict:
         raise ReproducibleBuildError(f"Lockfile not found: {lockfile_path}")
 
     content = path.read_text(encoding="utf-8")
-    packages: List[Dict] = []
+    packages: list[dict] = []
 
     for line in content.splitlines():
         line = line.strip()
@@ -191,7 +190,7 @@ def pin_dependencies(lockfile_path: str) -> Dict:
         version_op = match.group("op")
 
         # Extract all --hash=algo:hash pairs from the line
-        hashes: List[Dict[str, str]] = []
+        hashes: list[dict[str, str]] = []
         for hmatch in re.finditer(
             r"--hash=(?P<algo>sha\d+):(?P<hash_val>[a-f0-9]+)", line
         ):
@@ -219,7 +218,7 @@ def pin_dependencies(lockfile_path: str) -> Dict:
     }
 
 
-def verify_reproducible_build(wheel_path: str) -> Dict:
+def verify_reproducible_build(wheel_path: str) -> dict:
     """Verify a built wheel is reproducible.
 
     Checks:
@@ -251,8 +250,8 @@ def verify_reproducible_build(wheel_path: str) -> Dict:
             f"Not a wheel file (expected .whl extension): {wheel_path}"
         )
 
-    violations: List[str] = []
-    checks: List[Dict] = []
+    violations: list[str] = []
+    checks: list[dict] = []
 
     # Check 1: Valid zip file
     try:
@@ -365,7 +364,7 @@ def verify_reproducible_build(wheel_path: str) -> Dict:
     }
 
 
-def hermetic_build_config() -> Dict:
+def hermetic_build_config() -> dict:
     """Return config for hermetic pip install (no network during build).
 
     A hermetic build ensures:
@@ -426,7 +425,7 @@ def generate_build_manifest(output_dir: str) -> str:
         raise ReproducibleBuildError(f"Output directory not found: {output_dir}")
 
     epoch = get_source_date_epoch()
-    source_files: Dict[str, str] = {}
+    source_files: dict[str, str] = {}
 
     # Hash all Python source files
     for py_file in sorted(out_path.rglob("*.py")):

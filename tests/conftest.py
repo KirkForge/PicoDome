@@ -6,11 +6,6 @@ from pathlib import Path
 
 import pytest
 
-from irondome.models import (
-    Finding,
-    Severity,
-    Verdict,
-)
 from irondome.l3.models import (
     Policy,
     PolicyRule,
@@ -28,7 +23,11 @@ from irondome.l4.models import (
     ProcessSpawn,
     TimingPoint,
 )
-
+from irondome.models import (
+    Finding,
+    Severity,
+    Verdict,
+)
 
 # ─── Shared model fixtures ──────────────────────────────────────────────────
 

@@ -4,7 +4,6 @@ import json
 import tempfile
 from pathlib import Path
 
-
 from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction
 from irondome.l3.policy import default_policy, load_policy
 

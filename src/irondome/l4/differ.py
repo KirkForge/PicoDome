@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
-
 from irondome.l4.models import Baseline, BehavioralProfile, DriftResult
 
 
@@ -114,16 +112,16 @@ def compare_profile_to_baseline(
 
 def find_best_baseline(
     profile: BehavioralProfile,
-    baselines: Dict[str, Baseline],
-) -> Optional[Tuple[Baseline, DriftResult]]:
+    baselines: dict[str, Baseline],
+) -> tuple[Baseline, DriftResult] | None:
     """
     Find the best-matching baseline for a profile.
     Returns (baseline, drift_result) for the lowest-drift match, or None.
     """
-    best: Optional[Tuple[Baseline, DriftResult]] = None
+    best: tuple[Baseline, DriftResult] | None = None
     best_score = 1.0
 
-    for name, baseline in baselines.items():
+    for _name, baseline in baselines.items():
         # Skip if package doesn't match at all
         if baseline.package not in ("*", profile.package, profile.entrypoint):
             continue

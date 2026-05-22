@@ -13,13 +13,12 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Union
 
 from irondome import __version__
+from irondome.formatters.sarif import format_sarif
 from irondome.l3.models import SandboxResult
 from irondome.l4.models import AnalysisResult
 from irondome.models import Severity
-from irondome.formatters.sarif import format_sarif
 
 # Dome-themed severity labels for markdown output
 _DOME_LABELS = {
@@ -32,7 +31,7 @@ _DOME_LABELS = {
 
 
 def format_github(
-    result: Union[SandboxResult, AnalysisResult],
+    result: SandboxResult | AnalysisResult,
     sarif_path: str = "irondome-results.sarif",
 ) -> str:
     """

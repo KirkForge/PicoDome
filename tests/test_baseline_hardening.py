@@ -1,10 +1,13 @@
 """Tests for baseline hardening (anti-poisoning)."""
 
 import pytest
-from irondome.l4.models import Baseline
+
 from irondome.baseline_hardening import (
-    SignedBaseline, BaselineUpdateRateLimit, HardenedBaselineManager,
+    BaselineUpdateRateLimit,
+    HardenedBaselineManager,
+    SignedBaseline,
 )
+from irondome.l4.models import Baseline
 
 
 @pytest.fixture

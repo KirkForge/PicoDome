@@ -1,8 +1,10 @@
 """Tests for API versioning."""
 
 from irondome.api_versioning import (
-    APIVersion, APIVersionNegotiator, DeprecationNotice,
     CURRENT_API_VERSION,
+    APIVersion,
+    APIVersionNegotiator,
+    DeprecationNotice,
 )
 
 

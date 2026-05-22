@@ -1,9 +1,9 @@
 """Tests for rate limiting and job queuing."""
 
-import time
 import threading
+import time
 
-from irondome.ratelimit import TokenBucketLimiter, RateLimitConfig, JobQueue, JobPriority
+from irondome.ratelimit import JobPriority, JobQueue, RateLimitConfig, TokenBucketLimiter
 
 
 class TestTokenBucketLimiter:

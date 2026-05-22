@@ -26,10 +26,10 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
-from irondome.l4.models import Baseline
 from irondome.audit import AuditEventType, get_audit_logger
+from irondome.l4.models import Baseline
 
 logger = logging.getLogger("irondome.baseline_hardening")
 
@@ -42,7 +42,7 @@ class SignedBaseline:
     signed_at: str = ""
     signed_by: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "baseline": self.baseline.to_dict(),
             "signature": self.signature,
@@ -51,7 +51,7 @@ class SignedBaseline:
         }
 
     @classmethod
-    def from_baseline(cls, baseline: Baseline, secret: str, signer: str = "") -> "SignedBaseline":
+    def from_baseline(cls, baseline: Baseline, secret: str, signer: str = "") -> SignedBaseline:
         """Sign a baseline with HMAC-SHA256."""
         import time as _time
         content = json.dumps(baseline.to_dict(), sort_keys=True)
@@ -75,7 +75,7 @@ class SignedBaseline:
 class BaselineUpdateRateLimit:
     """Rate limit for baseline updates to prevent poisoning."""
     max_updates_per_hour: int = 2
-    _update_times: List[float] = field(default_factory=list)
+    _update_times: list[float] = field(default_factory=list)
 
     def check(self) -> bool:
         """Check if an update is allowed. Returns True if allowed."""
@@ -97,7 +97,7 @@ class BaselineDriftCheck:
     actual_drift: float
     details: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "actual_drift": self.actual_drift,
             "allowed": self.allowed,
@@ -123,7 +123,7 @@ class HardenedBaselineManager:
     def __init__(self, signing_secret: str = "") -> None:
         self._secret = signing_secret
         self._rate_limiter = BaselineUpdateRateLimit()
-        self._last_baselines: Dict[str, Baseline] = {}
+        self._last_baselines: dict[str, Baseline] = {}
 
     def sign(self, baseline: Baseline, signer: str = "") -> SignedBaseline:
         """Sign a baseline with HMAC-SHA256."""

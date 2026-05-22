@@ -25,6 +25,7 @@ import threading
 import pytest
 
 from irondome.cluster.manager import (
+    DEFAULT_CLUSTER_PORT,
     ClusterManager,
     ClusterNode,
     ClusterState,
@@ -33,11 +34,9 @@ from irondome.cluster.manager import (
     ScanRequest,
     SQLiteStateBackend,
     _parse_iso_timestamp,
-    DEFAULT_CLUSTER_PORT,
     get_cluster_manager,
     setup_cluster_manager,
 )
-
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 

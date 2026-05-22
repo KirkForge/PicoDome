@@ -1,8 +1,7 @@
 """L4 honeypot touch detector."""
 
-from typing import Dict, List, Optional
 
-from irondome.l4.models import BehavioralProfile, Baseline, Finding
+from irondome.l4.models import Baseline, BehavioralProfile, Finding
 from irondome.models import Severity
 
 # Paths that no legitimate package should access
@@ -25,10 +24,10 @@ HONEYPOT_PATHS = [
 
 def detect_honeypot_touches(
     profile: BehavioralProfile,
-    baselines: Optional[Dict[str, Baseline]] = None,
-) -> List[Finding]:
+    baselines: dict[str, Baseline] | None = None,
+) -> list[Finding]:
     """Detect access to honeypot paths — files no package should touch."""
-    findings: List[Finding] = []
+    findings: list[Finding] = []
     import fnmatch
 
     for op in profile.fs_ops:

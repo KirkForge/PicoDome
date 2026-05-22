@@ -1,17 +1,16 @@
 """L4 baseline drift detector."""
 
-from typing import Dict, List, Optional
 
-from irondome.l4.models import BehavioralProfile, Baseline, Finding
+from irondome.l4.models import Baseline, BehavioralProfile, Finding
 from irondome.models import Severity
 
 
 def detect_baseline_drift(
     profile: BehavioralProfile,
-    baselines: Optional[Dict[str, Baseline]] = None,
-) -> List[Finding]:
+    baselines: dict[str, Baseline] | None = None,
+) -> list[Finding]:
     """Detect significant drift from known baselines."""
-    findings: List[Finding] = []
+    findings: list[Finding] = []
 
     if not baselines:
         return findings

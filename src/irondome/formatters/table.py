@@ -9,8 +9,6 @@ Uses dome-themed severity labels (like PicoSentry's claw-pinch branding):
 
 from __future__ import annotations
 
-from typing import Union
-
 from irondome.l3.models import SandboxResult, Verdict
 from irondome.l4.models import AnalysisResult, BehavioralVerdict
 from irondome.models import Severity
@@ -25,7 +23,7 @@ _DOME_LABELS = {
 }
 
 
-def format_table(result: Union[SandboxResult, AnalysisResult]) -> str:
+def format_table(result: SandboxResult | AnalysisResult) -> str:
     """Format sandbox or analysis result as a human-readable table."""
     if isinstance(result, SandboxResult):
         return _l3_table(result)
@@ -56,15 +54,10 @@ def _l3_table(result: SandboxResult) -> str:
     lines.append(f"║ {'Exit Code:':<16} {result.exit_code:<{width - 20}} ║")
 
     verdict_icon = _verdict_icon(result.overall_verdict)
+    verdict_text = result.overall_verdict.value
+    verdict_pad = width - 23 - len(verdict_text)
     lines.append(
-        f"║ {
-            'Verdict:':<16} {verdict_icon} {
-            result.overall_verdict.value}{
-                '':<{
-                    width -
-                    23 -
-                    len(
-                        result.overall_verdict.value)}} ║")
+        f"║ {'Verdict:':<16} {verdict_icon} {verdict_text}{'':<{verdict_pad}} ║")
 
     if result.events:
         lines.append("╠" + "═" * (width - 2) + "╣")

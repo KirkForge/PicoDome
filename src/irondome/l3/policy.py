@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Set
 
 from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction
 
@@ -118,7 +117,7 @@ PYTHON_RULES: list = [
 
 # ── Named policy registry ─────────────────────────────────────────────────
 
-NAMED_POLICIES: Dict[str, List[dict]] = {
+NAMED_POLICIES: dict[str, list[dict]] = {
     "default": DEFAULT_RULES,
     "strict": STRICT_RULES,
     "node": NODE_RULES,
@@ -126,7 +125,7 @@ NAMED_POLICIES: Dict[str, List[dict]] = {
 }
 
 
-def _rules_from_list(rules_data: list) -> List[PolicyRule]:
+def _rules_from_list(rules_data: list) -> list[PolicyRule]:
     """Convert a list of rule dicts to PolicyRule objects."""
     rules = []
     for r in rules_data:
@@ -142,7 +141,7 @@ def _rules_from_list(rules_data: list) -> List[PolicyRule]:
     return rules
 
 
-def load_policy(path: Optional[Path] = None, name: Optional[str] = None) -> Policy:
+def load_policy(path: Path | None = None, name: str | None = None) -> Policy:
     """Load a sandbox policy from a JSON file, named policy, or return the default.
 
     Args:
@@ -264,7 +263,7 @@ def import_policy(path: Path) -> Policy:
     return policy
 
 
-def validate_policy(policy: Policy) -> List[str]:
+def validate_policy(policy: Policy) -> list[str]:
     """Validate a Policy object for correctness.
 
     Checks:
@@ -280,14 +279,14 @@ def validate_policy(policy: Policy) -> List[str]:
     Returns:
         List of validation error strings. Empty list = valid.
     """
-    errors: List[str] = []
+    errors: list[str] = []
 
     # Check for empty policy
     if not policy.rules:
         errors.append("Policy has no rules")
 
     # Check rule ID uniqueness
-    seen_ids: Set[str] = set()
+    seen_ids: set[str] = set()
     for rule in policy.rules:
         if rule.rule_id in seen_ids:
             errors.append(f"Duplicate rule ID: {rule.rule_id}")

@@ -8,21 +8,20 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from irondome.audit import AuditEventType, AuditLogger
 from irondome.notary import (
     AuditNotary,
-    NullNotary,
-    RekorNotary,
+    NotaryConnectionError,
     NotaryError,
     NotaryTimeoutError,
-    NotaryConnectionError,
     NotaryVerificationError,
+    NullNotary,
+    RekorNotary,
     get_default_notary,
     set_default_notary,
     sign_entry,
     verify_entry_signature,
 )
-from irondome.audit import AuditLogger, AuditEventType
-
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 

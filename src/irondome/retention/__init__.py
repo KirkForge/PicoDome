@@ -7,8 +7,8 @@ Automatic cleanup of expired data. Secure deletion support.
 from __future__ import annotations
 
 from irondome.retention.manager import (
-    RetentionManager,
     RetentionConfig,
+    RetentionManager,
     RetentionPolicy,
     get_retention_manager,
 )

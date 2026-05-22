@@ -8,8 +8,6 @@ Deterministic: same input = same output. Sorted keys, no timestamps.
 
 from __future__ import annotations
 
-from typing import Union
-
 from irondome import __version__
 from irondome.l3.models import SandboxResult
 from irondome.l4.models import AnalysisResult
@@ -26,7 +24,7 @@ _DOME_LABELS = {
 
 
 def format_ml_context(
-    result: Union[SandboxResult, AnalysisResult],
+    result: SandboxResult | AnalysisResult,
     token_budget: int = 4096,
 ) -> str:
     """

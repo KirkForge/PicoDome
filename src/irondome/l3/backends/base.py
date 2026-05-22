@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 
 from irondome.l3.models import Policy, SandboxResult
 
@@ -14,11 +13,11 @@ class SandboxBackend(ABC):
     @abstractmethod
     def run(
         self,
-        command: List[str],
+        command: list[str],
         policy: Policy,
-        timeout: Optional[float] = None,
-        cwd: Optional[str] = None,
-        env: Optional[dict] = None,
+        timeout: float | None = None,
+        cwd: str | None = None,
+        env: dict | None = None,
     ) -> SandboxResult:
         """Execute a command under the given policy."""
         ...
@@ -33,3 +32,24 @@ class SandboxBackend(ABC):
     def name(self) -> str:
         """Human-readable backend name."""
         ...
+
+    @property
+    def isolation_level(self) -> str:
+        """Classification of isolation this backend provides.
+
+        Values:
+            - "kernel_enforced": Real syscall filtering (seccomp-bpf)
+            - "os_policy_enforced": OS-level sandboxing (seatbelt)
+            - "observational_only": Post-hoc pattern analysis (subprocess)
+        """
+        return "observational_only"
+
+    @property
+    def enforcement_guarantee(self) -> str:
+        """How strong the enforcement guarantee is.
+
+        Values:
+            - "hard": Actions are blocked before they happen
+            - "best_effort": Actions are detected after they happen
+        """
+        return "best_effort"

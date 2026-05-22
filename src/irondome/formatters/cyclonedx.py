@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Union
 
 from irondome import __version__
 from irondome.l3.models import SandboxResult
@@ -28,7 +27,7 @@ _SEVERITY_RATING = {
 }
 
 
-def format_cyclonedx(result: Union[SandboxResult, AnalysisResult]) -> str:
+def format_cyclonedx(result: SandboxResult | AnalysisResult) -> str:
     """
     Format a result as CycloneDX 1.5 JSON.
 

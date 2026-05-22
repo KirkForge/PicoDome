@@ -7,12 +7,11 @@ Provides deterministic allow/deny/kill enforcement via BPF.
 from __future__ import annotations
 
 import ctypes
-import shutil
 import logging
 import os
+import shutil
 import signal
 import time
-from typing import Dict, List, Optional, Set
 
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.models import (
@@ -105,11 +104,19 @@ class SeccompBackend(SandboxBackend):
     """
 
     def __init__(self):
-        self._syscall_cache: Dict[str, int] = {}
+        self._syscall_cache: dict[str, int] = {}
 
     @property
     def name(self) -> str:
         return "seccomp-bpf"
+
+    @property
+    def isolation_level(self) -> str:
+        return "kernel_enforced"
+
+    @property
+    def enforcement_guarantee(self) -> str:
+        return "hard"
 
     def is_available(self) -> bool:
         try:
@@ -127,14 +134,14 @@ class SeccompBackend(SandboxBackend):
 
     def run(
         self,
-        command: List[str],
+        command: list[str],
         policy: Policy,
-        timeout: Optional[float] = None,
-        cwd: Optional[str] = None,
-        env: Optional[dict] = None,
+        timeout: float | None = None,
+        cwd: str | None = None,
+        env: dict | None = None,
     ) -> SandboxResult:
         start_ms = _now_ms()
-        events: List[SandboxEvent] = []
+        events: list[SandboxEvent] = []
         effective_timeout = timeout or 30.0
 
         try:
@@ -267,6 +274,10 @@ class SeccompBackend(SandboxBackend):
             duration_ms=duration_ms,
             events=events,
             policy_name=policy.name,
+            backend_name=self.name,
+            isolation_level=self.isolation_level,
+            enforcement_guarantee=self.enforcement_guarantee,
+            degraded=False,
             stdout=stdout,
             stderr=stderr,
         )
@@ -285,11 +296,9 @@ class SeccompBackend(SandboxBackend):
 
     def _build_filter(self, lib: ctypes.CDLL, policy: Policy) -> tuple:
         """Build seccomp BPF filter from policy. Returns (ctx, blocked_syscalls)."""
-        blocked: Set[str] = set()
+        blocked: set[str] = set()
 
-        if policy.default_action == SyscallAction.DENY:
-            default_action = SCMP_ACT_KILL_PROCESS
-        elif policy.default_action == SyscallAction.KILL:
+        if policy.default_action == SyscallAction.DENY or policy.default_action == SyscallAction.KILL:
             default_action = SCMP_ACT_KILL_PROCESS
         else:
             default_action = SCMP_ACT_ALLOW
@@ -322,7 +331,7 @@ class SeccompBackend(SandboxBackend):
 
         return ctx, blocked
 
-    def _target_to_syscalls(self, target: RuleTarget) -> Set[str]:
+    def _target_to_syscalls(self, target: RuleTarget) -> set[str]:
         """Map a RuleTarget to Linux syscall names."""
         mapping = {
             RuleTarget.FILE_READ: _FS_READ_SYSCALLS,
@@ -419,13 +428,13 @@ class SeccompBackend(SandboxBackend):
 
         return b"".join(stdout_chunks), b"".join(stderr_chunks), exit_code
 
-    def _posthoc_analysis(self, stdout: str, stderr: str) -> List[SandboxEvent]:
+    def _posthoc_analysis(self, stdout: str, stderr: str) -> list[SandboxEvent]:
         """Post-hoc pattern analysis on captured output."""
         from irondome.l3.backends.subprocess_backend import SubprocessBackend
         sb = SubprocessBackend()
         return sb._check_suspicious_patterns(stdout, stderr)
 
-    def _compute_verdict(self, events: List[SandboxEvent], exit_code: int) -> Verdict:
+    def _compute_verdict(self, events: list[SandboxEvent], exit_code: int) -> Verdict:
         if exit_code == -1:
             return Verdict.KILL
         for event in events:
@@ -435,7 +444,73 @@ class SeccompBackend(SandboxBackend):
                 return Verdict.DENY
         return Verdict.ALLOW
 
-    def _fallback_run(self, command, policy, timeout, cwd, env) -> SandboxResult:
-        logger.warning("Seccomp setup failed — falling back to subprocess")
+    def _fallback_run(
+        self,
+        command: list[str],
+        policy: Policy,
+        timeout: float | None,
+        cwd: str | None,
+        env: dict | None,
+        reason: str = "seccomp setup failed",
+    ) -> SandboxResult:
+        """Handle backend failure.
+
+        If policy.fail_closed is True (default), return a KILL verdict
+        instead of degrading to the unconfined subprocess backend.
+        Only falls back to subprocess when fail_closed=False.
+        """
+        if policy.fail_closed:
+            logger.error(
+                "FAIL-CLOSED: %s — refusing fallback to "
+                "unconfined subprocess backend",
+                reason,
+            )
+            return SandboxResult(
+                command=command,
+                overall_verdict=Verdict.KILL,
+                exit_code=-1,
+                events=[
+                    SandboxEvent(
+                        rule_id="L3-SANDBOX-DEGRADE",
+                        verdict=Verdict.KILL,
+                        operation="sandbox_degradation_blocked",
+                        detail=(
+                            f"Sandbox backend failed: {reason}. "
+                            "Fail-closed policy prevents "
+                            "unconfined execution."
+                        ),
+                    ),
+                ],
+                policy_name=policy.name,
+                backend_name=self.name,
+                isolation_level="none",
+                enforcement_guarantee="none",
+                degraded=True,
+            )
+
+        logger.warning(
+            "FAIL-OPEN: %s — falling back to subprocess "
+            "(no real sandboxing)",
+            reason,
+        )
         from irondome.l3.backends.subprocess_backend import SubprocessBackend
-        return SubprocessBackend().run(command, policy, timeout=timeout, cwd=cwd, env=env)
+        result = SubprocessBackend().run(
+            command, policy, timeout=timeout, cwd=cwd, env=env,
+        )
+        # Mark as degraded — observational when kernel was expected
+        return SandboxResult(
+            run_id=result.run_id,
+            timestamp=result.timestamp,
+            command=result.command,
+            overall_verdict=result.overall_verdict,
+            exit_code=result.exit_code,
+            duration_ms=result.duration_ms,
+            events=result.events,
+            policy_name=result.policy_name,
+            backend_name=self.name,
+            isolation_level="observational_only",
+            enforcement_guarantee="best_effort",
+            degraded=True,
+            stdout=result.stdout,
+            stderr=result.stderr,
+        )

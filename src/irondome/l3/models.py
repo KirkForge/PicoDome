@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List
 
 from irondome.models import Verdict
 
@@ -41,12 +40,12 @@ class PolicyRule:
     rule_id: str
     target: RuleTarget
     action: SyscallAction
-    paths: List[str] = field(default_factory=list)
-    addresses: List[str] = field(default_factory=list)
-    syscalls: List[str] = field(default_factory=list)
+    paths: list[str] = field(default_factory=list)
+    addresses: list[str] = field(default_factory=list)
+    syscalls: list[str] = field(default_factory=list)
     description: str = ""
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "action": self.action.value,
             "addresses": list(self.addresses),
@@ -64,11 +63,13 @@ class Policy:
     name: str
     version: str = "1.0"
     default_action: SyscallAction = SyscallAction.DENY
-    rules: List[PolicyRule] = field(default_factory=list)
+    rules: list[PolicyRule] = field(default_factory=list)
+    fail_closed: bool = True
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "default_action": self.default_action.value,
+            "fail_closed": self.fail_closed,
             "name": self.name,
             "rules": [
                 {
@@ -97,8 +98,8 @@ class SandboxEvent:
     address: str = ""
     timestamp_ms: int = 0
 
-    def to_dict(self, deterministic: bool = False) -> Dict:
-        d: Dict = {
+    def to_dict(self, deterministic: bool = False) -> dict:
+        d: dict = {
             "detail": self.detail,
             "operation": self.operation,
             "path": self.path,
@@ -118,27 +119,40 @@ class SandboxResult:
 
     Deterministic by default: run_id and timestamp default to "".
     Use models._generate_run_id() / _generate_timestamp() for non-deterministic.
+
+    Backend classification:
+        isolation_level: "kernel_enforced" | "os_policy_enforced" |
+                         "observational_only"
+        enforcement_guarantee: "hard" | "best_effort"
     """
     run_id: str = ""
     timestamp: str = ""
-    command: List[str] = field(default_factory=list)
+    command: list[str] = field(default_factory=list)
     overall_verdict: Verdict = Verdict.ALLOW
     exit_code: int = 0
     duration_ms: int = 0
-    events: List[SandboxEvent] = field(default_factory=list)
+    events: list[SandboxEvent] = field(default_factory=list)
     policy_name: str = ""
+    backend_name: str = ""
+    isolation_level: str = ""
+    enforcement_guarantee: str = ""
+    degraded: bool = False
     stdout: str = ""
     stderr: str = ""
 
-    def to_dict(self, deterministic: bool = False) -> Dict:
+    def to_dict(self, deterministic: bool = False) -> dict:
         """Serialize to dict. Sort keys for deterministic JSON output.
 
         In deterministic mode, omit run_id, timestamp, duration_ms.
         """
-        d: Dict = {
+        d: dict = {
+            "backend": self.backend_name,
             "command": list(self.command),
+            "degraded": self.degraded,
+            "enforcement_guarantee": self.enforcement_guarantee,
             "events": [e.to_dict(deterministic=deterministic) for e in self.events],
             "exit_code": self.exit_code,
+            "isolation_level": self.isolation_level,
             "overall_verdict": self.overall_verdict.value,
             "policy_name": self.policy_name,
         }

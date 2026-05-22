@@ -1,18 +1,18 @@
 """Tests for L4 behavioral analysis."""
 
-from irondome.l4.engine import create_default_engine
-from irondome.l4.models import (
-    BehavioralProfile,
-    BehavioralVerdict,
-    Baseline,
-    NetworkCall,
-    DnsQuery,
-    FileOperation,
-)
-from irondome.l4.profiler import profile_from_sandbox_result
+from irondome.l3.engine import sandbox_run
 from irondome.l4.baseline import load_all_baselines, load_baseline
 from irondome.l4.differ import compare_profile_to_baseline
-from irondome.l3.engine import sandbox_run
+from irondome.l4.engine import create_default_engine
+from irondome.l4.models import (
+    Baseline,
+    BehavioralProfile,
+    BehavioralVerdict,
+    DnsQuery,
+    FileOperation,
+    NetworkCall,
+)
+from irondome.l4.profiler import profile_from_sandbox_result
 
 
 class TestProfiler:
