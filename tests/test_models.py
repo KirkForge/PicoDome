@@ -5,6 +5,13 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
+from irondome.models import (
+    BehavioralVerdict,
+    Finding,
+    ScanStats,
+    Severity,
+    Verdict,
+)
 from irondome.l3.models import (
     Policy,
     PolicyRule,
@@ -22,16 +29,9 @@ from irondome.l4.models import (
     ProcessSpawn,
     TimingPoint,
 )
-from irondome.models import (
-    BehavioralVerdict,
-    Finding,
-    ScanStats,
-    Severity,
-    Verdict,
-)
 
-# ─── Severity enum
-# ────────────────────────────────────────────────────────────
+
+# ─── Severity enum ────────────────────────────────────────────────────────────
 
 
 class TestSeverity:
@@ -54,8 +54,7 @@ class TestSeverity:
         assert Severity.CRITICAL.value == "CRITICAL"
 
 
-# ─── Verdict enum
-# ─────────────────────────────────────────────────────────────
+# ─── Verdict enum ─────────────────────────────────────────────────────────────
 
 
 class TestVerdict:
@@ -71,8 +70,7 @@ class TestVerdict:
         assert isinstance(Verdict.ALLOW, str)
 
 
-# ─── BehavioralVerdict enum
-# ───────────────────────────────────────────────────
+# ─── BehavioralVerdict enum ───────────────────────────────────────────────────
 
 
 class TestBehavioralVerdict:
@@ -88,8 +86,7 @@ class TestBehavioralVerdict:
         assert isinstance(BehavioralVerdict.CLEAN, str)
 
 
-# ─── Finding
-# ──────────────────────────────────────────────────────────────────
+# ─── Finding ──────────────────────────────────────────────────────────────────
 
 
 class TestFinding:
@@ -144,8 +141,7 @@ class TestFinding:
             assert f.severity == sev
 
 
-# ─── ScanStats
-# ────────────────────────────────────────────────────────────────
+# ─── ScanStats ────────────────────────────────────────────────────────────────
 
 
 class TestScanStats:
@@ -190,8 +186,7 @@ class TestScanStats:
             s.packages_scanned = 99
 
 
-# ─── SandboxEvent
-# ─────────────────────────────────────────────────────────────
+# ─── SandboxEvent ─────────────────────────────────────────────────────────────
 
 
 class TestSandboxEvent:
@@ -236,15 +231,12 @@ class TestSandboxEvent:
         assert d["address"] == "1.2.3.4"
 
     def test_sandbox_event_frozen(self):
-        e =
-            SandboxEvent(rule_id="R1", verdict=Verdict.ALLOW, operation="t", \
-                detail="t")
+        e = SandboxEvent(rule_id="R1", verdict=Verdict.ALLOW, operation="t", detail="t")
         with pytest.raises(FrozenInstanceError):
             e.rule_id = "changed"
 
 
-# ─── SandboxResult
-# ─────────────────────────────────────────────────────────────
+# ─── SandboxResult ─────────────────────────────────────────────────────────────
 
 
 class TestSandboxResult:
@@ -268,10 +260,7 @@ class TestSandboxResult:
         assert d["policy_name"] == "test-policy"
         assert "events" in d
 
-    def test_sandbox_result_to_dict_json_serializable(
-        self,
-        clean_sandbox_result,
-    ):
+    def test_sandbox_result_to_dict_json_serializable(self, clean_sandbox_result):
         d = clean_sandbox_result.to_dict()
         json_str = json.dumps(d)
         assert isinstance(json_str, str)
@@ -291,10 +280,8 @@ class TestSandboxResult:
         assert d["timestamp"] == "2025-01-01T00:00:00Z"
 
     def test_sandbox_result_auto_fields(self):
-        """SandboxResult run_id and timestamp default to empty (deterministic \
-            mode).
-        Use _generate_run_id() and _generate_timestamp() for non-deterministic \
-            IDs."""
+        """SandboxResult run_id and timestamp default to empty (deterministic mode).
+        Use _generate_run_id() and _generate_timestamp() for non-deterministic IDs."""
         r = SandboxResult(command=["test"])
         # In deterministic mode, run_id and timestamp are empty
         assert r.run_id == ""
@@ -312,8 +299,7 @@ class TestSandboxResult:
         assert d["events"][0]["rule_id"] == "L3-SUS-001"
 
 
-# ─── L4 models
-# ────────────────────────────────────────────────────────────────
+# ─── L4 models ────────────────────────────────────────────────────────────────
 
 
 class TestNetworkCall:
@@ -374,9 +360,7 @@ class TestFileOperation:
         assert fo.bytes_transferred == 0
 
     def test_to_dict(self):
-        fo =
-            FileOperation(path="/tmp/test", operation="write", \
-                bytes_transferred=100)
+        fo = FileOperation(path="/tmp/test", operation="write", bytes_transferred=100)
         d = fo.to_dict()
         assert d["path"] == "/tmp/test"
         assert d["operation"] == "write"
@@ -396,8 +380,7 @@ class TestProcessSpawn:
         assert ps.exit_code is None
 
     def test_to_dict(self):
-        ps =
-            ProcessSpawn(executable="/bin/bash", args=["-c", "echo"], pid=1234)
+        ps = ProcessSpawn(executable="/bin/bash", args=["-c", "echo"], pid=1234)
         d = ps.to_dict()
         assert d["executable"] == "/bin/bash"
         assert d["args"] == ["-c", "echo"]
@@ -418,8 +401,7 @@ class TestTimingPoint:
         assert d["elapsed_ms"] == 50
 
 
-# ─── BehavioralProfile
-# ────────────────────────────────────────────────────────
+# ─── BehavioralProfile ────────────────────────────────────────────────────────
 
 
 class TestBehavioralProfile:
@@ -448,8 +430,7 @@ class TestBehavioralProfile:
             clean_profile.package = "changed"
 
 
-# ─── Baseline
-# ──────────────────────────────────────────────────────────────────
+# ─── Baseline ──────────────────────────────────────────────────────────────────
 
 
 class TestBaseline:
@@ -470,8 +451,7 @@ class TestBaseline:
             python_baseline.name = "changed"
 
 
-# ─── DriftResult
-# ───────────────────────────────────────────────────────────────
+# ─── DriftResult ───────────────────────────────────────────────────────────────
 
 
 class TestDriftResult:
@@ -514,8 +494,7 @@ class TestDriftResult:
         assert d["details"] == "Network and DNS drift"
 
 
-# ─── AnalysisResult
-# ────────────────────────────────────────────────────────────
+# ─── AnalysisResult ────────────────────────────────────────────────────────────
 
 
 class TestAnalysisResult:
@@ -560,8 +539,7 @@ class TestAnalysisResult:
             ar.target = "changed"
 
 
-# ─── Deterministic output
-# ──────────────────────────────────────────────────────
+# ─── Deterministic output ──────────────────────────────────────────────────────
 
 
 class TestDeterministicOutput:
@@ -594,11 +572,7 @@ class TestDeterministicOutput:
         )
         assert r1.to_dict() == r2.to_dict()
 
-    def test_analysis_result_json_roundtrip(
-        self,
-        clean_profile,
-        clean_finding,
-    ):
+    def test_analysis_result_json_roundtrip(self, clean_profile, clean_finding):
         """AnalysisResult should serialize to JSON and back."""
         ar = AnalysisResult(
             target="python",
@@ -612,8 +586,7 @@ class TestDeterministicOutput:
         assert parsed["overall_verdict"] == "CLEAN"
 
 
-# ─── SyscallAction and RuleTarget enums
-# ────────────────────────────────────────
+# ─── SyscallAction and RuleTarget enums ────────────────────────────────────────
 
 
 class TestSyscallAction:
@@ -642,8 +615,7 @@ class TestRuleTarget:
         assert len(RuleTarget) == 11
 
 
-# ─── PolicyRule
-# ─────────────────────────────────────────────────────────────────
+# ─── PolicyRule ─────────────────────────────────────────────────────────────────
 
 
 class TestPolicyRule:
@@ -670,15 +642,12 @@ class TestPolicyRule:
         assert pr.description == ""
 
     def test_frozen(self):
-        pr =
-            PolicyRule(rule_id="R", target=RuleTarget.NETWORK_OUT, \
-                action=SyscallAction.DENY)
+        pr = PolicyRule(rule_id="R", target=RuleTarget.NETWORK_OUT, action=SyscallAction.DENY)
         with pytest.raises(FrozenInstanceError):
             pr.rule_id = "changed"
 
 
-# ─── Policy
-# ─────────────────────────────────────────────────────────────────────
+# ─── Policy ─────────────────────────────────────────────────────────────────────
 
 
 class TestPolicy:

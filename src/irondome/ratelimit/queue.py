@@ -18,7 +18,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("irondome.ratelimit.queue")
 
@@ -35,20 +35,20 @@ class JobPriority(IntEnum):
 class QueuedJob:
     """A job in the priority queue."""
     job_id: str
-    command: list[str]
+    command: List[str]
     actor: str
     priority: JobPriority = JobPriority.NORMAL
     created_at: float = 0.0
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
     status: str = "queued"
 
-    def __lt__(self, other: QueuedJob) -> bool:
+    def __lt__(self, other: "QueuedJob") -> bool:
         """Priority queue ordering: priority first, then FIFO."""
         if self.priority != other.priority:
             return self.priority < other.priority
         return self.created_at < other.created_at
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "actor": self.actor,
             "command": self.command,
@@ -79,12 +79,12 @@ class JobQueue:
     """
 
     def __init__(self, max_size: int = 1000) -> None:
-        self._heap: list[QueuedJob] = []
-        self._jobs: dict[str, QueuedJob] = {}
+        self._heap: List[QueuedJob] = []
+        self._jobs: Dict[str, QueuedJob] = {}
         self._max_size = max_size
         self._lock = threading.Lock()
         self._not_empty = threading.Condition(self._lock)
-        self._completed: dict[str, dict] = {}
+        self._completed: Dict[str, Dict] = {}
         self._stats = {
             "enqueued": 0,
             "dequeued": 0,
@@ -95,11 +95,11 @@ class JobQueue:
 
     def enqueue(
         self,
-        command: list[str],
+        command: List[str],
         actor: str,
         priority: JobPriority = JobPriority.NORMAL,
-        metadata: dict[str, Any] | None = None,
-    ) -> QueuedJob | None:
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[QueuedJob]:
         """Add a job to the queue.
 
         Returns the QueuedJob if accepted, None if the queue is full.
@@ -109,8 +109,7 @@ class JobQueue:
                 # Drop lowest priority job to make room
                 if priority >= JobPriority.LOW:
                     self._stats["dropped"] += 1
-                    logger.warning("Job queue full (%d), dropping LOW priority \
-                        job", len(self._heap))
+                    logger.warning("Job queue full (%d), dropping LOW priority job", len(self._heap))
                     return None
                 # Evict the lowest priority, newest job
                 self._evict_lowest()
@@ -133,7 +132,7 @@ class JobQueue:
             self._not_empty.notify()
             return job
 
-    def dequeue(self, timeout: float | None = None) -> QueuedJob | None:
+    def dequeue(self, timeout: Optional[float] = None) -> Optional[QueuedJob]:
         """Get the highest-priority job from the queue.
 
         Blocks until a job is available or timeout expires.
@@ -163,7 +162,7 @@ class JobQueue:
             self._stats["dequeued"] += 1
             return job
 
-    def complete(self, job_id: str, result: dict | None = None) -> None:
+    def complete(self, job_id: str, result: Optional[Dict] = None) -> None:
         """Mark a job as completed with optional result."""
         with self._lock:
             if job_id in self._jobs:
@@ -179,17 +178,17 @@ class JobQueue:
                 self._jobs[job_id].status = "failed"
                 self._stats["completed"] += 1
 
-    def get(self, job_id: str) -> QueuedJob | None:
+    def get(self, job_id: str) -> Optional[QueuedJob]:
         """Get a job by ID."""
         with self._lock:
             return self._jobs.get(job_id)
 
-    def get_result(self, job_id: str) -> dict | None:
+    def get_result(self, job_id: str) -> Optional[Dict]:
         """Get a completed job's result."""
         with self._lock:
             return self._completed.get(job_id)
 
-    def list_pending(self, limit: int = 50) -> list[QueuedJob]:
+    def list_pending(self, limit: int = 50) -> List[QueuedJob]:
         """List pending jobs in priority order."""
         with self._lock:
             pending = [j for j in self._jobs.values() if j.status == "queued"]
@@ -201,7 +200,7 @@ class JobQueue:
         with self._lock:
             return len(self._heap)
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> Dict[str, Any]:
         """Queue statistics."""
         with self._lock:
             by_priority = {}
@@ -231,8 +230,7 @@ class JobQueue:
             for job_id in expired_ids:
                 self._jobs[job_id].status = "expired"
                 self._stats["expired"] += 1
-            self._heap =
-                [j for j in self._heap if j.job_id not in set(expired_ids)]
+            self._heap = [j for j in self._heap if j.job_id not in set(expired_ids)]
             heapq.heapify(self._heap)
             return len(expired_ids)
 
@@ -246,8 +244,7 @@ class JobQueue:
         worst_time = -1.0
         for i, job in enumerate(self._heap):
             if job.priority.value > worst_priority or (
-                job.priority.value == worst_priority and job.created_at > \
-                    worst_time
+                job.priority.value == worst_priority and job.created_at > worst_time
             ):
                 worst_idx = i
                 worst_priority = job.priority.value

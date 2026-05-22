@@ -7,6 +7,7 @@ fields and random IDs are omitted from the output.
 from __future__ import annotations
 
 import json
+from typing import Union
 
 from irondome import __version__
 from irondome.l3.models import SandboxResult
@@ -14,7 +15,7 @@ from irondome.l4.models import AnalysisResult
 
 
 def format_json(
-    result: SandboxResult | AnalysisResult,
+    result: Union[SandboxResult, AnalysisResult],
     indent: int = 2,
     deterministic: bool = False,
 ) -> str:

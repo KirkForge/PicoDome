@@ -1,5 +1,4 @@
-"""Tests for the subprocess backend — pattern detection, verdicts, edge \
-    cases."""
+"""Tests for the subprocess backend — pattern detection, verdicts, edge cases."""
 
 
 import pytest
@@ -16,8 +15,7 @@ def backend():
 
 @pytest.fixture
 def permissive_policy():
-    """A permissive policy for testing pattern detection without DENY \
-        verdicts."""
+    """A permissive policy for testing pattern detection without DENY verdicts."""
     return Policy(
         name="test-permissive",
         default_action=SyscallAction.ALLOW,
@@ -25,8 +23,7 @@ def permissive_policy():
     )
 
 
-# ─── Backend basics
-# ────────────────────────────────────────────────────────────
+# ─── Backend basics ────────────────────────────────────────────────────────────
 
 
 class TestBackendBasics:
@@ -51,8 +48,7 @@ class TestBackendBasics:
         assert result.command == ["echo", "hello"]
 
 
-# ─── L3-SUS pattern tests
-# ─────────────────────────────────────────────────────
+# ─── L3-SUS pattern tests ─────────────────────────────────────────────────────
 
 
 class TestSuspiciousPatternDetection:
@@ -169,8 +165,7 @@ class TestSuspiciousPatternDetection:
         assert any(e.rule_id == "L3-SUS-010" for e in result.events)
 
 
-# ─── Network detection
-# ─────────────────────────────────────────────────────────
+# ─── Network detection ─────────────────────────────────────────────────────────
 
 
 class TestNetworkDetection:
@@ -179,8 +174,7 @@ class TestNetworkDetection:
             ["python3", "-c", "print('connect to 93.184.216.34')"],
             default_policy(),
         )
-        network_events =
-            [e for e in result.events if e.operation == "network_outbound"]
+        network_events = [e for e in result.events if e.operation == "network_outbound"]
         assert len(network_events) >= 1
 
     def test_skip_loopback_ips(self, backend):
@@ -205,8 +199,7 @@ class TestNetworkDetection:
         assert len(url_events) >= 1
 
 
-# ─── File write detection
-# ──────────────────────────────────────────────────────
+# ─── File write detection ──────────────────────────────────────────────────────
 
 
 class TestFileWriteDetection:
@@ -215,8 +208,7 @@ class TestFileWriteDetection:
             ["python3", "-c", "print('writing to /tmp/evil.sh')"],
             default_policy(),
         )
-        write_events =
-            [e for e in result.events if "file_write" in e.operation]
+        write_events = [e for e in result.events if "file_write" in e.operation]
         assert len(write_events) >= 1
 
     def test_detect_saved_to(self, backend):
@@ -224,16 +216,11 @@ class TestFileWriteDetection:
             ["python3", "-c", "print('saved to /tmp/data.txt')"],
             default_policy(),
         )
-        write_events =
-            [
-                e for e in result.events if "file_write" in e.operation or \
-                    "file_save" in e.operation,
-            ]
+        write_events = [e for e in result.events if "file_write" in e.operation or "file_save" in e.operation]
         assert len(write_events) >= 1
 
 
-# ─── Process spawn detection
-# ──────────────────────────────────────────────────
+# ─── Process spawn detection ──────────────────────────────────────────────────
 
 
 class TestProcessSpawnDetection:
@@ -242,8 +229,7 @@ class TestProcessSpawnDetection:
             ["python3", "-c", "print('executing: /bin/bash')"],
             default_policy(),
         )
-        spawn_events =
-            [e for e in result.events if e.operation == "process_spawn"]
+        spawn_events = [e for e in result.events if e.operation == "process_spawn"]
         assert len(spawn_events) >= 1
 
     def test_detect_spawning(self, backend):
@@ -251,13 +237,11 @@ class TestProcessSpawnDetection:
             ["python3", "-c", "print('spawning /usr/bin/wget')"],
             default_policy(),
         )
-        spawn_events =
-            [e for e in result.events if e.operation == "process_spawn"]
+        spawn_events = [e for e in result.events if e.operation == "process_spawn"]
         assert len(spawn_events) >= 1
 
 
-# ─── Timeout handling
-# ─────────────────────────────────────────────────────────
+# ─── Timeout handling ─────────────────────────────────────────────────────────
 
 
 class TestTimeoutHandling:
@@ -275,14 +259,12 @@ class TestTimeoutHandling:
         assert not any(e.rule_id == "L3-TIMEOUT-001" for e in result.events)
 
 
-# ─── Command not found
-# ──────────────────────────────────────────────────────────
+# ─── Command not found ──────────────────────────────────────────────────────────
 
 
 class TestCommandNotFound:
     def test_nonexistent_command(self, backend):
-        result =
-            backend.run(["nonexistent_command_xyzzy_12345"], default_policy())
+        result = backend.run(["nonexistent_command_xyzzy_12345"], default_policy())
         assert result.exit_code != 0
         assert any(
             e.rule_id in ("L3-EXEC-001", "L3-EXEC-002")
@@ -290,8 +272,7 @@ class TestCommandNotFound:
         ) or result.overall_verdict != Verdict.ALLOW
 
 
-# ─── Permission denied
-# ────────────────────────────────────────────────────────
+# ─── Permission denied ────────────────────────────────────────────────────────
 
 
 class TestPermissionDenied:
@@ -302,8 +283,7 @@ class TestPermissionDenied:
         assert result.exit_code != 0 or result.overall_verdict != Verdict.ALLOW
 
 
-# ─── Verdict computation
-# ────────────────────────────────────────────────────────
+# ─── Verdict computation ────────────────────────────────────────────────────────
 
 
 class TestVerdictComputation:
@@ -317,17 +297,12 @@ class TestVerdictComputation:
             default_policy(),
         )
         # Should have DENY or KILL events from SUS patterns
-        deny_or_kill =
-            [
-                e for e in result.events if e.verdict in (Verdict.DENY, \
-                    Verdict.KILL),
-            ]
+        deny_or_kill = [e for e in result.events if e.verdict in (Verdict.DENY, Verdict.KILL)]
         if deny_or_kill:
             assert result.overall_verdict in (Verdict.DENY, Verdict.KILL)
 
 
-# ─── Suspicious pattern regex edge cases
-# ────────────────────────────────────────
+# ─── Suspicious pattern regex edge cases ────────────────────────────────────────
 
 
 class TestSuspiciousPatternEdgeCases:
@@ -350,8 +325,7 @@ class TestSuspiciousPatternEdgeCases:
     def test_safe_output_no_events(self, backend):
         """Clean output should not trigger any SUS patterns."""
         result = backend.run(["echo", "hello world"], default_policy())
-        sus_events =
-            [e for e in result.events if e.rule_id.startswith("L3-SUS")]
+        sus_events = [e for e in result.events if e.rule_id.startswith("L3-SUS")]
         assert len(sus_events) == 0
 
     def test_multiple_patterns_in_one_output(self, backend):

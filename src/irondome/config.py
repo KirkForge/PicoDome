@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("irondome.config")
 
@@ -64,13 +64,13 @@ class IronDomeConfig:
         self.deterministic_output: bool = False
 
         # Failure thresholds
-        self.fail_on: str | None = None  # None means no threshold
+        self.fail_on: Optional[str] = None  # None means no threshold
 
         # Baseline
-        self.baseline: str | None = None
+        self.baseline: Optional[str] = None
 
         # Severity overrides (rule_id → severity)
-        self.severity_overrides: dict[str, str] = {}
+        self.severity_overrides: Dict[str, str] = {}
 
         # Token budget for LLM context output
         self.token_budget: int = 4096
@@ -79,17 +79,16 @@ class IronDomeConfig:
         self.timeout: float = 30.0
 
         # Policy file path
-        self.policy: str | None = None
+        self.policy: Optional[str] = None
 
         # Specific rules to run (None = all)
-        self.rules: list[str] | None = None
+        self.rules: Optional[List[str]] = None
 
         # Logging
         self.log_format: str = "text"
 
-    def merge_from_cli(self, args: Any) -> IronDomeConfig:
-        """Merge CLI args into this config. CLI flags override config file \
-            values.
+    def merge_from_cli(self, args: Any) -> "IronDomeConfig":
+        """Merge CLI args into this config. CLI flags override config file values.
 
         Uses attribute presence detection to determine if a CLI flag was
         explicitly set. Only overrides values where the user passed a flag.
@@ -141,15 +140,13 @@ class IronDomeConfig:
             merged.policy = str(args.policy)
         if getattr(args, "rules", None) is not None:
             merged.rules = args.rules
-        if getattr(args, "log_format", \
-            None) is not None and args.log_format != "text":
+        if getattr(args, "log_format", None) is not None and args.log_format != "text":
             merged.log_format = args.log_format
 
         return merged
 
     def apply_severity_overrides(self, findings: list) -> list:
-        """Apply severity overrides from config. Returns a NEW list of \
-            Findings.
+        """Apply severity overrides from config. Returns a NEW list of Findings.
 
         Does NOT mutate the original Findings (they are frozen).
         Each override creates a new Finding with the overridden severity.
@@ -177,15 +174,14 @@ class IronDomeConfig:
                     )
                 except ValueError:
                     logger.warning(
-                        "Invalid severity override for %s: %s (expected \
-                            CRITICAL/HIGH/MEDIUM/LOW/INFO)",
+                        "Invalid severity override for %s: %s (expected CRITICAL/HIGH/MEDIUM/LOW/INFO)",
                         f.rule_id,
                         new_sev,
                     )
             overridden.append(f)
         return overridden
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Serialize config to dict for JSON output."""
         return {
             "format": self.format,
@@ -206,16 +202,12 @@ class IronDomeConfig:
 def _validate_config_keys(data: dict, config_path: Path) -> None:
     """Validate config keys against known keys and warn about unknown keys.
 
-    Prevents silent config rot (
-        e.g.
-        typo in key name like 'severity_overides'
-    ).
+    Prevents silent config rot (e.g., typo in key name like 'severity_overides').
     """
     unknown = sorted(set(data.keys()) - KNOWN_KEYS)
     for key in unknown:
         logger.warning(
-            "Unknown config key '%s' in %s — will be ignored. Did you mean one \
-                of: %s?",
+            "Unknown config key '%s' in %s — will be ignored. Did you mean one of: %s?",
             key,
             config_path,
             ", ".join(sorted(KNOWN_KEYS)),
@@ -270,11 +262,7 @@ def apply_env_overrides(config: IronDomeConfig) -> IronDomeConfig:
                 else:
                     setattr(config, attr_name, val)
             except ValueError:
-                logger.warning(
-                    "Invalid value for %s: %s (expected number)",
-                    env_name,
-                    env_val,
-                )
+                logger.warning("Invalid value for %s: %s (expected number)", env_name, env_val)
                 continue
 
     return config
@@ -308,21 +296,14 @@ def load_config(target_dir: Path) -> IronDomeConfig:
 
             data = json.loads(config_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as e:
-            logger.warning(
-                "Failed to parse config file %s: %s"
-                config_path
-                e
-            )
+            logger.warning("Failed to parse config file %s: %s", config_path, e)
             return config
     except Exception as e:
         logger.warning("Failed to parse config file %s: %s", config_path, e)
         return config
 
     if not isinstance(data, dict):
-        logger.warning(
-            "Config file %s is not a mapping, ignoring"
-            config_path
-        )
+        logger.warning("Config file %s is not a mapping, ignoring", config_path)
         return config
 
     # Validate against known keys
@@ -377,38 +358,21 @@ def load_config(target_dir: Path) -> IronDomeConfig:
 
     if "severity_overrides" in data:
         try:
-            config.severity_overrides = {
-                str(k): str(v) for k
-                v in data["severity_overrides"].items()
-            }
+            config.severity_overrides = {str(k): str(v) for k, v in data["severity_overrides"].items()}
         except (AttributeError, TypeError, ValueError) as e:
-            logger.warning(
-                "Invalid severity_overrides in %s: %s"
-                config_path
-                e
-            )
+            logger.warning("Invalid severity_overrides in %s: %s", config_path, e)
 
     if "token_budget" in data:
         try:
             config.token_budget = int(data["token_budget"])
         except (ValueError, TypeError) as e:
-            logger.warning(
-                "Invalid token_budget %r in %s: %s"
-                data["token_budget"]
-                config_path
-                e
-            )
+            logger.warning("Invalid token_budget %r in %s: %s", data["token_budget"], config_path, e)
 
     if "timeout" in data:
         try:
             config.timeout = float(data["timeout"])
         except (ValueError, TypeError) as e:
-            logger.warning(
-                "Invalid timeout %r in %s: %s"
-                data["timeout"]
-                config_path
-                e
-            )
+            logger.warning("Invalid timeout %r in %s: %s", data["timeout"], config_path, e)
 
     if "policy" in data:
         policy_path = data["policy"]
@@ -440,7 +404,7 @@ def load_config(target_dir: Path) -> IronDomeConfig:
     return config
 
 
-def _find_config(target_dir: Path) -> Path | None:
+def _find_config(target_dir: Path) -> Optional[Path]:
     """Search for config file in target directory.
 
     Returns first match in precedence order:

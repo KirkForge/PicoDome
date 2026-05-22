@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from irondome.grpc_transport import is_grpc_available
 
@@ -44,7 +44,7 @@ class ScanResult:
         self.l4_verdict = l4_verdict
         self.findings_count = findings_count
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "result_json": self.result_json,
             "exit_code": self.exit_code,
@@ -56,7 +56,7 @@ class ScanResult:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> ScanResult:
+    def from_dict(cls, d: Dict[str, Any]) -> "ScanResult":
         return cls(
             result_json=d.get("result_json", ""),
             exit_code=d.get("exit_code", 0),
@@ -79,15 +79,8 @@ class IronDomeGRPCClient:
     Or with TLS::
 
         from irondome.mtls import MTLSConfig
-        config = MTLSConfig(
-            cert_path="client.crt"
-            key_path="client.key"
-            ca_path="ca.crt"
-        )
-        client = IronDomeGRPCClient(
-            target="localhost:50051"
-            mtls_config=config
-        )
+        config = MTLSConfig(cert_path="client.crt", key_path="client.key", ca_path="ca.crt")
+        client = IronDomeGRPCClient(target="localhost:50051", mtls_config=config)
 
     If grpcio is not installed, calling scan() will raise ImportError.
     Check ``is_grpc_available()`` before instantiating.
@@ -96,7 +89,7 @@ class IronDomeGRPCClient:
     def __init__(
         self,
         target: str = "localhost:50051",
-        mtls_config: Any | None = None,
+        mtls_config: Optional[Any] = None,
         timeout: float = 30.0,
         max_retries: int = 3,
         retry_delay: float = 1.0,
@@ -128,20 +121,14 @@ class IronDomeGRPCClient:
             logger.info("gRPC client connected (TLS) to %s", self._target)
         else:
             self._channel = grpc.insecure_channel(self._target)
-            logger.info(
-                "gRPC client connected (plaintext) to %s",
-                self._target,
-            )
+            logger.info("gRPC client connected (plaintext) to %s", self._target)
 
         # Try to use generated stubs, fall back to manual
         try:
-            from irondome.grpc_transport.proto import (
-                irondome_pb2_grpc as pb2_grpc,
-            )
+            from irondome.grpc_transport.proto import irondome_pb2_grpc as pb2_grpc
             self._stub = pb2_grpc.IronDomeServiceStub(self._channel)
         except ImportError:
-            logger.warning(
-                "Compiled protobuf stubs not found, using manual stub")
+            logger.warning("Compiled protobuf stubs not found, using manual stub")
             self._stub = None
 
     def _create_client_credentials(self, mtls_config) -> Any:
@@ -150,12 +137,10 @@ class IronDomeGRPCClient:
             return None
 
         import grpc
-
         from irondome.mtls.context import MTLSConfig
 
         if not isinstance(mtls_config, MTLSConfig):
-            logger.warning(
-                "mtls_config is not an MTLSConfig instance, skipping TLS")
+            logger.warning("mtls_config is not an MTLSConfig instance, skipping TLS")
             return None
 
         if mtls_config.dev_mode:
@@ -191,10 +176,10 @@ class IronDomeGRPCClient:
 
     def scan(
         self,
-        command: list[str],
-        policy: str | None = None,
-        timeout: float | None = None,
-        cwd: str | None = None,
+        command: List[str],
+        policy: Optional[str] = None,
+        timeout: Optional[float] = None,
+        cwd: Optional[str] = None,
     ) -> ScanResult:
         """Submit a scan request synchronously with retry logic.
 
@@ -228,27 +213,21 @@ class IronDomeGRPCClient:
                     )
                     time.sleep(self._retry_delay)
                 else:
-                    logger.error(
-                        "All %d scan attempts failed"
-                        self._max_retries
-                    )
+                    logger.error("All %d scan attempts failed", self._max_retries)
 
-        raise ConnectionError(
-            f"Failed to scan after {self._max_retries} attempts: {last_error}")
+        raise ConnectionError(f"Failed to scan after {self._max_retries} attempts: {last_error}")
 
     def _do_scan(
         self,
-        command: list[str],
-        policy: str | None,
+        command: List[str],
+        policy: Optional[str],
         timeout: float,
-        cwd: str | None,
+        cwd: Optional[str],
     ) -> ScanResult:
         """Execute a single scan RPC call."""
         try:
             from irondome.grpc_transport.proto import irondome_pb2 as pb2
-            from irondome.grpc_transport.proto import (
-                irondome_pb2_grpc as pb2_grpc,
-            )
+            from irondome.grpc_transport.proto import irondome_pb2_grpc as pb2_grpc
 
             request = pb2.ScanRequest(
                 command=command,
@@ -276,10 +255,10 @@ class IronDomeGRPCClient:
 
     def _do_scan_manual(
         self,
-        command: list[str],
-        policy: str | None,
+        command: List[str],
+        policy: Optional[str],
         timeout: float,
-        cwd: str | None,
+        cwd: Optional[str],
     ) -> ScanResult:
         """Manual scan call when proto stubs are not compiled.
 
@@ -311,38 +290,27 @@ class IronDomeGRPCClient:
 
     async def scan_async(
         self,
-        command: list[str],
-        policy: str | None = None,
-        timeout: float | None = None,
-        cwd: str | None = None,
+        command: List[str],
+        policy: Optional[str] = None,
+        timeout: Optional[float] = None,
+        cwd: Optional[str] = None,
     ) -> ScanResult:
-        """Submit a scan request asynchronously (uses grpcio asyncio if \
-            available).
+        """Submit a scan request asynchronously (uses grpcio asyncio if available).
 
         Falls back to synchronous scan if grpcio asyncio is not available.
         """
         # For now, delegate to sync scan — async gRPC requires grpcio>=1.32
         # and the async server. This is a reasonable fallback.
-        logger.debug(
-            "scan_async: delegating to synchronous scan (async gRPC not yet \
-                implemented)"
-            )
-        return self.scan(
-            command=command
-            policy=policy
-            timeout=timeout
-            cwd=cwd
-        )
+        logger.debug("scan_async: delegating to synchronous scan (async gRPC not yet implemented)")
+        return self.scan(command=command, policy=policy, timeout=timeout, cwd=cwd)
 
-    def health(self) -> dict[str, Any]:
+    def health(self) -> Dict[str, Any]:
         """Check the health of the gRPC server."""
         self._ensure_channel()
 
         try:
             from irondome.grpc_transport.proto import irondome_pb2 as pb2
-            from irondome.grpc_transport.proto import (
-                irondome_pb2_grpc as pb2_grpc,
-            )
+            from irondome.grpc_transport.proto import irondome_pb2_grpc as pb2_grpc
 
             request = pb2.HealthCheckRequest()
             if self._stub is None:
@@ -369,18 +337,13 @@ class IronDomeGRPCClient:
                 logger.error("gRPC Health RPC failed: %s", e)
                 return {"healthy": False, "detail": str(e)}
 
-    def get_policy(self, name: str, version: int | None = None) -> dict[
-        str
-        Any
-    ]:
+    def get_policy(self, name: str, version: Optional[int] = None) -> Dict[str, Any]:
         """Get a policy by name."""
         self._ensure_channel()
 
         try:
             from irondome.grpc_transport.proto import irondome_pb2 as pb2
-            from irondome.grpc_transport.proto import (
-                irondome_pb2_grpc as pb2_grpc,
-            )
+            from irondome.grpc_transport.proto import irondome_pb2_grpc as pb2_grpc
 
             request = pb2.PolicyGetRequest(name=name, version=version or 0)
             if self._stub is None:
@@ -394,8 +357,7 @@ class IronDomeGRPCClient:
             }
         except ImportError:
             import grpc
-            request_data = json.dumps({"name": name, "version": version or 0}).encode(
-                "utf-8")
+            request_data = json.dumps({"name": name, "version": version or 0}).encode("utf-8")
             try:
                 response_data = self._channel.unary_unary(
                     "/irondome.IronDomeService/GetPolicy",
@@ -409,21 +371,19 @@ class IronDomeGRPCClient:
 
     def query_audit(
         self,
-        event_type: str | None = None,
-        actor: str | None = None,
-        target: str | None = None,
-        since: str | None = None,
-        until: str | None = None,
+        event_type: Optional[str] = None,
+        actor: Optional[str] = None,
+        target: Optional[str] = None,
+        since: Optional[str] = None,
+        until: Optional[str] = None,
         limit: int = 100,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Query the audit log via gRPC."""
         self._ensure_channel()
 
         try:
             from irondome.grpc_transport.proto import irondome_pb2 as pb2
-            from irondome.grpc_transport.proto import (
-                irondome_pb2_grpc as pb2_grpc,
-            )
+            from irondome.grpc_transport.proto import irondome_pb2_grpc as pb2_grpc
 
             request = pb2.AuditQueryRequest(
                 event_type=event_type or "",
@@ -472,7 +432,7 @@ class IronDomeGRPCClient:
             self._channel = None
             self._stub = None
 
-    def __enter__(self) -> IronDomeGRPCClient:
+    def __enter__(self) -> "IronDomeGRPCClient":
         return self
 
     def __exit__(self, *args) -> None:

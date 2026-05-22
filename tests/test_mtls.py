@@ -1,9 +1,7 @@
 """Tests for mTLS module."""
 
 import os
-
 import pytest
-
 from irondome.mtls import MTLSConfig, create_ssl_context
 
 

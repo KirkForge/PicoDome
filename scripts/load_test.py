@@ -16,25 +16,26 @@ import argparse
 import json
 import statistics
 import time
-from typing import Any
+from typing import Any, Dict, List
 
 from irondome import __version__
 from irondome.l3.engine import sandbox_run
+from irondome.l3.policy import default_policy
 from irondome.l4.engine import create_default_engine
 from irondome.l4.profiler import profile_from_sandbox_result
 
 
 def benchmark_scan(
-    command: list[str],
+    command: List[str],
     iterations: int = 10,
     timeout: float = 30.0,
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Benchmark a single scan command over multiple iterations."""
-    durations: list[float] = []
-    exit_codes: list[int] = []
-    event_counts: list[int] = []
-    finding_counts: list[int] = []
-    errors: list[str] = []
+    durations: List[float] = []
+    exit_codes: List[int] = []
+    event_counts: List[int] = []
+    finding_counts: List[int] = []
+    errors: List[str] = []
 
     for i in range(iterations):
         try:
@@ -60,7 +61,7 @@ def benchmark_scan(
             errors.append(str(e))
 
     # Compute stats
-    result: dict[str, Any] = {
+    result: Dict[str, Any] = {
         "command": command,
         "iterations": iterations,
         "errors": len(errors),
@@ -106,7 +107,7 @@ def main() -> None:
         (["python3", "-c", "import json; print(json.dumps({'a':1}))"], "python-json"),
     ]
 
-    results: dict[str, Any] = {
+    results: Dict[str, Any] = {
         "version": __version__,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "iterations": args.iterations,

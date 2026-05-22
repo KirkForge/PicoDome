@@ -1,5 +1,4 @@
-"""IronDome gRPC Transport — optional high-throughput transport for daemon \
-    mode.
+"""IronDome gRPC Transport — optional high-throughput transport for daemon mode.
 
 This module provides gRPC client and server implementations as an alternative
 to the built-in HTTP daemon. gRPC is OPTIONAL — if ``grpcio`` is not installed,

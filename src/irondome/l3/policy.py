@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Dict, List, Optional, Set
 
 from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction
 
@@ -15,8 +16,7 @@ logger = logging.getLogger("irondome.l3.policy")
 DEFAULT_RULES: list = [
     # Allow reading system libraries and config
     {"rule_id": "L3-FILE-R-001", "target": "file_read", "action": "allow",
-     "paths": ["/usr/lib/**", "/lib/**", "/usr/share/**", "/etc/ld.so.cache", \
-         "/etc/localtime", "/proc/self/**"],
+     "paths": ["/usr/lib/**", "/lib/**", "/usr/share/**", "/etc/ld.so.cache", "/etc/localtime", "/proc/self/**"],
      "description": "Read system libraries and locale info"},
     # Allow reading Python standard library
     {"rule_id": "L3-FILE-R-002", "target": "file_read", "action": "allow",
@@ -70,10 +70,8 @@ STRICT_RULES: list = [
 
 NODE_RULES: list = [
     {"rule_id": "L3-NODE-R-001", "target": "file_read", "action": "allow",
-     "paths": ["/usr/lib/**", "/lib/**", "/usr/share/**", "/etc/localtime", \
-         "/proc/self/**",
-               "**/node_modules/**", "**/package.json", "**/package-lock.json",
-                   "**/.npm/**"],
+     "paths": ["/usr/lib/**", "/lib/**", "/usr/share/**", "/etc/localtime", "/proc/self/**",
+               "**/node_modules/**", "**/package.json", "**/package-lock.json", "**/.npm/**"],
      "description": "Read Node.js system and project files"},
     {"rule_id": "L3-NODE-R-002", "target": "file_write", "action": "allow",
      "paths": ["/tmp/**", "/dev/null", "/dev/stdout", "/dev/stderr",
@@ -83,14 +81,12 @@ NODE_RULES: list = [
      "description": "Allow outbound network (npm registry)"},
     {"rule_id": "L3-NODE-DNS-001", "target": "dns_query", "action": "allow",
      "description": "Allow DNS resolution"},
-    {"rule_id": "L3-NODE-PROC-001", "target": "process_spawn", "action": \
-        "allow",
+    {"rule_id": "L3-NODE-PROC-001", "target": "process_spawn", "action": "allow",
      "description": "Allow process spawning (node, npm)"},
     {"rule_id": "L3-NODE-BIND-001", "target": "network_bind", "action": "deny",
      "description": "Deny network binding"},
     {"rule_id": "L3-NODE-EXEC-001", "target": "file_exec", "action": "allow",
-     "paths": ["/usr/bin/node", "/usr/local/bin/node", "/usr/bin/npm", \
-         "/usr/local/bin/npm",
+     "paths": ["/usr/bin/node", "/usr/local/bin/node", "/usr/bin/npm", "/usr/local/bin/npm",
                "/usr/bin/npx", "/usr/local/bin/npx"],
      "description": "Allow node/npm execution"},
 ]
@@ -99,10 +95,8 @@ NODE_RULES: list = [
 
 PYTHON_RULES: list = [
     {"rule_id": "L3-PY-R-001", "target": "file_read", "action": "allow",
-     "paths": ["/usr/lib/**", "/lib/**", "/usr/share/**", "/etc/localtime", \
-         "/proc/self/**",
-               "**/site-packages/**", "**/*.py", "**/pyproject.toml",
-                   "**/setup.py"
+     "paths": ["/usr/lib/**", "/lib/**", "/usr/share/**", "/etc/localtime", "/proc/self/**",
+               "**/site-packages/**", "**/*.py", "**/pyproject.toml", "**/setup.py",
                "**/requirements.txt", "**/pip.conf", "**/.pip/**"],
      "description": "Read Python system and project files"},
     {"rule_id": "L3-PY-R-002", "target": "file_write", "action": "allow",
@@ -118,14 +112,13 @@ PYTHON_RULES: list = [
     {"rule_id": "L3-PY-BIND-001", "target": "network_bind", "action": "deny",
      "description": "Deny network binding"},
     {"rule_id": "L3-PY-EXEC-001", "target": "file_exec", "action": "allow",
-     "paths": ["/usr/bin/python*", "/usr/local/bin/python*", "/usr/bin/pip*", \
-         "/usr/local/bin/pip*"],
+     "paths": ["/usr/bin/python*", "/usr/local/bin/python*", "/usr/bin/pip*", "/usr/local/bin/pip*"],
      "description": "Allow python/pip execution"},
 ]
 
 # ── Named policy registry ─────────────────────────────────────────────────
 
-NAMED_POLICIES: dict[str, list[dict]] = {
+NAMED_POLICIES: Dict[str, List[dict]] = {
     "default": DEFAULT_RULES,
     "strict": STRICT_RULES,
     "node": NODE_RULES,
@@ -133,7 +126,7 @@ NAMED_POLICIES: dict[str, list[dict]] = {
 }
 
 
-def _rules_from_list(rules_data: list) -> list[PolicyRule]:
+def _rules_from_list(rules_data: list) -> List[PolicyRule]:
     """Convert a list of rule dicts to PolicyRule objects."""
     rules = []
     for r in rules_data:
@@ -149,9 +142,8 @@ def _rules_from_list(rules_data: list) -> list[PolicyRule]:
     return rules
 
 
-def load_policy(path: Path | None = None, name: str | None = None) -> Policy:
-    """Load a sandbox policy from a JSON file, named policy, or return the \
-        default.
+def load_policy(path: Optional[Path] = None, name: Optional[str] = None) -> Policy:
+    """Load a sandbox policy from a JSON file, named policy, or return the default.
 
     Args:
         path: Path to a JSON policy file.
@@ -165,8 +157,7 @@ def load_policy(path: Path | None = None, name: str | None = None) -> Policy:
     if name is not None and name in NAMED_POLICIES:
         logger.info("Loading named policy: %s", name)
         rules_data = NAMED_POLICIES[name]
-        default_action =
-            SyscallAction.DENY if name == "strict" else SyscallAction.DENY
+        default_action = SyscallAction.DENY if name == "strict" else SyscallAction.DENY
         return Policy(
             name=f"iron-dome-{name}",
             version="1.0",
@@ -231,8 +222,7 @@ def export_policy(policy: Policy, path: Path) -> None:
         path: File path to write the JSON to.
 
     The exported file can be re-imported with import_policy().
-    Deterministic: output is sorted and deterministic (no timestamps, no \
-        random IDs).
+    Deterministic: output is sorted and deterministic (no timestamps, no random IDs).
     """
     data = policy.to_dict()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -270,12 +260,11 @@ def import_policy(path: Path) -> Policy:
             + "\n".join(f"  - {e}" for e in errors)
         )
 
-    logger.info("Imported and validated policy '%s' from %s", policy.name, \
-        path)
+    logger.info("Imported and validated policy '%s' from %s", policy.name, path)
     return policy
 
 
-def validate_policy(policy: Policy) -> list[str]:
+def validate_policy(policy: Policy) -> List[str]:
     """Validate a Policy object for correctness.
 
     Checks:
@@ -291,14 +280,14 @@ def validate_policy(policy: Policy) -> list[str]:
     Returns:
         List of validation error strings. Empty list = valid.
     """
-    errors: list[str] = []
+    errors: List[str] = []
 
     # Check for empty policy
     if not policy.rules:
         errors.append("Policy has no rules")
 
     # Check rule ID uniqueness
-    seen_ids: set[str] = set()
+    seen_ids: Set[str] = set()
     for rule in policy.rules:
         if rule.rule_id in seen_ids:
             errors.append(f"Duplicate rule ID: {rule.rule_id}")
@@ -308,23 +297,19 @@ def validate_policy(policy: Policy) -> list[str]:
     valid_targets = {t.value for t in RuleTarget}
     for rule in policy.rules:
         if rule.target.value not in valid_targets:
-            errors.append(f"Invalid target '{rule.target.value}' in rule \
-                {rule.rule_id}")
+            errors.append(f"Invalid target '{rule.target.value}' in rule {rule.rule_id}")
 
     # Validate actions
     valid_actions = {a.value for a in SyscallAction}
     for rule in policy.rules:
         if rule.action.value not in valid_actions:
-            errors.append(f"Invalid action '{rule.action.value}' in rule \
-                {rule.rule_id}")
+            errors.append(f"Invalid action '{rule.action.value}' in rule {rule.rule_id}")
 
     # Check for rules with no paths where paths might be expected
     for rule in policy.rules:
-        if rule.target in (RuleTarget.FILE_READ, RuleTarget.FILE_WRITE, \
-            RuleTarget.FILE_EXEC):
+        if rule.target in (RuleTarget.FILE_READ, RuleTarget.FILE_WRITE, RuleTarget.FILE_EXEC):
             if not rule.paths and rule.action == SyscallAction.ALLOW:
-                # Allow without paths = allow everything - might be intentional
-                # but worth noting
+                # Allow without paths = allow everything - might be intentional but worth noting
                 pass
 
     # Check default_action
@@ -350,9 +335,6 @@ def _policy_from_dict(data: dict) -> Policy:
     return Policy(
         name=data.get("name", "custom"),
         version=data.get("version", "1.0"),
-        default_action=SyscallAction(
-            data.get("default_action", "deny")
-        ),
-        fail_closed=data.get("fail_closed", True),
+        default_action=SyscallAction(data.get("default_action", "deny")),
         rules=rules,
     )

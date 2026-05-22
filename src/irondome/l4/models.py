@@ -7,6 +7,7 @@ when deterministic=True. Finding.finding_id defaults to "".
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
 from irondome.models import (
     BehavioralVerdict,
@@ -25,8 +26,8 @@ class NetworkCall:
     bytes_received: int = 0
     timestamp_ms: int = 0
 
-    def to_dict(self, deterministic: bool = False) -> dict:
-        d: dict = {
+    def to_dict(self, deterministic: bool = False) -> Dict:
+        d: Dict = {
             "address": self.address,
             "bytes_received": self.bytes_received,
             "bytes_sent": self.bytes_sent,
@@ -42,11 +43,11 @@ class NetworkCall:
 class DnsQuery:
     """A DNS query observed during execution."""
     hostname: str
-    resolved_ips: list[str] = field(default_factory=list)
+    resolved_ips: List[str] = field(default_factory=list)
     timestamp_ms: int = 0
 
-    def to_dict(self, deterministic: bool = False) -> dict:
-        d: dict = {
+    def to_dict(self, deterministic: bool = False) -> Dict:
+        d: Dict = {
             "hostname": self.hostname,
             "resolved_ips": list(self.resolved_ips),
         }
@@ -64,8 +65,8 @@ class FileOperation:
     bytes_transferred: int = 0
     timestamp_ms: int = 0
 
-    def to_dict(self, deterministic: bool = False) -> dict:
-        d: dict = {
+    def to_dict(self, deterministic: bool = False) -> Dict:
+        d: Dict = {
             "bytes_transferred": self.bytes_transferred,
             "operation": self.operation,
             "path": self.path,
@@ -80,13 +81,13 @@ class FileOperation:
 class ProcessSpawn:
     """A child process spawned during execution."""
     executable: str
-    args: list[str] = field(default_factory=list)
+    args: List[str] = field(default_factory=list)
     pid: int = 0
-    exit_code: int | None = None
+    exit_code: Optional[int] = None
     timestamp_ms: int = 0
 
-    def to_dict(self, deterministic: bool = False) -> dict:
-        d: dict = {
+    def to_dict(self, deterministic: bool = False) -> Dict:
+        d: Dict = {
             "args": list(self.args),
             "executable": self.executable,
             "exit_code": self.exit_code,
@@ -104,8 +105,8 @@ class TimingPoint:
     elapsed_ms: int
     timestamp_ms: int = 0
 
-    def to_dict(self, deterministic: bool = False) -> dict:
-        d: dict = {
+    def to_dict(self, deterministic: bool = False) -> Dict:
+        d: Dict = {
             "elapsed_ms": self.elapsed_ms,
             "label": self.label,
         }
@@ -118,19 +119,19 @@ class TimingPoint:
 class BehavioralProfile:
     """Full behavioral profile of a sandbox execution."""
     package: str
-    timing_points: list[TimingPoint] = field(default_factory=list)
-    network_calls: list[NetworkCall] = field(default_factory=list)
-    dns_queries: list[DnsQuery] = field(default_factory=list)
-    fs_ops: list[FileOperation] = field(default_factory=list)
-    spawns: list[ProcessSpawn] = field(default_factory=list)
+    timing_points: List[TimingPoint] = field(default_factory=list)
+    network_calls: List[NetworkCall] = field(default_factory=list)
+    dns_queries: List[DnsQuery] = field(default_factory=list)
+    fs_ops: List[FileOperation] = field(default_factory=list)
+    spawns: List[ProcessSpawn] = field(default_factory=list)
     entrypoint: str = ""
     total_runtime_ms: int = 0
     exit_code: int = 0
     stdout_len: int = 0
     stderr_len: int = 0
 
-    def to_dict(self, deterministic: bool = False) -> dict:
-        d: dict = {
+    def to_dict(self, deterministic: bool = False) -> Dict:
+        d: Dict = {
             "dns_queries_count": len(self.dns_queries),
             "entrypoint": self.entrypoint,
             "exit_code": self.exit_code,
@@ -158,11 +159,11 @@ class Baseline:
     expected_fs_ops: int = 0
     expected_spawns: int = 0
     expected_runtime_ms_range: tuple = (0, 0)
-    allowed_domains: list[str] = field(default_factory=list)
-    allowed_paths: list[str] = field(default_factory=list)
+    allowed_domains: List[str] = field(default_factory=list)
+    allowed_paths: List[str] = field(default_factory=list)
     notes: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict:
         return {
             "allowed_domains": list(self.allowed_domains),
             "allowed_paths": list(self.allowed_paths),
@@ -190,7 +191,7 @@ class DriftResult:
     timing_drift: bool = False
     details: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict:
         return {
             "baseline_name": self.baseline_name,
             "details": self.details,
@@ -207,24 +208,22 @@ class DriftResult:
 class AnalysisResult:
     """Complete L4 behavioral analysis result."""
     target: str
-    findings: list[Finding] = field(default_factory=list)
-    profile: BehavioralProfile | None = None
-    drift_results: list[DriftResult] = field(default_factory=list)
+    findings: List[Finding] = field(default_factory=list)
+    profile: Optional[BehavioralProfile] = None
+    drift_results: List[DriftResult] = field(default_factory=list)
     overall_verdict: BehavioralVerdict = BehavioralVerdict.CLEAN
     stats: ScanStats = field(default_factory=ScanStats)
 
-    def to_dict(self, deterministic: bool = False) -> dict:
+    def to_dict(self, deterministic: bool = False) -> Dict:
         """Serialize to dict with sorted keys.
 
         In deterministic mode, omit timing fields from stats and finding IDs.
         """
         return {
             "drift_results": [d.to_dict() for d in self.drift_results],
-            "findings": [f.to_dict(deterministic=deterministic) for f in \
-                self.findings],
+            "findings": [f.to_dict(deterministic=deterministic) for f in self.findings],
             "overall_verdict": self.overall_verdict.value,
-            "profile": self.profile.to_dict(deterministic=deterministic) if \
-                self.profile else None,
+            "profile": self.profile.to_dict(deterministic=deterministic) if self.profile else None,
             "stats": self.stats.to_dict(deterministic=deterministic),
             "target": self.target,
         }

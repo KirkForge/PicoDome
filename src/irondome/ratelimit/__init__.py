@@ -6,8 +6,8 @@ to prevent abuse and ensure fair resource allocation under load.
 
 from __future__ import annotations
 
-from irondome.ratelimit.limiter import RateLimitConfig, TokenBucketLimiter
-from irondome.ratelimit.queue import JobPriority, JobQueue, QueuedJob
+from irondome.ratelimit.limiter import TokenBucketLimiter, RateLimitConfig
+from irondome.ratelimit.queue import JobQueue, JobPriority, QueuedJob
 
 __all__ = [
     "TokenBucketLimiter",

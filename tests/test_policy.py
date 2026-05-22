@@ -4,6 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
+
 from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction
 from irondome.l3.policy import default_policy, load_policy
 
@@ -18,49 +19,39 @@ class TestPolicyPresets:
 
     def test_default_policy_file_read_rules(self):
         policy = default_policy()
-        read_rules =
-            [r for r in policy.rules if r.target == RuleTarget.FILE_READ]
+        read_rules = [r for r in policy.rules if r.target == RuleTarget.FILE_READ]
         assert len(read_rules) >= 1
         for r in read_rules:
             assert r.action == SyscallAction.ALLOW
 
     def test_default_policy_network_rules(self):
         policy = default_policy()
-        net_rules =
-            [
-                r for r in policy.rules if r.target in (RuleTarget.NETWORK_OUT, \
-                    RuleTarget.NETWORK_IN),
-            ]
+        net_rules = [r for r in policy.rules if r.target in (RuleTarget.NETWORK_OUT, RuleTarget.NETWORK_IN)]
         assert len(net_rules) >= 1
 
     def test_default_policy_deny_network_out(self):
         policy = default_policy()
-        net_out_rules =
-            [r for r in policy.rules if r.target == RuleTarget.NETWORK_OUT]
-        deny_rules =
-            [r for r in net_out_rules if r.action == SyscallAction.DENY]
+        net_out_rules = [r for r in policy.rules if r.target == RuleTarget.NETWORK_OUT]
+        deny_rules = [r for r in net_out_rules if r.action == SyscallAction.DENY]
         assert len(deny_rules) >= 1
 
     def test_default_policy_deny_process_spawn(self):
         policy = default_policy()
-        spawn_rules =
-            [r for r in policy.rules if r.target == RuleTarget.PROCESS_SPAWN]
+        spawn_rules = [r for r in policy.rules if r.target == RuleTarget.PROCESS_SPAWN]
         assert len(spawn_rules) >= 1
         for r in spawn_rules:
             assert r.action == SyscallAction.DENY
 
     def test_default_policy_deny_network_bind(self):
         policy = default_policy()
-        bind_rules =
-            [r for r in policy.rules if r.target == RuleTarget.NETWORK_BIND]
+        bind_rules = [r for r in policy.rules if r.target == RuleTarget.NETWORK_BIND]
         assert len(bind_rules) >= 1
         for r in bind_rules:
             assert r.action == SyscallAction.DENY
 
     def test_default_policy_allow_dns(self):
         policy = default_policy()
-        dns_rules =
-            [r for r in policy.rules if r.target == RuleTarget.DNS_QUERY]
+        dns_rules = [r for r in policy.rules if r.target == RuleTarget.DNS_QUERY]
         assert len(dns_rules) >= 1
         for r in dns_rules:
             assert r.action == SyscallAction.ALLOW
@@ -78,8 +69,7 @@ class TestPolicyImportExport:
     def test_export_to_json_file(self):
         policy = default_policy()
         d = policy.to_dict()
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", \
-            delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(d, f, indent=2)
             path = Path(f.name)
 
@@ -101,8 +91,7 @@ class TestPolicyImportExport:
                 },
             ],
         }
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", \
-            delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(data, f)
             path = Path(f.name)
 
@@ -115,8 +104,7 @@ class TestPolicyImportExport:
     def test_roundtrip_preserves_rules(self):
         original = default_policy()
         d = original.to_dict()
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", \
-            delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(d, f, indent=2)
             path = Path(f.name)
 
@@ -181,15 +169,11 @@ class TestNodePreset:
             name="node-preset",
             default_action=SyscallAction.DENY,
             rules=[
-                PolicyRule(rule_id="NODE-001", target=RuleTarget.FILE_READ, \
-                    action=SyscallAction.ALLOW,
-                           paths=["**/node_modules/**", "**/*.js"],
-                               description="Read JS files"),
-                PolicyRule(rule_id="NODE-002", target=RuleTarget.FILE_WRITE, \
-                    action=SyscallAction.ALLOW,
+                PolicyRule(rule_id="NODE-001", target=RuleTarget.FILE_READ, action=SyscallAction.ALLOW,
+                           paths=["**/node_modules/**", "**/*.js"], description="Read JS files"),
+                PolicyRule(rule_id="NODE-002", target=RuleTarget.FILE_WRITE, action=SyscallAction.ALLOW,
                            paths=["/tmp/**"], description="Write to tmp"),
-                PolicyRule(rule_id="NODE-003", target=RuleTarget.NETWORK_OUT, \
-                    action=SyscallAction.DENY,
+                PolicyRule(rule_id="NODE-003", target=RuleTarget.NETWORK_OUT, action=SyscallAction.DENY,
                            description="Block network"),
             ],
         )
@@ -204,18 +188,13 @@ class TestPythonPreset:
             name="python-preset",
             default_action=SyscallAction.DENY,
             rules=[
-                PolicyRule(rule_id="PY-001", target=RuleTarget.FILE_READ, \
-                    action=SyscallAction.ALLOW,
-                           paths=["/usr/lib/python*/**", "**/site-packages/**"],
-                               description="Read Python libs"),
-                PolicyRule(rule_id="PY-002", target=RuleTarget.FILE_WRITE, \
-                    action=SyscallAction.ALLOW,
+                PolicyRule(rule_id="PY-001", target=RuleTarget.FILE_READ, action=SyscallAction.ALLOW,
+                           paths=["/usr/lib/python*/**", "**/site-packages/**"], description="Read Python libs"),
+                PolicyRule(rule_id="PY-002", target=RuleTarget.FILE_WRITE, action=SyscallAction.ALLOW,
                            paths=["/tmp/**"], description="Write to tmp"),
-                PolicyRule(rule_id="PY-003", target=RuleTarget.NETWORK_OUT, \
-                    action=SyscallAction.DENY,
+                PolicyRule(rule_id="PY-003", target=RuleTarget.NETWORK_OUT, action=SyscallAction.DENY,
                            description="Block network"),
-                PolicyRule(rule_id="PY-004", target=RuleTarget.PROCESS_SPAWN, \
-                    action=SyscallAction.DENY,
+                PolicyRule(rule_id="PY-004", target=RuleTarget.PROCESS_SPAWN, action=SyscallAction.DENY,
                            description="Block spawns"),
             ],
         )

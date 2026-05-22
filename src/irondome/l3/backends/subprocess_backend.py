@@ -1,5 +1,4 @@
-"""Subprocess sandbox backend — policy enforcement via trace and post-hoc \
-    analysis.
+"""Subprocess sandbox backend — policy enforcement via trace and post-hoc analysis.
 
 Works on any platform without kernel-level sandboxing.
 Uses strace (Linux) or dtruss (macOS) for syscall tracing when available,
@@ -12,6 +11,7 @@ import logging
 import os
 import re
 import subprocess
+from typing import List, Optional
 
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.models import (
@@ -33,8 +33,7 @@ _LINUX_TRACE_PATTERNS = {
     "open": re.compile(r'open(at)?\("([^"]+)",.*\)\s*=\s*(-?\d+)'),
     "read": re.compile(r'read\((\d+),\s*".*",\s*(\d+)\)\s*=\s*(-?\d+)'),
     "write": re.compile(r'write\((\d+),\s*".*",\s*(\d+)\)\s*=\s*(-?\d+)'),
-    "connect": re.compile(r'connect\((\d+), \
-        \s*\{.*sin_addr=inet_addr\("([^"]+)"\).*\},\s*(\d+)\)\s*=\s*(-?\d+)'),
+    "connect": re.compile(r'connect\((\d+),\s*\{.*sin_addr=inet_addr\("([^"]+)"\).*\},\s*(\d+)\)\s*=\s*(-?\d+)'),
     "bind": re.compile(r'bind\((\d+),\s*\{.*\},\s*(\d+)\)\s*=\s*(-?\d+)'),
     "execve": re.compile(r'execve\("([^"]+)"'),
     "socket": re.compile(r'socket\(.*\)\s*=\s*(-?\d+)'),
@@ -54,14 +53,14 @@ class SubprocessBackend(SandboxBackend):
 
     def run(
         self,
-        command: list[str],
+        command: List[str],
         policy: Policy,
-        timeout: float | None = None,
-        cwd: str | None = None,
-        env: dict | None = None,
+        timeout: Optional[float] = None,
+        cwd: Optional[str] = None,
+        env: Optional[dict] = None,
     ) -> SandboxResult:
         start_ms = _now_ms()
-        events: list[SandboxEvent] = []
+        events: List[SandboxEvent] = []
         exit_code = -1
         stdout = ""
         stderr = ""
@@ -82,8 +81,7 @@ class SubprocessBackend(SandboxBackend):
             )
 
             try:
-                stdout_bytes, stderr_bytes =
-                    proc.communicate(timeout=effective_timeout)
+                stdout_bytes, stderr_bytes = proc.communicate(timeout=effective_timeout)
                 exit_code = proc.returncode
             except subprocess.TimeoutExpired:
                 proc.kill()
@@ -101,8 +99,7 @@ class SubprocessBackend(SandboxBackend):
             stderr = stderr_bytes.decode("utf-8", errors="replace").strip()
 
             # Post-hoc policy analysis
-            events.extend(self._analyze_output(stdout, stderr, policy, \
-                command))
+            events.extend(self._analyze_output(stdout, stderr, policy, command))
 
         except FileNotFoundError:
             events.append(SandboxEvent(
@@ -131,7 +128,6 @@ class SubprocessBackend(SandboxBackend):
             duration_ms=duration_ms,
             events=events,
             policy_name=policy.name,
-            backend_name=self.name,
             stdout=stdout,
             stderr=stderr,
         )
@@ -141,10 +137,10 @@ class SubprocessBackend(SandboxBackend):
         stdout: str,
         stderr: str,
         policy: Policy,
-        command: list[str],
-    ) -> list[SandboxEvent]:
+        command: List[str],
+    ) -> List[SandboxEvent]:
         """Post-hoc analysis of command output against policy rules."""
-        events: list[SandboxEvent] = []
+        events: List[SandboxEvent] = []
         combined = stdout + "\n" + stderr
 
         for rule in policy.rules:
@@ -162,10 +158,10 @@ class SubprocessBackend(SandboxBackend):
         return events
 
     def _check_network(
-        self, output: str, rule: PolicyRule, command: list[str]
-    ) -> list[SandboxEvent]:
+        self, output: str, rule: PolicyRule, command: List[str]
+    ) -> List[SandboxEvent]:
         """Check for network activity in output."""
-        events: list[SandboxEvent] = []
+        events: List[SandboxEvent] = []
         ip_pattern = re.compile(
             r'(?:(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})\.){3}'
             r'(?:25[0-5]|2[0-4]\d|1\d\d|\d{1,2})'
@@ -178,8 +174,7 @@ class SubprocessBackend(SandboxBackend):
                 continue
             events.append(SandboxEvent(
                 rule_id=rule.rule_id,
-                verdict=Verdict.DENY if rule.action == SyscallAction.DENY else \
-                    Verdict.ALLOW,
+                verdict=Verdict.DENY if rule.action == SyscallAction.DENY else Verdict.ALLOW,
                 operation="network_outbound",
                 detail=f"IP address found: {ip}",
                 address=ip,
@@ -189,8 +184,7 @@ class SubprocessBackend(SandboxBackend):
             url = match.group(0)
             events.append(SandboxEvent(
                 rule_id=rule.rule_id,
-                verdict=Verdict.DENY if rule.action == SyscallAction.DENY else \
-                    Verdict.ALLOW,
+                verdict=Verdict.DENY if rule.action == SyscallAction.DENY else Verdict.ALLOW,
                 operation="network_outbound",
                 detail=f"URL found: {url[:100]}",
                 address=url[:100],
@@ -200,9 +194,9 @@ class SubprocessBackend(SandboxBackend):
 
     def _check_file_write(
         self, output: str, rule: PolicyRule
-    ) -> list[SandboxEvent]:
+    ) -> List[SandboxEvent]:
         """Check for file write indicators."""
-        events: list[SandboxEvent] = []
+        events: List[SandboxEvent] = []
         write_indicators = [
             (r'writing to ([^\s]+)', "file_write_indicator"),
             (r'wrote (\d+) bytes to ([^\s]+)', "file_write_bytes"),
@@ -215,8 +209,7 @@ class SubprocessBackend(SandboxBackend):
                 path = match.group(1) if match.lastindex else match.group(0)
                 events.append(SandboxEvent(
                     rule_id=rule.rule_id,
-                    verdict=Verdict.DENY if rule.action == SyscallAction.DENY \
-                        else Verdict.ALLOW,
+                    verdict=Verdict.DENY if rule.action == SyscallAction.DENY else Verdict.ALLOW,
                     operation=op,
                     detail=f"Write detected: {path}",
                     path=path,
@@ -226,9 +219,9 @@ class SubprocessBackend(SandboxBackend):
 
     def _check_process_spawn(
         self, output: str, rule: PolicyRule
-    ) -> list[SandboxEvent]:
+    ) -> List[SandboxEvent]:
         """Check for process spawn indicators."""
-        events: list[SandboxEvent] = []
+        events: List[SandboxEvent] = []
         spawn_patterns = [
             r'executing: ([^\s]+)',
             r'spawning ([^\s]+)',
@@ -240,8 +233,7 @@ class SubprocessBackend(SandboxBackend):
                 detail = match.group(1) if match.lastindex else match.group(0)
                 events.append(SandboxEvent(
                     rule_id=rule.rule_id,
-                    verdict=Verdict.DENY if rule.action == SyscallAction.DENY \
-                        else Verdict.ALLOW,
+                    verdict=Verdict.DENY if rule.action == SyscallAction.DENY else Verdict.ALLOW,
                     operation="process_spawn",
                     detail=f"Process spawn detected: {detail}",
                 ))
@@ -250,34 +242,24 @@ class SubprocessBackend(SandboxBackend):
 
     def _check_suspicious_patterns(
         self, stdout: str, stderr: str
-    ) -> list[SandboxEvent]:
+    ) -> List[SandboxEvent]:
         """Check for suspicious behavioral patterns."""
-        events: list[SandboxEvent] = []
+        events: List[SandboxEvent] = []
         combined = stdout + stderr
 
         patterns = [
-            (r'(?i)(eval\s*\(|exec\s*\(|compile\s*\()', "L3-SUS-001", \
-                "dynamic_code_exec", Verdict.DENY),
-            (r'(?i)(subprocess\.(?:call|run|Popen|check_output|check_call)|os\. \
-                system|os\.popen|commands\.getoutput)',
+            (r'(?i)(eval\s*\(|exec\s*\(|compile\s*\()', "L3-SUS-001", "dynamic_code_exec", Verdict.DENY),
+            (r'(?i)(subprocess\.(?:call|run|Popen|check_output|check_call)|os\.system|os\.popen|commands\.getoutput)',
                 "L3-SUS-002", "shell_execution", Verdict.DENY),
-            (r'(?i)(/etc/passwd|/etc/shadow|/etc/sudoers)', "L3-SUS-003", \
-                "sensitive_file_access", Verdict.DENY),
-            (r'(?i)(curl|wget|nc\s|netcat|telnet)', "L3-SUS-004", \
-                "network_tool_usage", Verdict.DENY),
-            (r'(?i)(chmod\s\+x|chmod\s777)', "L3-SUS-005", \
-                "permission_escalation", Verdict.DENY),
-            (r'(?i)(base64\.(?:b64decode|b64encode|decode|encode)\s*\(|base64\s \
-                +-d\b)', "L3-SUS-006",
+            (r'(?i)(/etc/passwd|/etc/shadow|/etc/sudoers)', "L3-SUS-003", "sensitive_file_access", Verdict.DENY),
+            (r'(?i)(curl|wget|nc\s|netcat|telnet)', "L3-SUS-004", "network_tool_usage", Verdict.DENY),
+            (r'(?i)(chmod\s\+x|chmod\s777)', "L3-SUS-005", "permission_escalation", Verdict.DENY),
+            (r'(?i)(base64\.(?:b64decode|b64encode|decode|encode)\s*\(|base64\s+-d\b)', "L3-SUS-006",
                 "base64_decoding", Verdict.DENY),
-            (r'(?i)(rm\s+-rf\s+/|dd\s+if=/dev)', "L3-SUS-007", \
-                "destructive_command", Verdict.KILL),
-            (r'(?i)(/proc/self|ptrace|process_vm_readv)', "L3-SUS-008", \
-                "process_introspection", Verdict.DENY),
-            (r'(?i)(\.ssh/|id_rsa|id_ed25519|authorized_keys)', "L3-SUS-009", \
-                "ssh_key_access", Verdict.DENY),
-            (r'(?i)(/root/\.\w+|/home/\w+/\.)', "L3-SUS-010", "dotfile_access", \
-                Verdict.DENY),
+            (r'(?i)(rm\s+-rf\s+/|dd\s+if=/dev)', "L3-SUS-007", "destructive_command", Verdict.KILL),
+            (r'(?i)(/proc/self|ptrace|process_vm_readv)', "L3-SUS-008", "process_introspection", Verdict.DENY),
+            (r'(?i)(\.ssh/|id_rsa|id_ed25519|authorized_keys)', "L3-SUS-009", "ssh_key_access", Verdict.DENY),
+            (r'(?i)(/root/\.\w+|/home/\w+/\.)', "L3-SUS-010", "dotfile_access", Verdict.DENY),
         ]
 
         for pattern, rule_id, operation, verdict in patterns:
@@ -292,11 +274,10 @@ class SubprocessBackend(SandboxBackend):
         return events
 
     def _compute_verdict(
-        self, events: list[SandboxEvent], exit_code: int
+        self, events: List[SandboxEvent], exit_code: int
     ) -> Verdict:
         """Compute overall verdict from events."""
-        if exit_code == -1 and any(e.rule_id == "L3-TIMEOUT-001" for e in \
-            events):
+        if exit_code == -1 and any(e.rule_id == "L3-TIMEOUT-001" for e in events):
             return Verdict.KILL
 
         for event in events:

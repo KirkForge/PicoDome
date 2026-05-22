@@ -23,19 +23,13 @@ class IronDomeServicer:
     and logs all RPCs to the audit module.
     """
 
-    def __init__(
-        self,
-        scan_engine,
-        start_time: float,
-        scan_count_ref: Any,
-    ) -> None:
+    def __init__(self, scan_engine, start_time: float, scan_count_ref: Any) -> None:
         """Initialize the servicer.
 
         Args:
             scan_engine: _ScanEngine instance wrapping L3+L4 pipeline.
             start_time: Server start time (monotonic).
-            scan_count_ref: Reference to the server object (
-                for incrementing scan count).
+            scan_count_ref: Reference to the server object (for incrementing scan count).
         """
         self._scan_engine = scan_engine
         self._start_time = start_time
@@ -43,38 +37,24 @@ class IronDomeServicer:
 
     def Scan(self, request, context):
         """Handle a Scan RPC."""
-        self._audit_log(
-            "SCAN_START"
-            detail=f"command={list(request.command)}"
-        )
+        self._audit_log("SCAN_START", detail=f"command={list(request.command)}")
 
         try:
             # Extract fields from request
-            command = list(request.command) if hasattr(request, 'command') else [
-                ]
+            command = list(request.command) if hasattr(request, 'command') else []
             policy_name = request.policy if hasattr(request, 'policy') else ""
-            timeout = request.timeout if hasattr(
-                request
-                'timeout'
-            ) and request.timeout else 30.0
-            cwd = request.cwd if hasattr(
-                request
-                'cwd'
-            ) and request.cwd else None
+            timeout = request.timeout if hasattr(request, 'timeout') and request.timeout else 30.0
+            cwd = request.cwd if hasattr(request, 'cwd') and request.cwd else None
 
             # Load policy if specified
             policy = None
             if policy_name:
                 try:
-                    from pathlib import Path
-
                     from irondome.l3.policy import load_policy
+                    from pathlib import Path
                     policy = load_policy(Path(policy_name))
                 except Exception:
-                    logger.debug(
-                        "Policy '%s' not found, using default"
-                        policy_name
-                    )
+                    logger.debug("Policy '%s' not found, using default", policy_name)
 
             # Run L3 sandbox
             sandbox_result = self._scan_engine.scan(
@@ -107,19 +87,14 @@ class IronDomeServicer:
 
             self._audit_log(
                 "SCAN_COMPLETE",
-                detail=f"l3={sandbox_result.overall_verdict.value} l4={
-                    analysis_result.overall_verdict.value}",
+                detail=f"l3={sandbox_result.overall_verdict.value} l4={analysis_result.overall_verdict.value}",
             )
 
             # Try to use proto response, fall back to manual
             try:
                 from irondome.grpc_transport.proto import irondome_pb2 as pb2
                 return pb2.ScanResponse(
-                    result_json=json.dumps(
-                        result
-                        sort_keys=True
-                        default=str
-                    ),
+                    result_json=json.dumps(result, sort_keys=True, default=str),
                     exit_code=sandbox_result.exit_code,
                     verdict=analysis_result.overall_verdict.value,
                     job_id=result["job_id"],
@@ -130,8 +105,7 @@ class IronDomeServicer:
             except ImportError:
                 # Return a dict-like response for manual handling
                 return _DictProxy({
-                    "result_json": json.dumps(result, sort_keys=True, \
-                        default=str),
+                    "result_json": json.dumps(result, sort_keys=True, default=str),
                     "exit_code": sandbox_result.exit_code,
                     "verdict": analysis_result.overall_verdict.value,
                     "job_id": result["job_id"],
@@ -204,14 +178,8 @@ class IronDomeServicer:
         try:
             from irondome.policy_versioned import get_policy_store
             store = get_policy_store()
-            version = request.version if hasattr(
-                request
-                'version'
-            ) and request.version else None
-            pv = store.load(
-                name
-                version=version if version and version > 0 else None
-            )
+            version = request.version if hasattr(request, 'version') and request.version else None
+            pv = store.load(name, version=version if version and version > 0 else None)
             if pv:
                 policy_json = json.dumps(pv.to_dict(), sort_keys=True)
                 policy_version = pv.version
@@ -238,18 +206,12 @@ class IronDomeServicer:
 
     def QueryAudit(self, request, context):
         """Handle a QueryAudit RPC."""
-        event_type = request.event_type if hasattr(
-            request
-            'event_type'
-        ) else ""
+        event_type = request.event_type if hasattr(request, 'event_type') else ""
         actor = request.actor if hasattr(request, 'actor') else ""
         target = request.target if hasattr(request, 'target') else ""
         since = request.since if hasattr(request, 'since') else ""
         until = request.until if hasattr(request, 'until') else ""
-        limit = request.limit if hasattr(
-            request
-            'limit'
-        ) and request.limit else 100
+        limit = request.limit if hasattr(request, 'limit') and request.limit else 100
 
         try:
             from irondome.audit import AuditEventType, get_audit_logger
@@ -270,11 +232,7 @@ class IronDomeServicer:
                 until=until or None,
                 limit=limit,
             )
-            events_json = json.dumps(
-                [e.to_dict() for e in events]
-                sort_keys=True
-                default=str
-            )
+            events_json = json.dumps([e.to_dict() for e in events], sort_keys=True, default=str)
             count = len(events)
         except Exception as e:
             events_json = json.dumps({"error": str(e)})

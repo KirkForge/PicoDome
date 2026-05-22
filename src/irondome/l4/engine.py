@@ -10,10 +10,8 @@ from __future__ import annotations
 import inspect
 import logging
 import time
-from collections.abc import Callable, Sequence
+from typing import Callable, Dict, List, Optional, Sequence
 
-from irondome.l4.baseline import load_all_baselines
-from irondome.l4.differ import find_best_baseline
 from irondome.l4.models import (
     AnalysisResult,
     Baseline,
@@ -23,11 +21,14 @@ from irondome.l4.models import (
     Finding,
     ScanStats,
 )
-from irondome.models import Severity, _generate_finding_id
+from irondome.models import Severity
+from irondome.l4.baseline import load_all_baselines
+from irondome.l4.differ import find_best_baseline
+from irondome.models import _generate_finding_id
 
 logger = logging.getLogger("irondome.l4.engine")
 
-DetectorRule = Callable[..., list[Finding]]
+DetectorRule = Callable[..., List[Finding]]
 
 
 class L4Engine:
@@ -38,9 +39,9 @@ class L4Engine:
     """
 
     def __init__(self) -> None:
-        self._rules: dict[str, DetectorRule] = {}
+        self._rules: Dict[str, DetectorRule] = {}
 
-    def register(self, rule_id: str, rule: DetectorRule) -> L4Engine:
+    def register(self, rule_id: str, rule: DetectorRule) -> "L4Engine":
         """Register a detector rule. Returns self for chaining."""
         self._rules[rule_id] = rule
         return self
@@ -49,15 +50,15 @@ class L4Engine:
         """Remove a detector rule."""
         self._rules.pop(rule_id, None)
 
-    def list_rules(self) -> list[str]:
+    def list_rules(self) -> List[str]:
         """Return sorted list of registered rule IDs."""
         return sorted(self._rules.keys())
 
     def analyze(
         self,
         profile: BehavioralProfile,
-        baselines: dict[str, Baseline] | None = None,
-        rules: Sequence[str] | None = None,
+        baselines: Optional[Dict[str, Baseline]] = None,
+        rules: Optional[Sequence[str]] = None,
         deterministic: bool = True,
     ) -> AnalysisResult:
         """
@@ -67,8 +68,7 @@ class L4Engine:
             profile: Behavioral profile to analyze.
             baselines: Optional dict of baselines. None = use shipped defaults.
             rules: Optional subset of rule IDs to run. None = all rules.
-            deterministic: If True,
-                ensure no timestamps or random IDs in findings.
+            deterministic: If True, ensure no timestamps or random IDs in findings.
 
         Returns:
             AnalysisResult with findings and overall verdict.
@@ -97,7 +97,7 @@ class L4Engine:
         )
 
         start_ms = _now_ms()
-        all_findings: list[Finding] = []
+        all_findings: List[Finding] = []
 
         for rule_id, rule_fn in selected.items():
             try:
@@ -132,7 +132,7 @@ class L4Engine:
         duration = int(_now_ms() - start_ms)
 
         # Compute drift
-        drift_results: list[DriftResult] = []
+        drift_results: List[DriftResult] = []
         best_match = find_best_baseline(profile, baselines)
         if best_match:
             _, drift = best_match
@@ -142,11 +142,10 @@ class L4Engine:
         overall = _compute_verdict(all_findings)
 
         # Stats
-        by_severity: dict[str, int] = {}
-        by_rule: dict[str, int] = {}
+        by_severity: Dict[str, int] = {}
+        by_rule: Dict[str, int] = {}
         for f in all_findings:
-            by_severity[f.severity.value] =
-                by_severity.get(f.severity.value, 0) + 1
+            by_severity[f.severity.value] = by_severity.get(f.severity.value, 0) + 1
             by_rule[f.rule_id] = by_rule.get(f.rule_id, 0) + 1
 
         stats = ScanStats(
@@ -176,11 +175,11 @@ class L4Engine:
 
 def create_default_engine() -> L4Engine:
     """Create L4Engine with all built-in detector rules registered."""
-    from irondome.l4.rules.baseline_drift import detect_baseline_drift
-    from irondome.l4.rules.entropy import detect_entropy_anomalies
-    from irondome.l4.rules.exfil import detect_exfiltration
-    from irondome.l4.rules.honeypot import detect_honeypot_touches
     from irondome.l4.rules.timing import detect_timing_anomalies
+    from irondome.l4.rules.exfil import detect_exfiltration
+    from irondome.l4.rules.entropy import detect_entropy_anomalies
+    from irondome.l4.rules.honeypot import detect_honeypot_touches
+    from irondome.l4.rules.baseline_drift import detect_baseline_drift
 
     engine = L4Engine()
     engine.register("L4-TIME", detect_timing_anomalies)
@@ -193,18 +192,16 @@ def create_default_engine() -> L4Engine:
 
 def analyze(
     profile: BehavioralProfile,
-    baselines: dict[str, Baseline] | None = None,
-    rules: Sequence[str] | None = None,
+    baselines: Optional[Dict[str, Baseline]] = None,
+    rules: Optional[Sequence[str]] = None,
     deterministic: bool = True,
 ) -> AnalysisResult:
     """Run behavioral analysis with the default engine."""
     engine = create_default_engine()
-    return
-        engine.analyze(profile, baselines=baselines, rules=rules, \
-            deterministic=deterministic)
+    return engine.analyze(profile, baselines=baselines, rules=rules, deterministic=deterministic)
 
 
-def _compute_verdict(findings: list[Finding]) -> BehavioralVerdict:
+def _compute_verdict(findings: List[Finding]) -> BehavioralVerdict:
     """Compute overall verdict from findings."""
     if not findings:
         return BehavioralVerdict.CLEAN

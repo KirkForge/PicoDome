@@ -1,16 +1,17 @@
 """L4 baseline drift detector."""
 
+from typing import Dict, List, Optional
 
-from irondome.l4.models import Baseline, BehavioralProfile, Finding
+from irondome.l4.models import BehavioralProfile, Baseline, Finding
 from irondome.models import Severity
 
 
 def detect_baseline_drift(
     profile: BehavioralProfile,
-    baselines: dict[str, Baseline] | None = None,
-) -> list[Finding]:
+    baselines: Optional[Dict[str, Baseline]] = None,
+) -> List[Finding]:
     """Detect significant drift from known baselines."""
-    findings: list[Finding] = []
+    findings: List[Finding] = []
 
     if not baselines:
         return findings
@@ -35,21 +36,17 @@ def detect_baseline_drift(
         findings.append(Finding(
             rule_id="L4-BASE-002",
             severity=Severity.CRITICAL,
-            message=f"Severe baseline drift ({drift.score:.0%}) from \
-                '{baseline.name}': {drift.details}",
+            message=f"Severe baseline drift ({drift.score:.0%}) from '{baseline.name}': {drift.details}",
             location=profile.package,
-            evidence={"baseline": baseline.name, "drift_score": drift.score, \
-                "details": drift.details},
+            evidence={"baseline": baseline.name, "drift_score": drift.score, "details": drift.details},
         ))
     elif drift.score >= 0.4:
         findings.append(Finding(
             rule_id="L4-BASE-003",
             severity=Severity.MEDIUM,
-            message=f"Moderate baseline drift ({drift.score:.0%}) from \
-                '{baseline.name}': {drift.details}",
+            message=f"Moderate baseline drift ({drift.score:.0%}) from '{baseline.name}': {drift.details}",
             location=profile.package,
-            evidence={"baseline": baseline.name, "drift_score": drift.score, \
-                "details": drift.details},
+            evidence={"baseline": baseline.name, "drift_score": drift.score, "details": drift.details},
         ))
 
     return findings

@@ -1,45 +1,32 @@
 """Tests for rate limiting and job queuing."""
 
-import threading
 import time
+import threading
 
-from irondome.ratelimit import (
-    JobPriority,
-    JobQueue,
-    RateLimitConfig,
-    TokenBucketLimiter,
-)
+from irondome.ratelimit import TokenBucketLimiter, RateLimitConfig, JobQueue, JobPriority
 
 
 class TestTokenBucketLimiter:
     def test_allow_within_burst(self):
-        limiter =
-            TokenBucketLimiter(RateLimitConfig(rate_per_second=1.0, \
-                burst_size=5))
+        limiter = TokenBucketLimiter(RateLimitConfig(rate_per_second=1.0, burst_size=5))
         for _ in range(5):
             assert limiter.allow("actor-1") is True
 
     def test_reject_over_burst(self):
-        limiter =
-            TokenBucketLimiter(RateLimitConfig(rate_per_second=1.0, \
-                burst_size=3))
+        limiter = TokenBucketLimiter(RateLimitConfig(rate_per_second=1.0, burst_size=3))
         for _ in range(3):
             limiter.allow("actor-1")
         assert limiter.allow("actor-1") is False
 
     def test_tokens_refill(self):
-        limiter =
-            TokenBucketLimiter(RateLimitConfig(rate_per_second=100.0, \
-                burst_size=1))
+        limiter = TokenBucketLimiter(RateLimitConfig(rate_per_second=100.0, burst_size=1))
         limiter.allow("actor-1")  # consume the 1 token
         assert limiter.allow("actor-1") is False
         time.sleep(0.02)  # wait for refill at 100/sec
         assert limiter.allow("actor-1") is True
 
     def test_independent_actors(self):
-        limiter =
-            TokenBucketLimiter(RateLimitConfig(rate_per_second=1.0, \
-                burst_size=2))
+        limiter = TokenBucketLimiter(RateLimitConfig(rate_per_second=1.0, burst_size=2))
         assert limiter.allow("actor-a") is True
         assert limiter.allow("actor-a") is True
         assert limiter.allow("actor-a") is False
@@ -70,9 +57,7 @@ class TestTokenBucketLimiter:
         assert limiter.allow("actor-1") is True
 
     def test_thread_safety(self):
-        limiter =
-            TokenBucketLimiter(RateLimitConfig(rate_per_second=100.0, \
-                burst_size=50))
+        limiter = TokenBucketLimiter(RateLimitConfig(rate_per_second=100.0, burst_size=50))
         results = []
 
         def worker():
@@ -100,12 +85,9 @@ class TestJobQueue:
 
     def test_priority_ordering(self):
         q = JobQueue(max_size=10)
-        q.enqueue(command=["echo", "low"], actor="u1", \
-            priority=JobPriority.LOW)
-        q.enqueue(command=["echo", "critical"], actor="u2", \
-            priority=JobPriority.CRITICAL)
-        q.enqueue(command=["echo", "normal"], actor="u3", \
-            priority=JobPriority.NORMAL)
+        q.enqueue(command=["echo", "low"], actor="u1", priority=JobPriority.LOW)
+        q.enqueue(command=["echo", "critical"], actor="u2", priority=JobPriority.CRITICAL)
+        q.enqueue(command=["echo", "normal"], actor="u3", priority=JobPriority.NORMAL)
 
         first = q.dequeue(timeout=1.0)
         assert first.priority == JobPriority.CRITICAL
@@ -116,10 +98,8 @@ class TestJobQueue:
 
     def test_fifo_within_priority(self):
         q = JobQueue(max_size=10)
-        q.enqueue(command=["echo", "1"], actor="u1", \
-            priority=JobPriority.NORMAL)
-        q.enqueue(command=["echo", "2"], actor="u2", \
-            priority=JobPriority.NORMAL)
+        q.enqueue(command=["echo", "1"], actor="u1", priority=JobPriority.NORMAL)
+        q.enqueue(command=["echo", "2"], actor="u2", priority=JobPriority.NORMAL)
         first = q.dequeue(timeout=1.0)
         second = q.dequeue(timeout=1.0)
         assert first.actor == "u1"
@@ -129,9 +109,7 @@ class TestJobQueue:
         q = JobQueue(max_size=2)
         q.enqueue(command=["echo", "1"], actor="u1")
         q.enqueue(command=["echo", "2"], actor="u2")
-        result =
-            q.enqueue(command=["echo", "3"], actor="u3", \
-                priority=JobPriority.LOW)
+        result = q.enqueue(command=["echo", "3"], actor="u3", priority=JobPriority.LOW)
         assert result is None  # dropped
 
     def test_complete_job(self):

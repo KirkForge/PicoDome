@@ -30,10 +30,10 @@ import logging
 import os
 import time
 import uuid
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-from typing import Any
-from urllib.parse import parse_qs, urlparse
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse, parse_qs
 
 from irondome import __version__
 from irondome.audit import AuditEventType, get_audit_logger
@@ -59,13 +59,10 @@ class TokenAuth:
     1. ``IRONDOME_API_TOKENS`` env var (comma-separated)
     2. ``~/.irondome/api-tokens`` file (one token per line)
 
-    Token format: ``irondome-<role>-<secret>`` (
-        e.g.
-        ``irondome-admin-abc123``
-    )
+    Token format: ``irondome-<role>-<secret>`` (e.g., ``irondome-admin-abc123``)
     """
 
-    def __init__(self, rbac: RBAC | None = None) -> None:
+    def __init__(self, rbac: Optional[RBAC] = None) -> None:
         self._tokens: set = set()
         self._rbac = rbac
         self._load_tokens()
@@ -83,8 +80,7 @@ class TokenAuth:
         token_file = Path.home() / ".irondome" / "api-tokens"
         if token_file.is_file():
             try:
-                for line in token_file.read_text(encoding="utf-8").splitlines(
-                    ):
+                for line in token_file.read_text(encoding="utf-8").splitlines():
                     line = line.strip()
                     if line and not line.startswith("#"):
                         self._tokens.add(line)
@@ -95,8 +91,7 @@ class TokenAuth:
         logger.info("Loaded %d API token(s)", len(self._tokens))
 
     def _register_role(self, token: str) -> None:
-        """Parse token format irondome-<role>-<secret> and register with \
-            RBAC."""
+        """Parse token format irondome-<role>-<secret> and register with RBAC."""
         if self._rbac and token.startswith("irondome-"):
             parts = token.split("-", 2)
             if len(parts) >= 3:
@@ -106,15 +101,8 @@ class TokenAuth:
     def validate(self, token: str) -> bool:
         """Check if a token is valid."""
         if not self._tokens:
-            if os.environ.get("IRONDOME_DEV_MODE", "").lower() in (
-                "1"
-                "true"
-                "yes"
-            ):
-                logger.warning(
-                    "DEV MODE: No API tokens configured — all requests \
-                        authenticated"
-                    )
+            if os.environ.get("IRONDOME_DEV_MODE", "").lower() in ("1", "true", "yes"):
+                logger.warning("DEV MODE: No API tokens configured — all requests authenticated")
                 return True
             logger.warning(
                 "No API tokens configured — rejecting all requests. "
@@ -146,18 +134,12 @@ class RBAC:
 
     ROLE_PERMISSIONS = {
         Role.SUBMITTER: {"scan:submit", "scan:read", "health"},
-        Role.READER: {
-            "scan:read"
-            "policy:read"
-            "baseline:read"
-            "audit:read"
-            "health"
-        },
+        Role.READER: {"scan:read", "policy:read", "baseline:read", "audit:read", "health"},
         Role.ADMIN: {"*"},  # all permissions
     }
 
     def __init__(self) -> None:
-        self._token_roles: dict[str, str] = {}
+        self._token_roles: Dict[str, str] = {}
 
     def register_token(self, token: str, role: str) -> None:
         """Register a token with a specific role."""
@@ -179,17 +161,17 @@ class RBAC:
 class ScanJob:
     """Track an in-flight or completed scan job."""
 
-    def __init__(self, job_id: str, command: list[str], actor: str) -> None:
+    def __init__(self, job_id: str, command: List[str], actor: str) -> None:
         self.job_id = job_id
         self.command = command
         self.actor = actor
         self.status = "pending"
         self.created_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        self.completed_at: str | None = None
-        self.result: dict | None = None
-        self.error: str | None = None
+        self.completed_at: Optional[str] = None
+        self.result: Optional[Dict] = None
+        self.error: Optional[str] = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         d = {
             "command": self.command,
             "created_at": self.created_at,
@@ -209,28 +191,21 @@ class ScanJobStore:
     """In-memory store of recent scan jobs (bounded)."""
 
     def __init__(self, max_jobs: int = 1000) -> None:
-        self._jobs: dict[str, ScanJob] = {}
+        self._jobs: Dict[str, ScanJob] = {}
         self._max_jobs = max_jobs
 
     def add(self, job: ScanJob) -> None:
         self._jobs[job.job_id] = job
         # Evict oldest if over limit
         if len(self._jobs) > self._max_jobs:
-            oldest_key = min(
-                self._jobs,
-                key=lambda k: self._jobs[k].created_at,
-            )
+            oldest_key = min(self._jobs, key=lambda k: self._jobs[k].created_at)
             del self._jobs[oldest_key]
 
-    def get(self, job_id: str) -> ScanJob | None:
+    def get(self, job_id: str) -> Optional[ScanJob]:
         return self._jobs.get(job_id)
 
-    def list_recent(self, limit: int = 50) -> list[ScanJob]:
-        jobs = sorted(
-            self._jobs.values()
-            key=lambda j: j.created_at
-            reverse=True
-        )
+    def list_recent(self, limit: int = 50) -> List[ScanJob]:
+        jobs = sorted(self._jobs.values(), key=lambda j: j.created_at, reverse=True)
         return jobs[:limit]
 
 # ─── HTTP handler ────────────────────────────────────────────────────────────
@@ -264,14 +239,14 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     def _send_error(self, status: int, message: str) -> None:
         self._send_json({"error": message, "status": status}, status)
 
-    def _get_token(self) -> str | None:
+    def _get_token(self) -> Optional[str]:
         """Extract bearer token from Authorization header."""
         auth_header = self.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             return auth_header[7:].strip()
         return None
 
-    def _require_auth(self) -> str | None:
+    def _require_auth(self) -> Optional[str]:
         """Validate authentication. Returns token or sends 401."""
         token = self._get_token()
 
@@ -284,17 +259,14 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
         return token
 
-    def _require_permission(self, permission: str) -> str | None:
+    def _require_permission(self, permission: str) -> Optional[str]:
         """Require auth + permission. Returns token or sends 403."""
         token = self._require_auth()
         if token is None:
             return None
 
         if not self.rbac.has_permission(token, permission):
-            self._send_error(
-                403
-                f"Forbidden: insufficient permissions ({permission})"
-            )
+            self._send_error(403, f"Forbidden: insufficient permissions ({permission})")
             return None
 
         return token
@@ -433,21 +405,14 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
         command = data.get("command")
         if not command or not isinstance(command, list):
-            self._send_error(
-                400
-                "Missing or invalid 'command' field (must be a list)"
-            )
+            self._send_error(400, "Missing or invalid 'command' field (must be a list)")
             return
 
         timeout = data.get("timeout", 30.0)
         data.get("policy")
 
         job_id = str(uuid.uuid4())[:8]
-        job = ScanJob(
-            job_id=job_id
-            command=command
-            actor=token[:16] if token else "unknown"
-        )
+        job = ScanJob(job_id=job_id, command=command, actor=token[:16] if token else "unknown")
         self.job_store.add(job)
 
         # Audit
@@ -489,10 +454,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             }
 
             job.status = "completed"
-            job.completed_at = time.strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-                time.gmtime()
-            )
+            job.completed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             job.result = result
 
             # Update metrics
@@ -506,13 +468,9 @@ class IronDomeHandler(BaseHTTPRequestHandler):
                 audit.record(
                     event_type=AuditEventType.SCAN_COMPLETE,
                     actor=job.actor,
-                    detail=f"l3={sandbox_result.overall_verdict.value} l4={
-                        analysis_result.overall_verdict.value}",
+                    detail=f"l3={sandbox_result.overall_verdict.value} l4={analysis_result.overall_verdict.value}",
                     target=command[0] if command else "",
-                    metadata={
-                        "job_id": job_id
-                        "findings": len(analysis_result.findings)
-                    },
+                    metadata={"job_id": job_id, "findings": len(analysis_result.findings)},
                 )
             except Exception:
                 pass
@@ -542,7 +500,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         else:
             self._send_error(404, f"Scan job not found: {job_id}")
 
-    def _handle_list_scans(self, query: dict) -> None:
+    def _handle_list_scans(self, query: Dict) -> None:
         limit = int(query.get("limit", ["50"])[0])
         jobs = self.job_store.list_recent(limit=limit)
         self._send_json({
@@ -583,11 +541,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             store = get_policy_store()
             author = data.get("author", token[:16] if token else "unknown")
             description = data.get("change_description", "")
-            pv = store.save(
-                policy
-                author=author
-                change_description=description
-            )
+            pv = store.save(policy, author=author, change_description=description)
             self._send_json(pv.to_dict(), status=201)
         except Exception as e:
             self._send_error(400, f"Invalid policy: {e}")
@@ -600,7 +554,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             "count": len(baselines),
         })
 
-    def _handle_audit_query(self, query: dict) -> None:
+    def _handle_audit_query(self, query: Dict) -> None:
         from irondome.audit import AuditEventType, get_audit_logger
         audit = get_audit_logger()
 
@@ -661,16 +615,12 @@ class IronDomeDaemon:
 
     def __init__(
         self,
-        host: str | None = None,
-        port: int | None = None,
+        host: Optional[str] = None,
+        port: Optional[int] = None,
     ) -> None:
-        self._host = host or os.environ.get(
-            "IRONDOME_DAEMON_HOST"
-            "127.0.0.1"
-        )
-        self._port = port or int(
-            os.environ.get("IRONDOME_DAEMON_PORT", "8443"))
-        self._server: HTTPServer | None = None
+        self._host = host or os.environ.get("IRONDOME_DAEMON_HOST", "127.0.0.1")
+        self._port = port or int(os.environ.get("IRONDOME_DAEMON_PORT", "8443"))
+        self._server: Optional[HTTPServer] = None
 
     def start(self, background: bool = False) -> None:
         """Start the daemon HTTP server."""
@@ -688,11 +638,7 @@ class IronDomeDaemon:
         except Exception:
             pass
 
-        logger.info(
-            "Iron Dome daemon starting on %s:%d"
-            self._host
-            self._port
-        )
+        logger.info("Iron Dome daemon starting on %s:%d", self._host, self._port)
 
         if background:
             import threading

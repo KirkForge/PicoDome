@@ -5,17 +5,14 @@ IronDome's core thesis is determinism. Builds MUST be bit-for-bit reproducible.
 This module provides:
 
 - ReproducibleBuild: configuration class for reproducible builds
-- get_source_date_epoch(): read SOURCE_DATE_EPOCH or fallback to build \
-    timestamp
+- get_source_date_epoch(): read SOURCE_DATE_EPOCH or fallback to build timestamp
 - pin_dependencies(): read requirements/pip lock and return pinned hashes
 - verify_reproducible_build(): verify a built wheel is reproducible
-- hermetic_build_config(): config for hermetic pip install (no network during \
-    build)
+- hermetic_build_config(): config for hermetic pip install (no network during build)
 - generate_build_manifest(): generate a build manifest JSON with all hashes
 
 Design principles:
-- SOURCE_DATE_EPOCH must be respected for all timestamp generation during \
-    build.
+- SOURCE_DATE_EPOCH must be respected for all timestamp generation during build.
 - All dependency versions must be pinned with hashes (pip --require-hashes).
 - The build must work in air-gapped environments (all deps pre-downloaded).
 - Tests must work without network access.
@@ -31,9 +28,9 @@ import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Dict, List, Optional
 
-# ─── Constants
-# ────────────────────────────────────────────────────────────────
+# ─── Constants ────────────────────────────────────────────────────────────────
 
 _DEFAULT_SOURCE_DATE_EPOCH = 0  # 1970-01-01 00:00:00 UTC
 _HASH_ALGORITHMS = ("sha256", "sha384", "sha512")
@@ -48,15 +45,13 @@ _REQUIREMENTS_LINE_PATTERN = re.compile(
 )
 _WHEEL_HASH_CHUNK_SIZE = 65536  # 64KB chunks for hashing
 
-# ─── Exceptions
-# ────────────────────────────────────────────────────────────────
+# ─── Exceptions ────────────────────────────────────────────────────────────────
 
 
 class ReproducibleBuildError(Exception):
     """Raised when a reproducible build check fails."""
 
-# ─── ReproducibleBuild class
-# ──────────────────────────────────────────────────
+# ─── ReproducibleBuild class ──────────────────────────────────────────────────
 
 
 @dataclass(frozen=True)
@@ -79,7 +74,7 @@ class ReproducibleBuild:
     no_deps: bool = False
     offline: bool = True
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict:
         """Serialize to dict with sorted keys for deterministic JSON."""
         d = {
             "source_date_epoch": self.source_date_epoch,
@@ -91,7 +86,7 @@ class ReproducibleBuild:
         }
         return {k: v for k, v in sorted(d.items())}
 
-    def env_vars(self) -> dict[str, str]:
+    def env_vars(self) -> Dict[str, str]:
         """Return environment variables for the reproducible build."""
         env = {
             "SOURCE_DATE_EPOCH": str(self.source_date_epoch),
@@ -99,7 +94,7 @@ class ReproducibleBuild:
         }
         return env
 
-    def pip_install_args(self) -> list[str]:
+    def pip_install_args(self) -> List[str]:
         """Return pip install arguments for reproducible install."""
         args = []
         if self.require_hashes:
@@ -112,30 +107,25 @@ class ReproducibleBuild:
             args.append("--offline")
         return args
 
-# ─── Core functions
-# ────────────────────────────────────────────────────────────
+# ─── Core functions ────────────────────────────────────────────────────────────
 
 
-def get_source_date_epoch(fallback_timestamp: int | None = None) -> int:
+def get_source_date_epoch(fallback_timestamp: Optional[int] = None) -> int:
     """Read SOURCE_DATE_EPOCH env var or use fallback timestamp.
 
-    SOURCE_DATE_EPOCH is the standard environment variable for reproducible \
-        builds.
-    If set,
-        it must be used for all timestamp generation during the build process.
+    SOURCE_DATE_EPOCH is the standard environment variable for reproducible builds.
+    If set, it must be used for all timestamp generation during the build process.
     If not set, use the fallback_timestamp if provided, otherwise 0 (epoch).
 
     Args:
-        fallback_timestamp: Optional timestamp to use if SOURCE_DATE_EPOCH is \
-            not set.
+        fallback_timestamp: Optional timestamp to use if SOURCE_DATE_EPOCH is not set.
             If None, defaults to 0 (1970-01-01 00:00:00 UTC).
 
     Returns:
         Integer epoch seconds.
 
     Raises:
-        ReproducibleBuildError: If SOURCE_DATE_EPOCH is set but not a valid \
-            integer.
+        ReproducibleBuildError: If SOURCE_DATE_EPOCH is set but not a valid integer.
     """
     env_val = os.environ.get("SOURCE_DATE_EPOCH")
     if env_val is not None:
@@ -157,7 +147,7 @@ def get_source_date_epoch(fallback_timestamp: int | None = None) -> int:
     return _DEFAULT_SOURCE_DATE_EPOCH
 
 
-def pin_dependencies(lockfile_path: str) -> dict:
+def pin_dependencies(lockfile_path: str) -> Dict:
     """Read requirements/pip lock and return pinned hashes.
 
     Parses a requirements.txt or pip-compatible lock file and extracts
@@ -173,15 +163,14 @@ def pin_dependencies(lockfile_path: str) -> dict:
         - "lockfile": the input path
 
     Raises:
-        ReproducibleBuildError: If lockfile doesn't exist or has no valid \
-            entries.
+        ReproducibleBuildError: If lockfile doesn't exist or has no valid entries.
     """
     path = Path(lockfile_path)
     if not path.is_file():
         raise ReproducibleBuildError(f"Lockfile not found: {lockfile_path}")
 
     content = path.read_text(encoding="utf-8")
-    packages: list[dict] = []
+    packages: List[Dict] = []
 
     for line in content.splitlines():
         line = line.strip()
@@ -192,8 +181,7 @@ def pin_dependencies(lockfile_path: str) -> dict:
 
         # Parse package==version or package>=version with optional --hash specs
         match = re.match(
-                r"^(?P<name>[a-zA-Z0-9_.-]+)(?P<op>==|>=|<=|~=|!=|>|<)(?P<versi \
-                    on>[^;\s]+)", line
+            r"^(?P<name>[a-zA-Z0-9_.-]+)(?P<op>==|>=|<=|~=|!=|>|<)(?P<version>[^;\s]+)", line
         )
         if not match:
             continue
@@ -203,7 +191,7 @@ def pin_dependencies(lockfile_path: str) -> dict:
         version_op = match.group("op")
 
         # Extract all --hash=algo:hash pairs from the line
-        hashes: list[dict[str, str]] = []
+        hashes: List[Dict[str, str]] = []
         for hmatch in re.finditer(
             r"--hash=(?P<algo>sha\d+):(?P<hash_val>[a-f0-9]+)", line
         ):
@@ -231,7 +219,7 @@ def pin_dependencies(lockfile_path: str) -> dict:
     }
 
 
-def verify_reproducible_build(wheel_path: str) -> dict:
+def verify_reproducible_build(wheel_path: str) -> Dict:
     """Verify a built wheel is reproducible.
 
     Checks:
@@ -252,8 +240,7 @@ def verify_reproducible_build(wheel_path: str) -> dict:
         - "violations": list of violations found (empty if reproducible)
 
     Raises:
-        ReproducibleBuildError: If wheel file doesn't exist or isn't a valid \
-            wheel.
+        ReproducibleBuildError: If wheel file doesn't exist or isn't a valid wheel.
     """
     path = Path(wheel_path)
     if not path.is_file():
@@ -264,8 +251,8 @@ def verify_reproducible_build(wheel_path: str) -> dict:
             f"Not a wheel file (expected .whl extension): {wheel_path}"
         )
 
-    violations: list[str] = []
-    checks: list[dict] = []
+    violations: List[str] = []
+    checks: List[Dict] = []
 
     # Check 1: Valid zip file
     try:
@@ -277,8 +264,7 @@ def verify_reproducible_build(wheel_path: str) -> dict:
                 "detail": f"{len(namelist)} entries",
             })
     except zipfile.BadZipFile as exc:
-        checks.append({"check": "valid_zip", "passed": False, "detail": \
-            str(exc)})
+        checks.append({"check": "valid_zip", "passed": False, "detail": str(exc)})
         violations.append(f"Invalid zip file: {exc}")
         return {
             "reproducible": False,
@@ -315,8 +301,7 @@ def verify_reproducible_build(wheel_path: str) -> dict:
         checks.append({
             "check": "no_embedded_timestamps",
             "passed": passed,
-            "detail": f"{len(timestamp_violations)} entries with non-epoch \
-                timestamps",
+            "detail": f"{len(timestamp_violations)} entries with non-epoch timestamps",
         })
 
         # Check 3: No non-deterministic files
@@ -352,8 +337,7 @@ def verify_reproducible_build(wheel_path: str) -> dict:
                 detail = "WHEEL metadata clean"
             else:
                 passed = False
-                violations.append("WHEEL metadata contains 'Generated' \
-                    timestamp")
+                violations.append("WHEEL metadata contains 'Generated' timestamp")
                 detail = "WHEEL metadata contains 'Generated' timestamp"
         else:
             passed = True
@@ -381,7 +365,7 @@ def verify_reproducible_build(wheel_path: str) -> dict:
     }
 
 
-def hermetic_build_config() -> dict:
+def hermetic_build_config() -> Dict:
     """Return config for hermetic pip install (no network during build).
 
     A hermetic build ensures:
@@ -439,11 +423,10 @@ def generate_build_manifest(output_dir: str) -> str:
     """
     out_path = Path(output_dir)
     if not out_path.is_dir():
-        raise
-            ReproducibleBuildError(f"Output directory not found: {output_dir}")
+        raise ReproducibleBuildError(f"Output directory not found: {output_dir}")
 
     epoch = get_source_date_epoch()
-    source_files: dict[str, str] = {}
+    source_files: Dict[str, str] = {}
 
     # Hash all Python source files
     for py_file in sorted(out_path.rglob("*.py")):
@@ -454,8 +437,7 @@ def generate_build_manifest(output_dir: str) -> str:
         source_files[rel_path] = _file_sha256(py_file)
 
     # Also hash config files
-    for config_file in ["pyproject.toml", "setup.cfg", "setup.py", \
-        "MANIFEST.in"]:
+    for config_file in ["pyproject.toml", "setup.cfg", "setup.py", "MANIFEST.in"]:
         cf = out_path / config_file
         if cf.is_file():
             source_files[config_file] = _file_sha256(cf)
@@ -483,8 +465,7 @@ def generate_build_manifest(output_dir: str) -> str:
     )
     return str(manifest_path)
 
-# ─── Helper functions
-# ──────────────────────────────────────────────────────────
+# ─── Helper functions ──────────────────────────────────────────────────────────
 
 
 def _file_sha256(path: Path) -> str:

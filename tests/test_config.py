@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction
-from irondome.l3.policy import _policy_from_dict, default_policy, load_policy
+from irondome.l3.policy import default_policy, load_policy, _policy_from_dict
 
 
 class TestDefaultPolicy:
@@ -74,8 +74,7 @@ class TestLoadPolicy:
             load_policy(Path("/nonexistent/policy.json"))
 
     def test_load_invalid_json_raises(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", \
-            delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write("not valid json {{{")
             f.flush()
             with pytest.raises(json.JSONDecodeError):
@@ -83,8 +82,7 @@ class TestLoadPolicy:
 
     def test_load_invalid_yaml_raises(self):
         """Even though we use JSON, invalid content should raise."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", \
-            delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write("key: value\n  indented: bad")
             f.flush()
             with pytest.raises(json.JSONDecodeError):
@@ -92,8 +90,7 @@ class TestLoadPolicy:
 
     def test_load_policy_with_minimal_data(self):
         data = {"name": "minimal"}
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", \
-            delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(data, f)
             f.flush()
             policy = load_policy(Path(f.name))
@@ -107,13 +104,11 @@ class TestLoadPolicy:
             "name": "multi-rule",
             "rules": [
                 {"rule_id": "R1", "target": "network_out", "action": "deny"},
-                {"rule_id": "R2", "target": "file_read", "action": "allow", \
-                    "paths": ["/usr/**"]},
+                {"rule_id": "R2", "target": "file_read", "action": "allow", "paths": ["/usr/**"]},
                 {"rule_id": "R3", "target": "process_spawn", "action": "deny"},
             ],
         }
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", \
-            delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(data, f)
             f.flush()
             policy = load_policy(Path(f.name))
@@ -234,10 +229,8 @@ class TestPolicyValidation:
         policy = Policy(
             name="test",
             rules=[
-                PolicyRule(rule_id="R1", target=RuleTarget.NETWORK_OUT, \
-                    action=SyscallAction.DENY),
-                PolicyRule(rule_id="R2", target=RuleTarget.FILE_WRITE, \
-                    action=SyscallAction.ALLOW),
+                PolicyRule(rule_id="R1", target=RuleTarget.NETWORK_OUT, action=SyscallAction.DENY),
+                PolicyRule(rule_id="R2", target=RuleTarget.FILE_WRITE, action=SyscallAction.ALLOW),
             ],
         )
         ids = [r.rule_id for r in policy.rules]
@@ -246,10 +239,8 @@ class TestPolicyValidation:
     def test_duplicate_rule_ids_detected(self):
         """If someone creates duplicate IDs, it should be caught."""
         rules = [
-            PolicyRule(rule_id="R1", target=RuleTarget.NETWORK_OUT, \
-                action=SyscallAction.DENY),
-            PolicyRule(rule_id="R1", target=RuleTarget.FILE_WRITE, \
-                action=SyscallAction.ALLOW),
+            PolicyRule(rule_id="R1", target=RuleTarget.NETWORK_OUT, action=SyscallAction.DENY),
+            PolicyRule(rule_id="R1", target=RuleTarget.FILE_WRITE, action=SyscallAction.ALLOW),
         ]
         ids = [r.rule_id for r in rules]
         assert len(ids) != len(set(ids)), "Duplicate IDs should be detected"

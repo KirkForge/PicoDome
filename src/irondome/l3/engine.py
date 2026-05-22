@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import platform
+from typing import List, Optional
 
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.backends.subprocess_backend import SubprocessBackend
@@ -49,15 +50,10 @@ def _detect_backend() -> SandboxBackend:
             logger.debug("Seatbelt backend unavailable", exc_info=True)
 
     logger.info("Using subprocess backend (fallback)")
-    logger.warning(
-        "No kernel-level sandbox available — subprocess "
-        "backend provides only post-hoc analysis, not real "
-        "enforcement. Consider fail_closed=True in policy."
-    )
     return SubprocessBackend()
 
 
-_default_backend: SandboxBackend | None = None
+_default_backend: Optional[SandboxBackend] = None
 
 
 def get_backend() -> SandboxBackend:
@@ -75,12 +71,12 @@ def set_backend(backend: SandboxBackend) -> None:
 
 
 def sandbox_run(
-    command: list[str],
-    policy: Policy | None = None,
-    timeout: float | None = None,
-    cwd: str | None = None,
-    env: dict | None = None,
-    backend: SandboxBackend | None = None,
+    command: List[str],
+    policy: Optional[Policy] = None,
+    timeout: Optional[float] = None,
+    cwd: Optional[str] = None,
+    env: Optional[dict] = None,
+    backend: Optional[SandboxBackend] = None,
     deterministic: bool = True,
 ) -> SandboxResult:
     """
@@ -113,7 +109,6 @@ def sandbox_run(
             exit_code=result.exit_code,
             events=result.events,
             policy_name=result.policy_name,
-            backend_name=result.backend_name,
             stdout=result.stdout,
             stderr=result.stderr,
         )
@@ -128,20 +123,17 @@ def sandbox_run(
             duration_ms=result.duration_ms,
             events=result.events,
             policy_name=result.policy_name,
-            backend_name=result.backend_name,
             stdout=result.stdout,
             stderr=result.stderr,
         )
 
     logger.info(
-        "L3 sandbox %s: verdict=%s exit=%d "
-        "duration=%dms events=%d backend=%s",
+        "L3 sandbox %s: verdict=%s exit=%d duration=%dms events=%d",
         result.run_id or "(deterministic)",
         result.overall_verdict.value,
         result.exit_code,
         result.duration_ms,
         len(result.events),
-        result.backend_name or "unknown",
     )
 
     return result
@@ -150,7 +142,7 @@ def sandbox_run(
 class SandboxEngine:
     """High-level sandbox engine interface."""
 
-    def __init__(self, backend: SandboxBackend | None = None):
+    def __init__(self, backend: Optional[SandboxBackend] = None):
         self._backend = backend
 
     @property
@@ -161,11 +153,11 @@ class SandboxEngine:
 
     def run(
         self,
-        command: list[str],
-        policy: Policy | None = None,
-        timeout: float | None = None,
-        cwd: str | None = None,
-        env: dict | None = None,
+        command: List[str],
+        policy: Optional[Policy] = None,
+        timeout: Optional[float] = None,
+        cwd: Optional[str] = None,
+        env: Optional[dict] = None,
         deterministic: bool = True,
     ) -> SandboxResult:
         return sandbox_run(

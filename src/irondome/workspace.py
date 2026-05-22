@@ -15,6 +15,7 @@ import json
 import logging
 import time
 from pathlib import Path
+from typing import Dict, List, Optional
 
 from irondome.config import IronDomeConfig, load_config
 from irondome.l3.engine import sandbox_run
@@ -66,7 +67,7 @@ class ProjectInfo:
         self.name = name or path.name
         self.version = version
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict:
         return {
             "path": str(self.path),
             "type": self.project_type,
@@ -79,17 +80,17 @@ class WorkspaceResult:
     """Aggregated results from multi-project workspace scanning."""
 
     def __init__(self) -> None:
-        self.projects: dict[str, ProjectInfo] = {}
-        self.sandbox_results: dict[str, SandboxResult] = {}
-        self.analysis_results: dict[str, AnalysisResult] = {}
+        self.projects: Dict[str, ProjectInfo] = {}
+        self.sandbox_results: Dict[str, SandboxResult] = {}
+        self.analysis_results: Dict[str, AnalysisResult] = {}
         self.total_findings: int = 0
         self.total_projects: int = 0
         self.scanned_projects: int = 0
         self.failed_projects: int = 0
-        self.errors: list[str] = []
+        self.errors: List[str] = []
         self.duration_ms: int = 0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict:
         return {
             "total_projects": self.total_projects,
             "scanned_projects": self.scanned_projects,
@@ -103,7 +104,7 @@ class WorkspaceResult:
         }
 
 
-def discover_projects(root: Path, max_depth: int = 8) -> list[ProjectInfo]:
+def discover_projects(root: Path, max_depth: int = 8) -> List[ProjectInfo]:
     """Discover all projects in a directory tree.
 
     A project is any directory containing a recognized project marker
@@ -123,7 +124,7 @@ def discover_projects(root: Path, max_depth: int = 8) -> list[ProjectInfo]:
     if not root.is_dir():
         return []
 
-    projects: dict[Path, ProjectInfo] = {}
+    projects: Dict[Path, ProjectInfo] = {}
     queue = [(root, 0)]
 
     while queue:
@@ -167,9 +168,7 @@ def discover_projects(root: Path, max_depth: int = 8) -> list[ProjectInfo]:
                         content = pyproject.read_text(encoding="utf-8")
                         for line in content.splitlines():
                             if line.strip().startswith("name"):
-                                name =
-                                    line.split("=", \
-                                        1)[1].strip().strip('"').strip("'")
+                                name = line.split("=", 1)[1].strip().strip('"').strip("'")
                                 break
                     except OSError:
                         name = current.name
@@ -188,14 +187,13 @@ def discover_projects(root: Path, max_depth: int = 8) -> list[ProjectInfo]:
         for entry in entries:
             if entry.is_symlink():
                 continue
-            if entry.is_dir() and entry.name not in SKIP_DIRS and not \
-                entry.name.startswith("."):
+            if entry.is_dir() and entry.name not in SKIP_DIRS and not entry.name.startswith("."):
                 queue.append((entry, depth + 1))
 
     return sorted(projects.values(), key=lambda p: str(p.path))
 
 
-def _default_sandbox_commands(project: ProjectInfo) -> list[list[str]]:
+def _default_sandbox_commands(project: ProjectInfo) -> List[List[str]]:
     """Get default sandbox commands for a project type.
 
     Returns a list of command lists (each is argv-style).
@@ -219,10 +217,10 @@ def _default_sandbox_commands(project: ProjectInfo) -> list[list[str]]:
 
 def scan_workspace(
     root: Path,
-    engine: L4Engine | None = None,
-    config: IronDomeConfig | None = None,
-    commands: dict[str, list[list[str]]] | None = None,
-    fail_on: str | None = None,
+    engine: Optional[L4Engine] = None,
+    config: Optional[IronDomeConfig] = None,
+    commands: Optional[Dict[str, List[List[str]]]] = None,
+    fail_on: Optional[str] = None,
     timeout: float = 30.0,
 ) -> WorkspaceResult:
     """Scan an entire workspace for supply-chain issues.
@@ -260,13 +258,10 @@ def scan_workspace(
     result = WorkspaceResult()
     result.total_projects = len(projects)
 
-    logger.info("Discovered %d project(s) in workspace %s", len(projects), \
-        root)
+    logger.info("Discovered %d project(s) in workspace %s", len(projects), root)
 
     for project in projects:
-        rel =
-            project.path.relative_to(root) if \
-                str(project.path).startswith(str(root)) else project.path.name
+        rel = project.path.relative_to(root) if str(project.path).startswith(str(root)) else project.path.name
         logger.info("Scanning: %s (%s)", rel, project.project_type)
 
         # Get sandbox commands
@@ -299,25 +294,16 @@ def scan_workspace(
 
                 # Store results
                 key = str(project.path)
-                result.sandbox_results[f"{key}:{' '.join(cmd)}"] =
-                    sandbox_result
+                result.sandbox_results[f"{key}:{' '.join(cmd)}"] = sandbox_result
                 result.analysis_results[f"{key}:{' '.join(cmd)}"] = analysis
                 all_findings_count += len(analysis.findings)
 
                 # Check fail threshold
                 if fail_on and analysis.findings:
-                    severity_order =
-                        {
-                            "CRITICAL": 0,
-                            "HIGH": 1,
-                            "MEDIUM": 2,
-                            "LOW": 3,
-                            "INFO": 4,
-                        }
+                    severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
                     min_level = severity_order.get(fail_on.upper(), 2)
                     for f in analysis.findings:
-                        if severity_order.get(f.severity.value, 4) <= \
-                            min_level:
+                        if severity_order.get(f.severity.value, 4) <= min_level:
                             project_ok = False
 
                 logger.info(
@@ -346,8 +332,7 @@ def scan_workspace(
     result.duration_ms = int((time.monotonic() - start) * 1000)
 
     logger.info(
-        "Workspace scan complete: %d/%d projects, %d findings, %d failed, \
-            %dms",
+        "Workspace scan complete: %d/%d projects, %d findings, %d failed, %dms",
         result.scanned_projects,
         result.total_projects,
         result.total_findings,
@@ -360,7 +345,7 @@ def scan_workspace(
 
 def scan_workspace_to_json(
     root: Path,
-    output: Path | None = None,
+    output: Optional[Path] = None,
     **kwargs,
 ) -> str:
     """Scan workspace and return JSON string.

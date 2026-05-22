@@ -1,21 +1,21 @@
 """L4 data exfiltration detector."""
 
 import re
+from typing import Dict, List, Optional
 
-from irondome.l4.models import Baseline, BehavioralProfile, Finding
+from irondome.l4.models import BehavioralProfile, Baseline, Finding
 from irondome.models import Severity
 
 
 def detect_exfiltration(
     profile: BehavioralProfile,
-    baselines: dict[str, Baseline] | None = None,
-) -> list[Finding]:
+    baselines: Optional[Dict[str, Baseline]] = None,
+) -> List[Finding]:
     """Detect potential data exfiltration patterns."""
-    findings: list[Finding] = []
+    findings: List[Finding] = []
 
     # Check for network calls to suspicious destinations
-    suspicious_tlds =
-        {".xyz", ".tk", ".ml", ".cf", ".ga", ".gq", ".top", ".pw", ".cc"}
+    suspicious_tlds = {".xyz", ".tk", ".ml", ".cf", ".ga", ".gq", ".top", ".pw", ".cc"}
     private_ips = re.compile(r'^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)')
 
     for call in profile.network_calls:
@@ -27,18 +27,15 @@ def detect_exfiltration(
                     severity=Severity.HIGH,
                     message=f"Network call to suspicious TLD: {call.address}",
                     location=call.address,
-                    evidence={"address": call.address, "port": call.port, \
-                        "tld": tld},
+                    evidence={"address": call.address, "port": call.port, "tld": tld},
                 ))
 
         # Check for non-standard ports on external IPs
-        if call.port not in (0, 80, 443, 8080, 8443) and not \
-            private_ips.match(call.address):
+        if call.port not in (0, 80, 443, 8080, 8443) and not private_ips.match(call.address):
             findings.append(Finding(
                 rule_id="L4-EXFIL-002",
                 severity=Severity.MEDIUM,
-                message=f"Network call to non-standard port: \
-                    {call.address}:{call.port}",
+                message=f"Network call to non-standard port: {call.address}:{call.port}",
                 location=f"{call.address}:{call.port}",
                 evidence={"address": call.address, "port": call.port},
             ))
@@ -73,8 +70,7 @@ def detect_exfiltration(
     ]
     sensitive_reads = [
         op.path for op in profile.fs_ops
-        if op.operation == "read" and any(p in op.path for p in \
-            sensitive_patterns)
+        if op.operation == "read" and any(p in op.path for p in sensitive_patterns)
     ]
     if sensitive_reads and len(profile.network_calls) > 0:
         findings.append(Finding(

@@ -8,6 +8,8 @@ Deterministic: same input = same output. Sorted keys, no timestamps.
 
 from __future__ import annotations
 
+from typing import Union
+
 from irondome import __version__
 from irondome.l3.models import SandboxResult
 from irondome.l4.models import AnalysisResult
@@ -24,7 +26,7 @@ _DOME_LABELS = {
 
 
 def format_ml_context(
-    result: SandboxResult | AnalysisResult,
+    result: Union[SandboxResult, AnalysisResult],
     token_budget: int = 4096,
 ) -> str:
     """
@@ -58,8 +60,7 @@ def _l3_ml_context(result: SandboxResult, token_budget: int) -> str:
         lines.append(f"events: {len(result.events)}")
         for event in result.events:
             lines.append(
-                f"  - {event.rule_id}: {event.verdict.value} | \
-                    {event.operation} | {event.detail}"
+                f"  - {event.rule_id}: {event.verdict.value} | {event.operation} | {event.detail}"
             )
     else:
         lines.append("events: 0")

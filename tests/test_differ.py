@@ -13,8 +13,8 @@ from irondome.l4.models import (
     ProcessSpawn,
 )
 
-# ─── Clean profile vs baseline
-# ────────────────────────────────────────────────
+
+# ─── Clean profile vs baseline ────────────────────────────────────────────────
 
 
 class TestCleanVsBaseline:
@@ -46,8 +46,7 @@ class TestCleanVsBaseline:
         assert drift.score == 0.0
 
 
-# ─── Network drift
-# ────────────────────────────────────────────────────────────
+# ─── Network drift ────────────────────────────────────────────────────────────
 
 
 class TestNetworkDrift:
@@ -87,8 +86,7 @@ class TestNetworkDrift:
         assert drift.network_drift is False
 
 
-# ─── DNS drift
-# ─────────────────────────────────────────────────────────────────
+# ─── DNS drift ─────────────────────────────────────────────────────────────────
 
 
 class TestDnsDrift:
@@ -112,18 +110,13 @@ class TestDnsDrift:
         assert drift.dns_drift is False
 
 
-# ─── FS drift
-# ──────────────────────────────────────────────────────────────────
+# ─── FS drift ──────────────────────────────────────────────────────────────────
 
 
 class TestFsDrift:
     def test_fs_drift_detected(self, python_baseline):
         # python-script expects <= 100 fs ops
-        ops =
-            [
-                FileOperation(path=f"/tmp/file{i}", operation="write") for i \
-                    in range(101),
-            ]
+        ops = [FileOperation(path=f"/tmp/file{i}", operation="write") for i in range(101)]
         profile = BehavioralProfile(
             package="python",
             fs_ops=ops,
@@ -142,8 +135,7 @@ class TestFsDrift:
         assert drift.fs_drift is False
 
 
-# ─── Spawn drift
-# ───────────────────────────────────────────────────────────────
+# ─── Spawn drift ───────────────────────────────────────────────────────────────
 
 
 class TestSpawnDrift:
@@ -166,8 +158,7 @@ class TestSpawnDrift:
         assert drift.spawn_drift is False
 
 
-# ─── Timing drift
-# ─────────────────────────────────────────────────────────────
+# ─── Timing drift ─────────────────────────────────────────────────────────────
 
 
 class TestTimingDrift:
@@ -198,8 +189,7 @@ class TestTimingDrift:
         assert drift.timing_drift is False
 
 
-# ─── Domain checks
-# ────────────────────────────────────────────────────────────
+# ─── Domain checks ────────────────────────────────────────────────────────────
 
 
 class TestDomainChecks:
@@ -252,8 +242,7 @@ class TestDomainChecks:
         assert drift.network_drift is False
 
 
-# ─── Path checks
-# ───────────────────────────────────────────────────────────────
+# ─── Path checks ───────────────────────────────────────────────────────────────
 
 
 class TestPathChecks:
@@ -303,8 +292,7 @@ class TestPathChecks:
         assert drift.fs_drift is False
 
 
-# ─── find_best_baseline
-# ────────────────────────────────────────────────────────
+# ─── find_best_baseline ────────────────────────────────────────────────────────
 
 
 class TestFindBestBaseline:
@@ -323,24 +311,20 @@ class TestFindBestBaseline:
         assert result[0].package == "npm"
 
     def test_no_matching_baseline(self):
-        profile =
-            BehavioralProfile(package="unknown-package-xyz", \
-                total_runtime_ms=100)
+        profile = BehavioralProfile(package="unknown-package-xyz", total_runtime_ms=100)
         baselines = load_all_baselines()
         result = find_best_baseline(profile, baselines)
         assert result is None
 
     def test_wildcard_package_matches(self):
-        """Baselines with version='*' should match any version of the \
-            package."""
+        """Baselines with version='*' should match any version of the package."""
         baselines = load_all_baselines()
         profile = BehavioralProfile(package="python", total_runtime_ms=100)
         result = find_best_baseline(profile, baselines)
         assert result is not None
 
     def test_best_baseline_lowest_drift(self, clean_profile):
-        """When multiple baselines match, the one with lowest drift should be \
-            selected."""
+        """When multiple baselines match, the one with lowest drift should be selected."""
         baselines = {
             "good-match": Baseline(
                 name="good-match",
@@ -366,8 +350,7 @@ class TestFindBestBaseline:
         assert result[0].name == "good-match"
 
 
-# ─── DriftResult
-# ───────────────────────────────────────────────────────────────
+# ─── DriftResult ───────────────────────────────────────────────────────────────
 
 
 class TestDriftResult:

@@ -27,7 +27,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Optional
 
 from irondome.audit import AuditEventType, get_audit_logger
 
@@ -45,7 +45,7 @@ class RetentionPolicy:
     secure_delete: bool = False
     max_size_mb: int = 0  # 0 = no quota
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "data_type": self.data_type,
             "max_size_mb": self.max_size_mb,
@@ -57,21 +57,17 @@ class RetentionPolicy:
 @dataclass
 class RetentionConfig:
     """Full retention configuration."""
-    scan_results: RetentionPolicy = field(default_factory=lambda: \
-        RetentionPolicy(
-        data_type="scan_results", ttl_days=90, secure_delete=True,
-            max_size_mb=500
+    scan_results: RetentionPolicy = field(default_factory=lambda: RetentionPolicy(
+        data_type="scan_results", ttl_days=90, secure_delete=True, max_size_mb=500,
     ))
-    audit_logs: RetentionPolicy = field(default_factory=lambda: \
-        RetentionPolicy(
-        data_type="audit_logs", ttl_days=365, secure_delete=False,
-            max_size_mb=200
+    audit_logs: RetentionPolicy = field(default_factory=lambda: RetentionPolicy(
+        data_type="audit_logs", ttl_days=365, secure_delete=False, max_size_mb=200,
     ))
     baselines: RetentionPolicy = field(default_factory=lambda: RetentionPolicy(
         data_type="baselines", ttl_days=0, secure_delete=False, max_size_mb=50,
     ))
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "audit_logs": self.audit_logs.to_dict(),
             "baselines": self.baselines.to_dict(),
@@ -79,7 +75,7 @@ class RetentionConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> RetentionConfig:
+    def from_dict(cls, data: Dict[str, Any]) -> "RetentionConfig":
         cfg = cls()
         for key in ("scan_results", "audit_logs", "baselines"):
             if key in data:
@@ -93,7 +89,7 @@ class RetentionConfig:
         return cfg
 
     @classmethod
-    def from_yaml_config(cls, config_data: dict[str, Any]) -> RetentionConfig:
+    def from_yaml_config(cls, config_data: Dict[str, Any]) -> "RetentionConfig":
         """Parse from .irondome.yml retention section."""
         retention = config_data.get("retention", {})
         return cls.from_dict(retention)
@@ -114,8 +110,8 @@ class RetentionManager:
 
     def __init__(
         self,
-        config: RetentionConfig | None = None,
-        data_dir: Path | None = None,
+        config: Optional[RetentionConfig] = None,
+        data_dir: Optional[Path] = None,
     ) -> None:
         self._config = config or RetentionConfig()
         self._data_dir = data_dir or _DEFAULT_DATA_DIR
@@ -144,7 +140,7 @@ class RetentionManager:
         logger.info("Saved scan result: %s", path.name)
         return path
 
-    def run_cleanup(self) -> dict[str, Any]:
+    def run_cleanup(self) -> Dict[str, Any]:
         """Remove expired files according to retention policy.
 
         Returns stats about what was cleaned up.
@@ -175,8 +171,7 @@ class RetentionManager:
             audit.record(
                 event_type=AuditEventType.DATA_RETENTION_CLEANUP,
                 actor="irondome-retention",
-                detail=f"Removed {stats['files_removed']} files, freed \
-                    {stats['bytes_freed']} bytes",
+                detail=f"Removed {stats['files_removed']} files, freed {stats['bytes_freed']} bytes",
                 metadata=stats,
             )
         except Exception:
@@ -184,7 +179,7 @@ class RetentionManager:
 
         return stats
 
-    def get_storage_stats(self) -> dict[str, Any]:
+    def get_storage_stats(self) -> Dict[str, Any]:
         """Get storage usage statistics."""
         stats = {
             "scan_results": self._dir_stats(self._scan_dir),
@@ -198,9 +193,8 @@ class RetentionManager:
 
         Creates a JSON archive of scan results and/or audit logs.
         """
-        export: dict[str, Any] = {
-            "export_timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", \
-                time.gmtime()),
+        export: Dict[str, Any] = {
+            "export_timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "data_type": data_type,
             "scan_results": [],
         }
@@ -278,7 +272,7 @@ class RetentionManager:
         directory: Path,
         policy: RetentionPolicy,
         now: float,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Clean up expired files in a directory."""
         stats = {"files_removed": 0, "bytes_freed": 0, "errors": []}
 
@@ -311,9 +305,7 @@ class RetentionManager:
             max_bytes = policy.max_size_mb * 1024 * 1024
             if dir_stats["total_bytes"] > max_bytes:
                 # Remove oldest files until under quota
-                files =
-                    sorted(directory.glob("*.json"), key=lambda f: \
-                        f.stat().st_mtime)
+                files = sorted(directory.glob("*.json"), key=lambda f: f.stat().st_mtime)
                 for f in files:
                     if dir_stats["total_bytes"] <= max_bytes:
                         break
@@ -332,7 +324,7 @@ class RetentionManager:
         return stats
 
     @staticmethod
-    def _dir_stats(directory: Path) -> dict[str, Any]:
+    def _dir_stats(directory: Path) -> Dict[str, Any]:
         """Compute stats for a directory."""
         if not directory.is_dir():
             return {"file_count": 0, "total_bytes": 0}
@@ -351,7 +343,7 @@ class RetentionManager:
 # ─── Module-level singleton ────────────────────────────────────────────────
 
 
-_retention_manager: RetentionManager | None = None
+_retention_manager: Optional[RetentionManager] = None
 
 
 def get_retention_manager() -> RetentionManager:

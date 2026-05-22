@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger("irondome.api_versioning")
 
@@ -30,7 +30,7 @@ CURRENT_API_VERSION = "v1"
 SUPPORTED_VERSIONS = ["v1"]
 
 # Versions that are deprecated (will be removed after 2 release cycles)
-DEPRECATED_VERSIONS: dict[str, str] = {}  # currently none
+DEPRECATED_VERSIONS: Dict[str, str] = {}  # currently none
 
 
 @dataclass(frozen=True)
@@ -41,7 +41,7 @@ class APIVersion:
     prefix: str = "v"
 
     @classmethod
-    def parse(cls, version_str: str) -> APIVersion:
+    def parse(cls, version_str: str) -> "APIVersion":
         """Parse version string like 'v1' or 'v2'."""
         version_str = version_str.strip().lower()
         if version_str.startswith("v"):
@@ -69,15 +69,11 @@ class DeprecationNotice:
     replacement: str  # the newer version or endpoint to use
     message: str = ""
 
-    def to_header(self) -> tuple[str, str]:
+    def to_header(self) -> Tuple[str, str]:
         """Return HTTP header for deprecation notice."""
-        return (
-            "Deprecation"
-            f"version={self.version}; sunset={self.sunset_date}; replacement={
-                self.replacement}"
-        )
+        return ("Deprecation", f"version={self.version}; sunset={self.sunset_date}; replacement={self.replacement}")
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "message": self.message,
             "replacement": self.replacement,
@@ -101,7 +97,7 @@ class APIVersionNegotiator:
         path: str = "",
         accept_header: str = "",
         version_header: str = "",
-    ) -> tuple[str, DeprecationNotice | None]:
+    ) -> Tuple[str, Optional[DeprecationNotice]]:
         """Negotiate the API version for a request.
 
         Returns (version_string, deprecation_notice).
@@ -123,30 +119,27 @@ class APIVersionNegotiator:
         # 4. Default
         return self._resolve(CURRENT_API_VERSION)
 
-    def _extract_from_path(self, path: str) -> str | None:
+    def _extract_from_path(self, path: str) -> Optional[str]:
         """Extract version from URL path /api/v1/..."""
         parts = path.strip("/").split("/")
         if len(parts) >= 2 and parts[0] == "api":
             candidate = parts[1]
-            if candidate in SUPPORTED_VERSIONS or candidate in \
-                DEPRECATED_VERSIONS:
+            if candidate in SUPPORTED_VERSIONS or candidate in DEPRECATED_VERSIONS:
                 return candidate
         return None
 
-    def _extract_from_accept(self, accept: str) -> str | None:
+    def _extract_from_accept(self, accept: str) -> Optional[str]:
         """Extract version from Accept header."""
         if "vnd.irondome" in accept:
             for part in accept.split(","):
                 part = part.strip()
                 if "vnd.irondome." in part:
                     start = part.index("vnd.irondome.") + len("vnd.irondome.")
-                    end = part.index("+", start) if "+" in part[start:] else \
-                        len(
-                        part)
+                    end = part.index("+", start) if "+" in part[start:] else len(part)
                     return part[start:end].lower()
         return None
 
-    def _resolve(self, version: str) -> tuple[str, DeprecationNotice | None]:
+    def _resolve(self, version: str) -> Tuple[str, Optional[DeprecationNotice]]:
         """Resolve a version string, checking for deprecation."""
         if version in DEPRECATED_VERSIONS:
             deprecation = DeprecationNotice(
@@ -155,23 +148,18 @@ class APIVersionNegotiator:
                 replacement=CURRENT_API_VERSION,
                 message=(
                     f"API {version} is deprecated and will be removed on "
-                    f"{DEPRECATED_VERSIONS[version]}. Migrate to \
-                        {CURRENT_API_VERSION}."
+                    f"{DEPRECATED_VERSIONS[version]}. Migrate to {CURRENT_API_VERSION}."
                 ),
             )
             return version, deprecation
 
         if version not in SUPPORTED_VERSIONS:
-            logger.warning(
-                "Unsupported API version requested: %s, falling back to %s",
-                version,
-                CURRENT_API_VERSION,
-            )
+            logger.warning("Unsupported API version requested: %s, falling back to %s", version, CURRENT_API_VERSION)
             return CURRENT_API_VERSION, None
 
         return version, None
 
-    def get_version_info(self) -> dict[str, Any]:
+    def get_version_info(self) -> Dict[str, Any]:
         """Get current API version information."""
         return {
             "current": CURRENT_API_VERSION,

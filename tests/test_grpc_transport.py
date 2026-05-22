@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
 
@@ -39,9 +40,7 @@ class FakeAnalysisResult:
 
     def __init__(self, verdict="CLEAN", findings_count=0):
         self.overall_verdict = type("V", (), {"value": verdict})()
-        self.findings =
-            [type("F", (), {"severity": type("S", (), {"value": "HIGH"})()})] \
-                * findings_count
+        self.findings = [type("F", (), {"severity": type("S", (), {"value": "HIGH"})()})] * findings_count
         self.target = "echo"
 
     def to_dict(self, deterministic=False):
@@ -54,13 +53,7 @@ class FakeAnalysisResult:
 @pytest.fixture
 def fake_scan_fn():
     """A mock scan function that returns a FakeSandboxResult."""
-    def _scan(
-        command,
-        policy=None,
-        timeout=30.0,
-        cwd=None,
-        deterministic=False,
-    ):
+    def _scan(command, policy=None, timeout=30.0, cwd=None, deterministic=False):
         return FakeSandboxResult()
     return _scan
 
@@ -76,13 +69,7 @@ def fake_analyze_fn():
 @pytest.fixture
 def fake_deny_scan_fn():
     """A mock scan function that returns a DENY result."""
-    def _scan(
-        command,
-        policy=None,
-        timeout=30.0,
-        cwd=None,
-        deterministic=False,
-    ):
+    def _scan(command, policy=None, timeout=30.0, cwd=None, deterministic=False):
         return FakeSandboxResult(verdict="DENY", exit_code=1)
     return _scan
 
@@ -95,8 +82,7 @@ def fake_deny_analyze_fn():
     return _analyze
 
 
-# ─── Tests: Module availability
-# ───────────────────────────────────────────────
+# ─── Tests: Module availability ───────────────────────────────────────────────
 
 
 class TestGRPCAvailability:
@@ -159,11 +145,7 @@ class TestGRPCServer:
         assert server._port == 9999
         assert server._max_workers == 20
 
-    def test_server_with_injected_scan_engine(
-        self,
-        fake_scan_fn,
-        fake_analyze_fn,
-    ):
+    def test_server_with_injected_scan_engine(self, fake_scan_fn, fake_analyze_fn):
         """Server should accept dependency-injected scan functions."""
         from irondome.grpc_transport.server import IronDomeGRPCServer
         server = IronDomeGRPCServer(
@@ -178,8 +160,7 @@ class TestGRPCServer:
         from irondome.grpc_transport.server import IronDomeGRPCServer
         server = IronDomeGRPCServer()
 
-        with patch("irondome.grpc_transport.server.is_grpc_available", \
-            return_value=False):
+        with patch("irondome.grpc_transport.server.is_grpc_available", return_value=False):
             with pytest.raises(ImportError, match="grpcio"):
                 server.start()
 
@@ -245,8 +226,7 @@ class TestGRPCClient:
         from irondome.grpc_transport.client import IronDomeGRPCClient
         client = IronDomeGRPCClient()
 
-        with patch("irondome.grpc_transport.client.is_grpc_available", \
-            return_value=False):
+        with patch("irondome.grpc_transport.client.is_grpc_available", return_value=False):
             with pytest.raises(ImportError, match="grpcio"):
                 client.scan(command=["echo", "hello"])
 
@@ -328,11 +308,7 @@ class TestScanResult:
 class TestServicer:
     """Test the gRPC servicer implementation with dependency injection."""
 
-    def test_servicer_scan_with_injected_engine(
-        self,
-        fake_scan_fn,
-        fake_analyze_fn,
-    ):
+    def test_servicer_scan_with_injected_engine(self, fake_scan_fn, fake_analyze_fn):
         """Servicer should use the injected scan engine."""
         from irondome.grpc_transport._servicer import IronDomeServicer
         from irondome.grpc_transport.server import _ScanEngine
@@ -500,24 +476,21 @@ class TestCLIGRPC:
     def test_daemon_grpc_without_grpcio(self):
         """daemon --transport grpc should fail gracefully without grpcio."""
         from irondome.cli import main
-        with patch("irondome.grpc_transport.is_grpc_available", \
-            return_value=False):
+        with patch("irondome.grpc_transport.is_grpc_available", return_value=False):
             exit_code = main(["daemon", "--transport", "grpc"])
             assert exit_code == 1
 
     def test_scan_grpc_without_grpcio(self):
         """scan-grpc should fail gracefully without grpcio."""
         from irondome.cli import main
-        with patch("irondome.grpc_transport.is_grpc_available", \
-            return_value=False):
+        with patch("irondome.grpc_transport.is_grpc_available", return_value=False):
             exit_code = main(["scan-grpc", "echo", "hello"])
             assert exit_code == 1
 
     def test_scan_grpc_no_command(self):
         """scan-grpc with no command should error."""
         from irondome.cli import main
-        with patch("irondome.grpc_transport.is_grpc_available", \
-            return_value=True):
+        with patch("irondome.grpc_transport.is_grpc_available", return_value=True):
             # Empty target list
             exit_code = main(["scan-grpc"])
             assert exit_code == 1
@@ -532,17 +505,13 @@ class TestProtoFile:
     def test_proto_file_exists(self):
         """The proto file should exist."""
         from pathlib import Path
-        proto_path =
-            Path(__file__).parent.parent / "src" / "irondome" / \
-                "grpc_transport" / "proto" / "irondome.proto"
+        proto_path = Path(__file__).parent.parent / "src" / "irondome" / "grpc_transport" / "proto" / "irondome.proto"
         assert proto_path.exists(), f"Proto file not found at {proto_path}"
 
     def test_proto_file_has_service(self):
         """The proto file should define IronDomeService."""
         from pathlib import Path
-        proto_path =
-            Path(__file__).parent.parent / "src" / "irondome" / \
-                "grpc_transport" / "proto" / "irondome.proto"
+        proto_path = Path(__file__).parent.parent / "src" / "irondome" / "grpc_transport" / "proto" / "irondome.proto"
         content = proto_path.read_text()
         assert "service IronDomeService" in content
         assert "rpc Scan" in content
@@ -553,9 +522,7 @@ class TestProtoFile:
     def test_proto_file_has_messages(self):
         """The proto file should define all required message types."""
         from pathlib import Path
-        proto_path =
-            Path(__file__).parent.parent / "src" / "irondome" / \
-                "grpc_transport" / "proto" / "irondome.proto"
+        proto_path = Path(__file__).parent.parent / "src" / "irondome" / "grpc_transport" / "proto" / "irondome.proto"
         content = proto_path.read_text()
         assert "message ScanRequest" in content
         assert "message ScanResponse" in content

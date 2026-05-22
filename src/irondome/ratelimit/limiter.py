@@ -17,7 +17,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("irondome.ratelimit")
 
@@ -36,7 +36,7 @@ class RateLimitConfig:
     # Global requests per second across all actors (0 = unlimited)
     global_rps: float = 0.0
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "burst_size": self.burst_size,
             "global_rps": self.global_rps,
@@ -85,10 +85,10 @@ class TokenBucketLimiter:
             # Reject with 429 Too Many Requests
     """
 
-    def __init__(self, config: RateLimitConfig | None = None) -> None:
+    def __init__(self, config: Optional[RateLimitConfig] = None) -> None:
         self._config = config or RateLimitConfig()
-        self._buckets: dict[str, _TokenBucket] = {}
-        self._global_bucket: _TokenBucket | None = None
+        self._buckets: Dict[str, _TokenBucket] = {}
+        self._global_bucket: Optional[_TokenBucket] = None
         self._lock = threading.Lock()
         self._last_cleanup = time.monotonic()
 
@@ -137,7 +137,7 @@ class TokenBucketLimiter:
 
             return allowed
 
-    def get_status(self, actor: str) -> dict[str, Any]:
+    def get_status(self, actor: str) -> Dict[str, Any]:
         """Get rate limit status for an actor."""
         with self._lock:
             if actor in self._buckets:
@@ -158,7 +158,7 @@ class TokenBucketLimiter:
                 "limited": False,
             }
 
-    def reset(self, actor: str | None = None) -> None:
+    def reset(self, actor: Optional[str] = None) -> None:
         """Reset rate limit state for an actor or all actors."""
         with self._lock:
             if actor:

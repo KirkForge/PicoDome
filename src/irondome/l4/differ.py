@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Dict, Optional, Tuple
+
 from irondome.l4.models import Baseline, BehavioralProfile, DriftResult
 
 
@@ -11,15 +13,7 @@ def compare_profile_to_baseline(
 ) -> DriftResult:
     """
     Compare a behavioral profile against a baseline.
-    Returns a DriftResult with a score from 0.0 (identical) to 1.0 (completely \
-        \
-        \
-        \
-        \
-        \
-        \
-        \
-        different).
+    Returns a DriftResult with a score from 0.0 (identical) to 1.0 (completely different).
     """
     drift_flags: list = []
     drift_count = 0
@@ -32,8 +26,7 @@ def compare_profile_to_baseline(
             network_drift = True
             drift_count += 1
             drift_flags.append(
-                f"Network: {len(profile.network_calls)} calls (expected \
-                    ≤{baseline.expected_network_calls})"
+                f"Network: {len(profile.network_calls)} calls (expected ≤{baseline.expected_network_calls})"
             )
 
     # DNS drift
@@ -43,8 +36,7 @@ def compare_profile_to_baseline(
             dns_drift = True
             drift_count += 1
             drift_flags.append(
-                f"DNS: {len(profile.dns_queries)} queries (expected \
-                    ≤{baseline.expected_dns_queries})"
+                f"DNS: {len(profile.dns_queries)} queries (expected ≤{baseline.expected_dns_queries})"
             )
 
     # Filesystem drift
@@ -54,8 +46,7 @@ def compare_profile_to_baseline(
             fs_drift = True
             drift_count += 1
             drift_flags.append(
-                f"FS: {len(profile.fs_ops)} operations (expected \
-                    ≤{baseline.expected_fs_ops})"
+                f"FS: {len(profile.fs_ops)} operations (expected ≤{baseline.expected_fs_ops})"
             )
 
     # Spawn drift
@@ -65,8 +56,7 @@ def compare_profile_to_baseline(
             spawn_drift = True
             drift_count += 1
             drift_flags.append(
-                f"Spawns: {len(profile.spawns)} processes (expected \
-                    ≤{baseline.expected_spawns})"
+                f"Spawns: {len(profile.spawns)} processes (expected ≤{baseline.expected_spawns})"
             )
 
     # Timing drift
@@ -77,15 +67,13 @@ def compare_profile_to_baseline(
             timing_drift = True
             drift_count += 1
             drift_flags.append(
-                f"Timing: {profile.total_runtime_ms}ms (expected \
-                    {low}-{high}ms)"
+                f"Timing: {profile.total_runtime_ms}ms (expected {low}-{high}ms)"
             )
 
     # Domain checks — compare hostname if available, skip if only an IP address
     if baseline.allowed_domains and "*" not in baseline.allowed_domains:
         for call in profile.network_calls:
-            # NetworkCall.address is typically an IP; check if it looks like a
-            # domain
+            # NetworkCall.address is typically an IP; check if it looks like a domain
             # (contains letters, not just digits/dots/colns)
             if not call.address.replace(".", "").replace(":", "").isdigit():
                 # Address looks like a domain name
@@ -126,13 +114,13 @@ def compare_profile_to_baseline(
 
 def find_best_baseline(
     profile: BehavioralProfile,
-    baselines: dict[str, Baseline],
-) -> tuple[Baseline, DriftResult] | None:
+    baselines: Dict[str, Baseline],
+) -> Optional[Tuple[Baseline, DriftResult]]:
     """
     Find the best-matching baseline for a profile.
     Returns (baseline, drift_result) for the lowest-drift match, or None.
     """
-    best: tuple[Baseline, DriftResult] | None = None
+    best: Optional[Tuple[Baseline, DriftResult]] = None
     best_score = 1.0
 
     for name, baseline in baselines.items():

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import List, Optional
 
 from irondome.l3.models import Policy, SandboxResult
 
@@ -13,11 +14,11 @@ class SandboxBackend(ABC):
     @abstractmethod
     def run(
         self,
-        command: list[str],
+        command: List[str],
         policy: Policy,
-        timeout: float | None = None,
-        cwd: str | None = None,
-        env: dict | None = None,
+        timeout: Optional[float] = None,
+        cwd: Optional[str] = None,
+        env: Optional[dict] = None,
     ) -> SandboxResult:
         """Execute a command under the given policy."""
         ...

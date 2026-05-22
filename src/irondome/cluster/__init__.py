@@ -6,22 +6,19 @@ heartbeat-based health checks, and state synchronization.
 Design principles:
 - Deterministic: cluster state must be consistent across nodes.
 - Scans are never lost: failed nodes have their scans redistributed.
-- Simple: no distributed consensus,
-    just heartbeat health + least-loaded assignment.
-- Two state backends: MemoryStateBackend (default/testing) and \
-    SQLiteStateBackend (
-    persistent).
+- Simple: no distributed consensus, just heartbeat health + least-loaded assignment.
+- Two state backends: MemoryStateBackend (default/testing) and SQLiteStateBackend (persistent).
 """
 
 from __future__ import annotations
 
 from irondome.cluster.manager import (
-    ClusterManager,
     ClusterNode,
     ClusterState,
+    ClusterManager,
     MemoryStateBackend,
-    NodeStatus,
     SQLiteStateBackend,
+    NodeStatus,
 )
 
 __all__ = [

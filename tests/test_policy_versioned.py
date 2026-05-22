@@ -48,17 +48,14 @@ class TestPolicyVersion:
 
 class TestVersionedPolicyStore:
     def test_save_creates_version(self, store, sample_policy):
-        pv =
-            store.save(sample_policy, author="admin", \
-                change_description="Initial")
+        pv = store.save(sample_policy, author="admin", change_description="Initial")
         assert pv.version == 1
         assert pv.author == "admin"
         assert pv.content_hash != ""
 
     def test_save_increments_version(self, store, sample_policy):
         store.save(sample_policy, author="admin", change_description="v1")
-        pv2 =
-            store.save(sample_policy, author="admin", change_description="v2")
+        pv2 = store.save(sample_policy, author="admin", change_description="v2")
         assert pv2.version == 2
 
     def test_load_latest(self, store, sample_policy):
@@ -78,9 +75,7 @@ class TestVersionedPolicyStore:
         assert store.load("nonexistent") is None
 
     def test_rollback(self, store, sample_policy):
-        pv1 =
-            store.save(sample_policy, author="admin", change_description="v1")
-        # noqa: F841
+        pv1 = store.save(sample_policy, author="admin", change_description="v1")  # noqa: F841
         # Modify policy
         modified = Policy(
             name="test-policy",
@@ -101,12 +96,10 @@ class TestVersionedPolicyStore:
             name="test-policy",
             default_action=SyscallAction.ALLOW,
             rules=[
-                PolicyRule(rule_id="NET-002", target=RuleTarget.FILE_READ, \
-                    action=SyscallAction.ALLOW, paths=["/tmp"]),
+                PolicyRule(rule_id="NET-002", target=RuleTarget.FILE_READ, action=SyscallAction.ALLOW, paths=["/tmp"]),
             ],
         )
-        store.save(modified, author="admin", change_description="v2 with new \
-            rule")
+        store.save(modified, author="admin", change_description="v2 with new rule")
         diff = store.diff("test-policy", 1, 2)
         assert diff["default_action_changed"] is True
         assert "NET-002" in diff["added_rules"]
@@ -122,8 +115,6 @@ class TestVersionedPolicyStore:
         assert violations == []
 
     def test_content_hash_deterministic(self, store, sample_policy):
-        pv1 =
-            store.save(sample_policy, author="admin", change_description="v1")
-        pv2 =
-            store.save(sample_policy, author="admin", change_description="v2")
+        pv1 = store.save(sample_policy, author="admin", change_description="v1")
+        pv2 = store.save(sample_policy, author="admin", change_description="v2")
         assert pv1.content_hash == pv2.content_hash  # same policy = same hash

@@ -11,6 +11,7 @@ import os
 import platform
 import subprocess
 import tempfile
+from typing import List, Optional
 
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.models import (
@@ -35,8 +36,7 @@ class SeatbeltBackend(SandboxBackend):
         return "seatbelt"
 
     def is_available(self) -> bool:
-        """Check if seatbelt is available (macOS only, sandbox-exec \
-            present)."""
+        """Check if seatbelt is available (macOS only, sandbox-exec present)."""
         if platform.system() != "Darwin":
             return False
         try:
@@ -51,22 +51,18 @@ class SeatbeltBackend(SandboxBackend):
 
     def run(
         self,
-        command: list[str],
+        command: List[str],
         policy: Policy,
-        timeout: float | None = None,
-        cwd: str | None = None,
-        env: dict | None = None,
+        timeout: Optional[float] = None,
+        cwd: Optional[str] = None,
+        env: Optional[dict] = None,
     ) -> SandboxResult:
         start_ms = _now_ms()
-        events: list[SandboxEvent] = []
+        events: List[SandboxEvent] = []
         effective_timeout = timeout or 30.0
 
         if not self.is_available():
-            return self._fallback_run(
-                command, policy, timeout, cwd, env,
-                reason="seatbelt backend not available on "
-                "this platform",
-            )
+            return self._fallback_run(command, policy, timeout, cwd, env)
 
         try:
             # Generate seatbelt profile
@@ -80,8 +76,7 @@ class SeatbeltBackend(SandboxBackend):
 
             try:
                 # Execute under sandbox-exec
-                sandbox_cmd =
-                    ["sandbox-exec", "-f", profile_path, "--"] + command
+                sandbox_cmd = ["sandbox-exec", "-f", profile_path, "--"] + command
 
                 run_env = os.environ.copy()
                 if env:
@@ -96,27 +91,21 @@ class SeatbeltBackend(SandboxBackend):
                 )
 
                 try:
-                    stdout_bytes, stderr_bytes =
-                        proc.communicate(timeout=effective_timeout)
+                    stdout_bytes, stderr_bytes = proc.communicate(timeout=effective_timeout)
                     exit_code = proc.returncode
-                    stdout =
-                        stdout_bytes.decode("utf-8", errors="replace").strip()
-                    stderr =
-                        stderr_bytes.decode("utf-8", errors="replace").strip()
+                    stdout = stdout_bytes.decode("utf-8", errors="replace").strip()
+                    stderr = stderr_bytes.decode("utf-8", errors="replace").strip()
                 except subprocess.TimeoutExpired:
                     proc.kill()
                     stdout_bytes, stderr_bytes = proc.communicate()
-                    stdout =
-                        stdout_bytes.decode("utf-8", errors="replace").strip()
-                    stderr =
-                        stderr_bytes.decode("utf-8", errors="replace").strip()
+                    stdout = stdout_bytes.decode("utf-8", errors="replace").strip()
+                    stderr = stderr_bytes.decode("utf-8", errors="replace").strip()
                     exit_code = -1
                     events.append(SandboxEvent(
                         rule_id="L3-TIMEOUT-001",
                         verdict=Verdict.KILL,
                         operation="process_timeout",
-                        detail=f"Process exceeded {effective_timeout}s \
-                            timeout",
+                        detail=f"Process exceeded {effective_timeout}s timeout",
                         timestamp_ms=int(_now_ms() - start_ms),
                     ))
 
@@ -131,9 +120,7 @@ class SeatbeltBackend(SandboxBackend):
                     ))
 
                 # Post-hoc analysis
-                from irondome.l3.backends.subprocess_backend import (
-                    SubprocessBackend,
-                )
+                from irondome.l3.backends.subprocess_backend import SubprocessBackend
                 sb = SubprocessBackend()
                 events.extend(sb._check_suspicious_patterns(stdout, stderr))
 
@@ -170,7 +157,6 @@ class SeatbeltBackend(SandboxBackend):
             duration_ms=duration_ms,
             events=events,
             policy_name=policy.name,
-            backend_name=self.name,
             stdout=stdout,
             stderr=stderr,
         )
@@ -178,8 +164,8 @@ class SeatbeltBackend(SandboxBackend):
     def _generate_profile(
         self,
         policy: Policy,
-        command: list[str],
-        cwd: str | None = None,
+        command: List[str],
+        cwd: Optional[str] = None,
     ) -> str:
         """Generate a macOS sandbox-exec profile from Iron Dome Policy."""
         lines = ["(version 1)"]
@@ -202,11 +188,7 @@ class SeatbeltBackend(SandboxBackend):
 
         return "\n".join(lines)
 
-    def _rule_to_allow_clause(
-        self,
-        rule: PolicyRule,
-        cwd: str | None,
-    ) -> str | None:
+    def _rule_to_allow_clause(self, rule: PolicyRule, cwd: Optional[str]) -> Optional[str]:
         """Convert an ALLOW rule to a seatbelt allow clause."""
         parts = ["(allow"]
 
@@ -224,10 +206,7 @@ class SeatbeltBackend(SandboxBackend):
                     parts.append('file-write*')
                 return f'({" ".join(parts)})' if len(parts) > 1 else None
 
-            _op =
-                "file-read*" if rule.target == RuleTarget.FILE_READ else \
-                    "file-write*"
-            # noqa: F841
+            _op = "file-read*" if rule.target == RuleTarget.FILE_READ else "file-write*"  # noqa: F841
             # Always include file-read-data, file-read-metadata
             if rule.target == RuleTarget.FILE_READ:
                 parts.append("file-read-data")
@@ -258,7 +237,7 @@ class SeatbeltBackend(SandboxBackend):
 
         return f'({" ".join(parts)})'
 
-    def _rule_to_deny_clause(self, rule: PolicyRule) -> str | None:
+    def _rule_to_deny_clause(self, rule: PolicyRule) -> Optional[str]:
         """Convert a DENY/KILL rule to a seatbelt deny clause."""
         parts = ["(deny"]
 
@@ -287,7 +266,7 @@ class SeatbeltBackend(SandboxBackend):
 
         return f'({" ".join(parts)})'
 
-    def _normalize_path(self, path: str, cwd: str | None) -> str:
+    def _normalize_path(self, path: str, cwd: Optional[str]) -> str:
         """Normalize a path for the seatbelt profile DSL."""
         if path == "**":
             return "/"
@@ -297,11 +276,7 @@ class SeatbeltBackend(SandboxBackend):
             return os.path.join(cwd, path)
         return os.path.abspath(path)
 
-    def _compute_verdict(
-        self,
-        events: list[SandboxEvent],
-        exit_code: int,
-    ) -> Verdict:
+    def _compute_verdict(self, events: List[SandboxEvent], exit_code: int) -> Verdict:
         for event in events:
             if event.verdict == Verdict.KILL:
                 return Verdict.KILL
@@ -309,59 +284,7 @@ class SeatbeltBackend(SandboxBackend):
                 return Verdict.DENY
         return Verdict.ALLOW
 
-    def _fallback_run(
-        self,
-        command: list[str],
-        policy: Policy,
-        timeout: float | None,
-        cwd: str | None,
-        env: dict | None,
-        reason: str = "seatbelt not available",
-    ) -> SandboxResult:
-        """Handle backend failure.
-
-        If policy.fail_closed is True (default), return a KILL verdict
-        instead of degrading to the unconfined subprocess backend.
-        Only falls back to subprocess when fail_closed=False.
-        """
-        if policy.fail_closed:
-            logger.error(
-                "FAIL-CLOSED: %s — refusing fallback to "
-                "unconfined subprocess backend",
-                reason,
-            )
-            return SandboxResult(
-                command=command,
-                overall_verdict=Verdict.KILL,
-                exit_code=-1,
-                events=[
-                    SandboxEvent(
-                        rule_id="L3-SANDBOX-DEGRADE",
-                        verdict=Verdict.KILL,
-                        operation="sandbox_degradation_blocked",
-                        detail=(
-                            f"Sandbox backend failed: {reason}. "
-                            "Fail-closed policy prevents "
-                            "unconfined execution."
-                        ),
-                    ),
-                ],
-                policy_name=policy.name,
-                backend_name=self.name,
-            )
-
-        logger.warning(
-            "FAIL-OPEN: %s — falling back to subprocess "
-            "(no real sandboxing)",
-            reason,
-        )
-        from irondome.l3.backends.subprocess_backend import (
-            SubprocessBackend,
-        )
-        return SubprocessBackend().run(
-            command,
-            policy,
-            timeout=timeout,
-            cwd=cwd,
-            env=env,
-        )
+    def _fallback_run(self, command, policy, timeout, cwd, env) -> SandboxResult:
+        logger.warning("Seatbelt not available — falling back to subprocess")
+        from irondome.l3.backends.subprocess_backend import SubprocessBackend
+        return SubprocessBackend().run(command, policy, timeout=timeout, cwd=cwd, env=env)

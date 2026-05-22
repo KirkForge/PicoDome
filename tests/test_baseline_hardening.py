@@ -1,13 +1,10 @@
 """Tests for baseline hardening (anti-poisoning)."""
 
 import pytest
-
-from irondome.baseline_hardening import (
-    BaselineUpdateRateLimit,
-    HardenedBaselineManager,
-    SignedBaseline,
-)
 from irondome.l4.models import Baseline
+from irondome.baseline_hardening import (
+    SignedBaseline, BaselineUpdateRateLimit, HardenedBaselineManager,
+)
 
 
 @pytest.fixture
@@ -29,9 +26,7 @@ def manager():
 
 class TestSignedBaseline:
     def test_sign_and_verify(self, npm_baseline):
-        signed =
-            SignedBaseline.from_baseline(npm_baseline, secret="my-secret", \
-                signer="admin")
+        signed = SignedBaseline.from_baseline(npm_baseline, secret="my-secret", signer="admin")
         assert signed.verify("my-secret") is True
 
     def test_wrong_secret_fails(self, npm_baseline):
@@ -51,9 +46,7 @@ class TestSignedBaseline:
         assert tampered.verify("secret") is False
 
     def test_to_dict(self, npm_baseline):
-        signed =
-            SignedBaseline.from_baseline(npm_baseline, secret="s", \
-                signer="admin")
+        signed = SignedBaseline.from_baseline(npm_baseline, secret="s", signer="admin")
         d = signed.to_dict()
         assert "signature" in d
         assert d["signed_by"] == "admin"

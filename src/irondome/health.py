@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, List
 
 from irondome import __version__
 from irondome.l3.engine import get_backend
@@ -28,7 +28,7 @@ class HealthStatus:
     detail: str = ""
     timestamp: str = ""
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "component": self.component,
             "detail": self.detail,
@@ -37,9 +37,9 @@ class HealthStatus:
         }
 
 
-def check_health() -> list[HealthStatus]:
+def check_health() -> List[HealthStatus]:
     """Run all health checks. Returns list of check results."""
-    checks: list[HealthStatus] = []
+    checks: List[HealthStatus] = []
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     # 1. Version check
@@ -96,8 +96,7 @@ def check_health() -> list[HealthStatus]:
         checks.append(HealthStatus(
             healthy=True,
             component="storage",
-            detail=f"scan_files={storage.get('scan_results', \
-                {}).get('file_count', 0)} "
+            detail=f"scan_files={storage.get('scan_results', {}).get('file_count', 0)} "
             f"bytes={storage.get('total_bytes', 0)}",
             timestamp=now,
         ))

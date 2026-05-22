@@ -1,5 +1,4 @@
-"""Tests for Iron Dome cluster module — multi-node daemon support with shared \
-    state.
+"""Tests for Iron Dome cluster module — multi-node daemon support with shared state.
 
 Tests cover:
 - ClusterNode creation, serialization, and comparison
@@ -26,7 +25,6 @@ import threading
 import pytest
 
 from irondome.cluster.manager import (
-    DEFAULT_CLUSTER_PORT,
     ClusterManager,
     ClusterNode,
     ClusterState,
@@ -35,9 +33,11 @@ from irondome.cluster.manager import (
     ScanRequest,
     SQLiteStateBackend,
     _parse_iso_timestamp,
+    DEFAULT_CLUSTER_PORT,
     get_cluster_manager,
     setup_cluster_manager,
 )
+
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -460,14 +460,7 @@ class TestClusterState:
         assert len(online) == 1
         assert online[0].node_id == "node-a"
 
-    def test_assign_scan_least_loaded(
-        self,
-        cluster_state,
-        node_a,
-        node_b,
-        node_c,
-        scan_request,
-    ):
+    def test_assign_scan_least_loaded(self, cluster_state, node_a, node_b, node_c, scan_request):
         """Test that scans are assigned to the least-loaded node."""
         cluster_state.add_node(node_a)  # load=0
         cluster_state.add_node(node_b)  # load=2
@@ -479,11 +472,7 @@ class TestClusterState:
         assert assigned is not None
         assert assigned.node_id == "node-a"  # least loaded (load=0)
 
-    def test_assign_scan_deterministic_with_equal_load(
-        self,
-        cluster_state,
-        scan_request,
-    ):
+    def test_assign_scan_deterministic_with_equal_load(self, cluster_state, scan_request):
         """Test that assignment is deterministic when loads are equal."""
         n1 = ClusterNode(node_id="alpha", address="10.0.0.1", load=0)
         n2 = ClusterNode(node_id="beta", address="10.0.0.2", load=0)
@@ -497,9 +486,7 @@ class TestClusterState:
 
     def test_assign_scan_no_online_nodes(self, cluster_state, scan_request):
         """Test assigning a scan when no nodes are online."""
-        offline =
-            ClusterNode(node_id="offline-1", address="10.0.0.1", \
-                status=NodeStatus.OFFLINE)
+        offline = ClusterNode(node_id="offline-1", address="10.0.0.1", status=NodeStatus.OFFLINE)
         cluster_state.add_node(offline)
         cluster_state.add_scan(scan_request)
         assigned = cluster_state.assign_scan(scan_request.scan_id)
@@ -604,13 +591,11 @@ class TestClusterState:
         snapshot = {
             "nodes": [
                 {"node_id": "remote-1", "address": "10.0.0.10", "port": 8444,
-                 "status": "online", "last_heartbeat": "2026-01-01T12:00:00Z",
-                     "load": 3},
+                 "status": "online", "last_heartbeat": "2026-01-01T12:00:00Z", "load": 3},
             ],
             "scans": [
                 {"scan_id": "remote-scan-1", "command": ["echo", "remote"],
-                 "priority": 0, "assigned_node": None, "created_at": "",
-                     "status": "pending"},
+                 "priority": 0, "assigned_node": None, "created_at": "", "status": "pending"},
             ],
             "leader_id": "remote-1",
         }
@@ -632,8 +617,7 @@ class TestClusterState:
         snapshot = {
             "nodes": [
                 {"node_id": "node-a", "address": "10.0.0.1", "port": 8444,
-                 "status": "online", "last_heartbeat": "2026-01-02T00:00:00Z",
-                     "load": 0},
+                 "status": "online", "last_heartbeat": "2026-01-02T00:00:00Z", "load": 0},
             ],
             "scans": [],
             "leader_id": None,
@@ -720,14 +704,11 @@ class TestClusterManager:
         manager.start()
         try:
             # Register a peer node
-            peer =
-                ClusterNode(node_id="peer-1", address="10.0.0.2", \
-                    status=NodeStatus.ONLINE)
+            peer = ClusterNode(node_id="peer-1", address="10.0.0.2", status=NodeStatus.ONLINE)
             manager.state.add_node(peer)
 
             # Process heartbeat
-            updated =
-                manager.handle_heartbeat("peer-1", status="online", load=3)
+            updated = manager.handle_heartbeat("peer-1", status="online", load=3)
             assert updated is not None
             assert updated.load == 3
             assert updated.status == NodeStatus.ONLINE
@@ -737,8 +718,7 @@ class TestClusterManager:
 
     def test_handle_heartbeat_unknown_node(self, manager):
         """Test heartbeat from an unknown node."""
-        result =
-            manager.handle_heartbeat("unknown-node", status="online", load=0)
+        result = manager.handle_heartbeat("unknown-node", status="online", load=0)
         assert result is None
 
     def test_handle_node_failure(self, manager, node_b):
@@ -749,12 +729,8 @@ class TestClusterManager:
             manager.state.add_node(node_b)  # node-b with load=2
 
             # Create scans assigned to node-b
-            s1 =
-                ScanRequest(scan_id="s1", command=["echo", "1"], \
-                    assigned_node="node-b", status="running")
-            s2 =
-                ScanRequest(scan_id="s2", command=["echo", "2"], \
-                    assigned_node="node-b", status="running")
+            s1 = ScanRequest(scan_id="s1", command=["echo", "1"], assigned_node="node-b", status="running")
+            s2 = ScanRequest(scan_id="s2", command=["echo", "2"], assigned_node="node-b", status="running")
             manager.state.add_scan(s1)
             manager.state.add_scan(s2)
 
@@ -779,8 +755,7 @@ class TestClusterManager:
             manager.state.add_node(node_b)
             redistributed = manager.handle_node_failure("node-b")
             assert len(redistributed) == 0
-            assert
-                manager.state.get_node("node-b").status == NodeStatus.OFFLINE
+            assert manager.state.get_node("node-b").status == NodeStatus.OFFLINE
         finally:
             manager.stop()
 
@@ -822,8 +797,7 @@ class TestClusterManager:
             snapshot = {
                 "nodes": [
                     {"node_id": "peer-1", "address": "10.0.0.5", "port": 8444,
-                     "status": "online",
-                         "last_heartbeat": "2026-01-01T12:00:00Z", "load": 0},
+                     "status": "online", "last_heartbeat": "2026-01-01T12:00:00Z", "load": 0},
                 ],
                 "scans": [],
                 "leader_id": "peer-1",
@@ -953,9 +927,7 @@ class TestClusterIntegration:
         state.add_node(n2)
 
         # Create a scan assigned to failing node
-        s1 =
-            ScanRequest(scan_id="s1", command=["echo", "1"], \
-                assigned_node="failing", status="running")
+        s1 = ScanRequest(scan_id="s1", command=["echo", "1"], assigned_node="failing", status="running")
         state.add_scan(s1)
 
         # Fail the node

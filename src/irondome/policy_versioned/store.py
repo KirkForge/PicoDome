@@ -27,7 +27,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from irondome.l3.models import Policy
 from irondome.l3.policy import _policy_from_dict
@@ -47,7 +47,7 @@ class PolicyVersion:
     change_description: str = ""
     content_hash: str = ""
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "author": self.author,
             "change_description": self.change_description,
@@ -58,7 +58,7 @@ class PolicyVersion:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> PolicyVersion:
+    def from_dict(cls, data: Dict[str, Any]) -> "PolicyVersion":
         policy_data = data.get("policy", {})
         policy = _policy_from_dict(policy_data)
         return cls(
@@ -85,7 +85,7 @@ class VersionedPolicyStore:
             └── v1.json
     """
 
-    def __init__(self, store_dir: Path | None = None) -> None:
+    def __init__(self, store_dir: Optional[Path] = None) -> None:
         self._store_dir = store_dir or _DEFAULT_STORE_DIR
         self._store_dir.mkdir(parents=True, exist_ok=True)
 
@@ -124,8 +124,7 @@ class VersionedPolicyStore:
         tmp_fd, tmp_path = tempfile.mkstemp(suffix=".json", dir=policy_dir)
         try:
             with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
-                f.write(json.dumps(pv.to_dict(), indent=2, sort_keys=True, \
-                    default=str))
+                f.write(json.dumps(pv.to_dict(), indent=2, sort_keys=True, default=str))
             os.replace(tmp_path, path)
         except Exception:
             os.unlink(tmp_path)
@@ -136,8 +135,7 @@ class VersionedPolicyStore:
         tmp_fd2, tmp_path2 = tempfile.mkstemp(suffix=".json", dir=policy_dir)
         try:
             with os.fdopen(tmp_fd2, "w", encoding="utf-8") as f:
-                f.write(json.dumps(pv.to_dict(), indent=2, sort_keys=True, \
-                    default=str))
+                f.write(json.dumps(pv.to_dict(), indent=2, sort_keys=True, default=str))
             os.replace(tmp_path2, latest_path)
         except Exception:
             os.unlink(tmp_path2)
@@ -153,11 +151,7 @@ class VersionedPolicyStore:
 
         return pv
 
-    def load(
-        self,
-        name: str,
-        version: int | None = None,
-    ) -> PolicyVersion | None:
+    def load(self, name: str, version: Optional[int] = None) -> Optional[PolicyVersion]:
         """Load a policy version. None = latest."""
         if version is None:
             # Read latest
@@ -175,12 +169,7 @@ class VersionedPolicyStore:
             return None
         return self._read_version_file(path)
 
-    def rollback(
-        self,
-        name: str,
-        version: int,
-        author: str,
-    ) -> PolicyVersion | None:
+    def rollback(self, name: str, version: int, author: str) -> Optional[PolicyVersion]:
         """Roll back to a previous version by re-saving it as a new version.
 
         This creates a new version (not overwriting history) so the
@@ -188,8 +177,7 @@ class VersionedPolicyStore:
         """
         target = self.load(name, version)
         if target is None:
-            logger.warning("Rollback failed: policy '%s' v%d not found", name, \
-                version)
+            logger.warning("Rollback failed: policy '%s' v%d not found", name, version)
             return None
 
         return self.save(
@@ -198,12 +186,7 @@ class VersionedPolicyStore:
             change_description=f"Rollback to v{version}",
         )
 
-    def diff(
-        self,
-        name: str,
-        version_a: int,
-        version_b: int,
-    ) -> dict[str, Any]:
+    def diff(self, name: str, version_a: int, version_b: int) -> Dict[str, Any]:
         """Diff two versions of a policy.
 
         Returns a dict with added_rules, removed_rules, changed_rules.
@@ -212,11 +195,7 @@ class VersionedPolicyStore:
         pv_b = self.load(name, version_b)
 
         if pv_a is None or pv_b is None:
-            return
-                {
-                    "error": f"One or both versions not found: v{version_a}, \
-                        v{version_b}",
-                }
+            return {"error": f"One or both versions not found: v{version_a}, v{version_b}"}
 
         rules_a = {r.rule_id: r for r in pv_a.policy.rules}
         rules_b = {r.rule_id: r for r in pv_b.policy.rules}
@@ -231,8 +210,7 @@ class VersionedPolicyStore:
                 if ra.to_dict() != rb.to_dict():
                     changed.append(rid)
 
-        default_changed =
-            pv_a.policy.default_action != pv_b.policy.default_action
+        default_changed = pv_a.policy.default_action != pv_b.policy.default_action
 
         return {
             "policy_name": name,
@@ -244,7 +222,7 @@ class VersionedPolicyStore:
             "changed_rules": changed,
         }
 
-    def list_policies(self) -> list[str]:
+    def list_policies(self) -> List[str]:
         """List all policy names in the store."""
         if not self._store_dir.exists():
             return []
@@ -254,13 +232,13 @@ class VersionedPolicyStore:
             if d.is_dir() and any(f.suffix == ".json" for f in d.iterdir())
         )
 
-    def list_versions(self, name: str) -> list[PolicyVersion]:
+    def list_versions(self, name: str) -> List[PolicyVersion]:
         """List all versions of a policy."""
         return self._list_versions(name)
 
-    def verify_integrity(self, name: str) -> list[str]:
+    def verify_integrity(self, name: str) -> List[str]:
         """Verify content hash integrity for all versions."""
-        violations: list[str] = []
+        violations: List[str] = []
         versions = self._list_versions(name)
 
         for pv in versions:
@@ -268,38 +246,35 @@ class VersionedPolicyStore:
             if pv.content_hash and pv.content_hash != expected_hash:
                 violations.append(
                     f"v{pv.version}: content_hash mismatch — "
-                    f"stored={pv.content_hash[:16]}... \
-                        computed={expected_hash[:16]}..."
+                    f"stored={pv.content_hash[:16]}... computed={expected_hash[:16]}..."
                 )
 
         return violations
 
     # ── Internal ────────────────────────────────────────────────────────
 
-    def _list_versions(self, name: str) -> list[PolicyVersion]:
+    def _list_versions(self, name: str) -> List[PolicyVersion]:
         """Internal: list versions from disk."""
         policy_dir = self._store_dir / name
         if not policy_dir.is_dir():
             return []
 
-        versions: list[PolicyVersion] = []
+        versions: List[PolicyVersion] = []
         for f in sorted(policy_dir.iterdir()):
-            if f.name.startswith("v") and f.name.endswith(".json") and f.name \
-                != "latest.json":
+            if f.name.startswith("v") and f.name.endswith(".json") and f.name != "latest.json":
                 pv = self._read_version_file(f)
                 if pv:
                     versions.append(pv)
 
         return versions
 
-    def _read_version_file(self, path: Path) -> PolicyVersion | None:
+    def _read_version_file(self, path: Path) -> Optional[PolicyVersion]:
         """Read a PolicyVersion from a JSON file."""
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             return PolicyVersion.from_dict(data)
         except (json.JSONDecodeError, OSError, KeyError) as e:
-            logger.warning("Failed to read policy version from %s: %s", path, \
-                e)
+            logger.warning("Failed to read policy version from %s: %s", path, e)
             return None
 
     @staticmethod
@@ -313,7 +288,7 @@ class VersionedPolicyStore:
 # ─── Module-level singleton ────────────────────────────────────────────────
 
 
-_policy_store: VersionedPolicyStore | None = None
+_policy_store: Optional[VersionedPolicyStore] = None
 
 
 def get_policy_store() -> VersionedPolicyStore:

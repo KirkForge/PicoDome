@@ -1,13 +1,9 @@
 """Tests for webhook notifications."""
 
 import json
-
 from irondome.webhooks import (
-    WebhookConfig,
-    WebhookDispatcher,
-    WebhookEvent,
-    WebhookPayload,
-    _sign_payload,
+    WebhookConfig, WebhookEvent, WebhookPayload,
+    WebhookDispatcher, _sign_payload,
 )
 
 
@@ -20,8 +16,7 @@ class TestWebhookConfig:
         assert config.enabled is True
 
     def test_to_dict_hides_secret(self):
-        config =
-            WebhookConfig(url="https://example.com", secret="super-secret")
+        config = WebhookConfig(url="https://example.com", secret="super-secret")
         d = config.to_dict()
         assert d["secret"] == "***"
 
@@ -83,8 +78,7 @@ class TestWebhookDispatcher:
 
     def test_event_filter_skips(self):
         d = WebhookDispatcher()
-        d.add_webhook(WebhookConfig(url="https://a.com", \
-            events=["policy_change"]))
+        d.add_webhook(WebhookConfig(url="https://a.com", events=["policy_change"]))
         result = d.notify(
             event=WebhookEvent.SCAN_ALERT,
             data={},
@@ -101,16 +95,13 @@ class TestWebhookDispatcher:
         d = WebhookDispatcher()
         d.add_webhook(WebhookConfig(url="https://a.com", events=["*"]))
         # Will attempt delivery (will fail since URL is fake, but not skipped)
-        result =
-            d.notify(event=WebhookEvent.SCAN_ALERT, data={}, \
-                severity="critical")
+        result = d.notify(event=WebhookEvent.SCAN_ALERT, data={}, severity="critical")
         assert result["failed"] == 1  # attempted but URL unreachable
 
     def test_from_config(self):
         config = {
             "webhooks": [
-                {"url": "https://a.com", "events": ["scan_alert"], \
-                    "min_severity": "critical"},
+                {"url": "https://a.com", "events": ["scan_alert"], "min_severity": "critical"},
                 {"url": "https://b.com", "events": ["*"], "enabled": False},
             ]
         }
