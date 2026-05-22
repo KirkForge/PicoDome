@@ -20,12 +20,14 @@ from irondome.audit.sinks.base import (
     register_sink,
 )
 from irondome.audit.sinks.file_sink import FileSink
+from irondome.audit.sinks.syslog_sink import SyslogSink
 from irondome.audit.sinks.webhook_sink import WebhookSink
 
 # Register built-in sinks
 register_sink("null", NullSink)
 register_sink("file", FileSink)
 register_sink("webhook", WebhookSink)
+register_sink("syslog", SyslogSink)
 
 __all__ = [
     "AuditSink",
@@ -36,4 +38,5 @@ __all__ = [
     "register_sink",
     "FileSink",
     "WebhookSink",
+    "SyslogSink",
 ]

@@ -32,13 +32,13 @@ import time
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from importlib import import_module
-from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from irondome.auth import AuthError, RBAC, Role, TokenAuth
 from irondome import __version__
 from irondome.audit import AuditEventType, get_audit_logger
+from irondome.auth import RBAC, TokenAuth
+from irondome.daemon.store import PersistentScanJobStore
 from irondome.errors import ErrorCode, ErrorCodes
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.engine import sandbox_run
@@ -47,7 +47,6 @@ from irondome.l4.engine import create_default_engine
 from irondome.l4.profiler import profile_from_sandbox_result
 from irondome.ratelimit import TokenBucketLimiter
 from irondome.retention import get_retention_manager
-from irondome.daemon.store import PersistentScanJobStore
 
 logger = logging.getLogger("irondome.daemon")
 
@@ -515,11 +514,10 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
         # Create job in persistent store
         if isinstance(self.job_store, PersistentScanJobStore):
-            job_data = self.job_store.add(job_id, command, actor)
+            self.job_store.add(job_id, command, actor)
         else:
             job = ScanJob(job_id=job_id, command=command, actor=actor)
             self.job_store.add(job)
-            job_data = job.to_dict()
 
         # Audit
         try:
@@ -786,6 +784,13 @@ class IronDomeDaemon:
         - ``IRONDOME_METRICS_PORT`` — separate metrics port (default: None, same as API)
         - ``IRONDOME_API_TOKENS`` — comma-separated auth tokens
         - ``IRONDOME_JOB_STORE_DIR`` — directory for persistent job storage
+        - ``IRONDOME_AUDIT_SINKS`` — comma-separated sink types (default: null)
+          Available: null, file, webhook, syslog
+        - ``IRONDOME_WEBHOOK_URL`` — URL for webhook sink
+        - ``IRONDOME_WEBHOOK_TOKEN`` — Bearer token for webhook sink
+        - ``IRONDOME_SYSLOG_HOST`` — Syslog server host (default: 127.0.0.1)
+        - ``IRONDOME_SYSLOG_PORT`` — Syslog server port (default: 514)
+        - ``IRONDOME_FILE_SINK_DIR`` — Directory for file sink output
     """
 
     def __init__(
@@ -807,10 +812,67 @@ class IronDomeDaemon:
         self._job_store_dir = job_store_dir or os.environ.get("IRONDOME_JOB_STORE_DIR")
 
         # Set up persistent job store
-        from irondome.daemon.store import PersistentScanJobStore
         from pathlib import Path as _Path
-        store_dir = Path(self._job_store_dir) if self._job_store_dir else None
+
+        from irondome.daemon.store import PersistentScanJobStore
+        store_dir = _Path(self._job_store_dir) if self._job_store_dir else None
         IronDomeHandler.job_store = PersistentScanJobStore(store_dir=store_dir)
+
+        # Set up audit sinks
+        self._sinks = self._init_sinks()
+
+    def _init_sinks(self) -> list:
+        """Initialize audit sinks from environment configuration."""
+        from irondome.audit.sinks import (
+            AuditSink,
+            FileSink,
+            NullSink,
+            SinkConfig,
+            SyslogSink,
+            WebhookSink,
+        )
+
+        sink_types = os.environ.get("IRONDOME_AUDIT_SINKS", "null").split(",")
+        sink_types = [s.strip().lower() for s in sink_types if s.strip()]
+
+        sinks: list[AuditSink] = []
+        for sink_type in sink_types:
+            config = SinkConfig()
+            try:
+                if sink_type == "null":
+                    sinks.append(NullSink(config=config))
+                elif sink_type == "file":
+                    sink_dir = os.environ.get("IRONDOME_FILE_SINK_DIR")
+                    sinks.append(FileSink(
+                        config=config,
+                        output_dir=sink_dir,
+                    ))
+                elif sink_type == "webhook":
+                    url = os.environ.get("IRONDOME_WEBHOOK_URL", "")
+                    token = os.environ.get("IRONDOME_WEBHOOK_TOKEN")
+                    if not url:
+                        logger.warning("WebhookSink: IRONDOME_WEBHOOK_URL not set, skipping")
+                        continue
+                    sinks.append(WebhookSink(
+                        config=config,
+                        url=url,
+                        auth_token=token,
+                    ))
+                elif sink_type == "syslog":
+                    syslog_host = os.environ.get("IRONDOME_SYSLOG_HOST", "127.0.0.1")
+                    syslog_port = int(os.environ.get("IRONDOME_SYSLOG_PORT", "514"))
+                    sinks.append(SyslogSink(
+                        config=config,
+                        host=syslog_host,
+                        port=syslog_port,
+                    ))
+                else:
+                    logger.warning("Unknown audit sink type: '%s', skipping", sink_type)
+            except Exception as exc:
+                logger.warning("Failed to initialize sink '%s': %s", sink_type, exc)
+
+        logger.info("Initialized %d audit sink(s): %s", len(sinks), [s.name for s in sinks])
+        return sinks
 
     def start(self, background: bool = False) -> None:
         """Start the daemon HTTP server."""
@@ -820,6 +882,13 @@ class IronDomeDaemon:
         # Audit
         try:
             audit = get_audit_logger()
+            # Wire sinks into the audit logger
+            for sink in self._sinks:
+                try:
+                    sink.start()
+                    audit.add_sink(sink)
+                except Exception as exc:
+                    logger.warning("Failed to start sink %s: %s", sink.name, exc)
             audit.record(
                 event_type=AuditEventType.DAEMON_START,
                 actor="irondome-daemon",
@@ -873,6 +942,13 @@ class IronDomeDaemon:
 
         if self._metrics_server:
             self._metrics_server.shutdown()
+
+        # Stop audit sinks
+        for sink in self._sinks:
+            try:
+                sink.stop()
+            except Exception as exc:
+                logger.warning("Failed to stop sink %s: %s", sink.name, exc)
 
         try:
             audit = get_audit_logger()
