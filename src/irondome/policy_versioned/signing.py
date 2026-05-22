@@ -1,0 +1,347 @@
+"""Policy signing and verification using HMAC-SHA256.
+
+Signed policies are YAML files with an appended signature block:
+
+.. code-block:: yaml
+
+    rules:
+      - name: deny-shells
+        pattern: "*/sh"
+        action: deny
+
+    # --- IRONDOME SIGNATURE ---
+    # algorithm: hmac-sha256
+    # signature: <hex-encoded HMAC>
+    # timestamp: 2026-05-22T17:00:00Z
+    # key_id: default
+
+The signature is computed over all lines *above* the signature block
+(i.e., the original policy content). This ensures tampering with
+any part of the policy invalidates the signature.
+
+Key management:
+  - IRONDOME_POLICY_KEY: hex-encoded HMAC key (preferred)
+  - IRONDOME_POLICY_KEY_FILE: path to file containing hex-encoded key
+  - If neither is set, policies are loaded without verification (warning logged).
+"""
+
+from __future__ import annotations
+
+import hashlib
+import hmac
+import logging
+import os
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+logger = logging.getLogger("irondome.policy.signing")
+
+SIGNATURE_MARKER = "# --- IRONDOME SIGNATURE ---"
+SUPPORTED_ALGORITHMS = frozenset({"hmac-sha256"})
+
+
+@dataclass(frozen=True)
+class PolicySignature:
+    """A parsed signature block from a signed policy file."""
+    algorithm: str
+    signature: str
+    timestamp: str
+    key_id: str = "default"
+
+
+@dataclass
+class VerifyResult:
+    """Result of verifying a signed policy."""
+    valid: bool
+    algorithm: str = ""
+    key_id: str = ""
+    timestamp: str = ""
+    error: str = ""
+
+
+# ─── Key management ────────────────────────────────────────────────────────
+
+
+def _load_key() -> bytes | None:
+    """Load the HMAC key from environment or file.
+
+    Returns:
+        The HMAC key as bytes, or None if not configured.
+    """
+    # 1. Direct hex key in env
+    hex_key = os.environ.get("IRONDOME_POLICY_KEY")
+    if hex_key:
+        try:
+            return bytes.fromhex(hex_key)
+        except ValueError:
+            logger.error("IRONDOME_POLICY_KEY is not valid hex")
+            return None
+
+    # 2. Key file path
+    key_file = os.environ.get("IRONDOME_POLICY_KEY_FILE")
+    if key_file:
+        try:
+            content = Path(key_file).read_text().strip()
+            return bytes.fromhex(content)
+        except (OSError, ValueError) as exc:
+            logger.error("Failed to read policy key file '%s': %s", key_file, exc)
+            return None
+
+    return None
+
+
+def generate_key() -> bytes:
+    """Generate a new random 32-byte HMAC key.
+
+    Returns:
+        32 bytes of cryptographically random data suitable for HMAC-SHA256.
+    """
+    return os.urandom(32)
+
+
+def key_to_hex(key: bytes) -> str:
+    """Encode an HMAC key as hex string for storage."""
+    return key.hex()
+
+
+# ─── Signing ───────────────────────────────────────────────────────────────
+
+
+def sign_policy(content: str, key: bytes, key_id: str = "default") -> str:
+    """Sign a policy file's content by appending an HMAC-SHA256 signature.
+
+    Args:
+        content: The original policy YAML content (without any signature).
+        key: The HMAC key as bytes.
+        key_id: Identifier for this key (for key rotation).
+
+    Returns:
+        The policy content with the signature block appended.
+    """
+    # Compute HMAC-SHA256 over the original content
+    sig = hmac.new(key, content.encode("utf-8"), hashlib.sha256).hexdigest()
+    timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    signature_block = (
+        f"\n{SIGNATURE_MARKER}\n"
+        f"# algorithm: hmac-sha256\n"
+        f"# signature: {sig}\n"
+        f"# timestamp: {timestamp}\n"
+        f"# key_id: {key_id}\n"
+    )
+
+    return content + signature_block
+
+
+def sign_policy_file(path: Path, key: bytes, key_id: str = "default") -> None:
+    """Sign a policy file in place by appending the signature block.
+
+    If the file is already signed, the old signature is removed first.
+    """
+    content = path.read_text(encoding="utf-8")
+    # Strip existing signature if present
+    content = strip_signature(content)
+    signed = sign_policy(content, key, key_id=key_id)
+    path.write_text(signed, encoding="utf-8")
+    logger.info("Signed policy file: %s", path)
+
+
+# ─── Verification ──────────────────────────────────────────────────────────
+
+
+def parse_signature(content: str) -> PolicySignature | None:
+    """Parse the signature block from a signed policy file.
+
+    Returns:
+        PolicySignature if found, None if the file is unsigned.
+    """
+    lines = content.split("\n")
+    marker_idx = None
+    for i, line in enumerate(lines):
+        if line.strip() == SIGNATURE_MARKER.strip():
+            marker_idx = i
+            break
+
+    if marker_idx is None:
+        return None
+
+    # Parse signature fields after the marker
+    algo = ""
+    sig = ""
+    timestamp = ""
+    key_id = "default"
+
+    for line in lines[marker_idx + 1:]:
+        stripped = line.strip()
+        if not stripped or not stripped.startswith("#"):
+            break
+        stripped = stripped.lstrip("# ").strip()
+        if stripped.startswith("algorithm:"):
+            algo = stripped.split(":", 1)[1].strip()
+        elif stripped.startswith("signature:"):
+            sig = stripped.split(":", 1)[1].strip()
+        elif stripped.startswith("timestamp:"):
+            timestamp = stripped.split(":", 1)[1].strip()
+        elif stripped.startswith("key_id:"):
+            key_id = stripped.split(":", 1)[1].strip()
+
+    if not algo or not sig:
+        return None
+
+    return PolicySignature(
+        algorithm=algo,
+        signature=sig,
+        timestamp=timestamp,
+        key_id=key_id,
+    )
+
+
+def strip_signature(content: str) -> str:
+    """Remove the signature block from a policy file, returning only the policy content."""
+    lines = content.split("\n")
+    marker_idx = None
+    for i, line in enumerate(lines):
+        if line.strip() == SIGNATURE_MARKER.strip():
+            marker_idx = i
+            break
+
+    if marker_idx is None:
+        return content
+
+    # Return everything before the marker (strip trailing blank lines)
+    policy_lines = lines[:marker_idx]
+    # Remove trailing empty lines
+    while policy_lines and not policy_lines[-1].strip():
+        policy_lines.pop()
+
+    return "\n".join(policy_lines) + "\n"
+
+
+def verify_policy(content: str, key: bytes, key_id: str = "default") -> VerifyResult:
+    """Verify the HMAC-SHA256 signature of a policy file.
+
+    Args:
+        content: The full policy file content (including signature block).
+        key: The HMAC key as bytes.
+        key_id: Expected key identifier (for key rotation).
+
+    Returns:
+        VerifyResult with valid=True if the signature matches.
+    """
+    parsed = parse_signature(content)
+    if parsed is None:
+        return VerifyResult(valid=False, error="no signature found")
+
+    if parsed.algorithm not in SUPPORTED_ALGORITHMS:
+        return VerifyResult(
+            valid=False,
+            algorithm=parsed.algorithm,
+            error=f"unsupported algorithm: {parsed.algorithm}",
+        )
+
+    if parsed.key_id != key_id:
+        return VerifyResult(
+            valid=False,
+            algorithm=parsed.algorithm,
+            key_id=parsed.key_id,
+            error=f"key_id mismatch: expected '{key_id}', got '{parsed.key_id}'",
+        )
+
+    # Extract the policy content (everything before the signature marker)
+    policy_content = strip_signature(content)
+
+    # Compute expected HMAC
+    expected_sig = hmac.new(key, policy_content.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    # Constant-time comparison to prevent timing attacks
+    if hmac.compare_digest(expected_sig, parsed.signature):
+        return VerifyResult(
+            valid=True,
+            algorithm=parsed.algorithm,
+            key_id=parsed.key_id,
+            timestamp=parsed.timestamp,
+        )
+    else:
+        return VerifyResult(
+            valid=False,
+            algorithm=parsed.algorithm,
+            key_id=parsed.key_id,
+            error="signature mismatch — policy may have been tampered with",
+        )
+
+
+def verify_policy_file(path: Path, key: bytes, key_id: str = "default") -> VerifyResult:
+    """Verify a signed policy file.
+
+    Args:
+        path: Path to the policy file.
+        key: The HMAC key as bytes.
+        key_id: Expected key identifier.
+
+    Returns:
+        VerifyResult with valid=True if the signature is valid.
+    """
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return VerifyResult(valid=False, error=f"cannot read file: {exc}")
+
+    return verify_policy(content, key, key_id=key_id)
+
+
+def load_policy_with_verification(path: Path, key: bytes | None = None, key_id: str = "default") -> tuple[str, VerifyResult | None]:
+    """Load a policy file, verifying its signature if a key is provided.
+
+    If no key is provided and the file is signed, a warning is logged.
+    If no key is provided and the file is unsigned, it loads normally.
+
+    Args:
+        path: Path to the policy file.
+        key: HMAC key for verification. If None, uses IRONDOME_POLICY_KEY env.
+        key_id: Expected key identifier.
+
+    Returns:
+        Tuple of (policy_content, verify_result).
+        verify_result is None if no verification was attempted.
+    """
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return "", VerifyResult(valid=False, error=f"cannot read file: {exc}")
+
+    # Determine key
+    effective_key = key or _load_key()
+
+    parsed = parse_signature(content)
+    if parsed is None:
+        # Unsigned policy
+        if effective_key is not None:
+            logger.warning(
+                "Policy %s is unsigned but verification key is configured — "
+                "rejecting unsigned policy",
+                path,
+            )
+            return "", VerifyResult(valid=False, error="policy is unsigned but key is configured")
+        logger.debug("Policy %s is unsigned (no verification key)", path)
+        return content, None
+
+    # Signed policy
+    if effective_key is None:
+        logger.warning(
+            "Policy %s is signed but no verification key (IRONDOME_POLICY_KEY) is configured — "
+            "cannot verify",
+            path,
+        )
+        return strip_signature(content), VerifyResult(
+            valid=False,
+            error="no verification key configured for signed policy",
+        )
+
+    result = verify_policy(content, effective_key, key_id=key_id)
+    if not result.valid:
+        logger.error("Policy %s signature verification FAILED: %s", path, result.error)
+        return "", result
+
+    logger.info("Policy %s signature verified (key_id=%s)", path, result.key_id)
+    return strip_signature(content), result

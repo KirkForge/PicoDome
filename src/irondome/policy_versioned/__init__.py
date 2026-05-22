@@ -7,10 +7,36 @@ signing capabilities.
 
 from __future__ import annotations
 
+from irondome.policy_versioned.signing import (
+    PolicySignature,
+    VerifyResult,
+    generate_key,
+    key_to_hex,
+    load_policy_with_verification,
+    sign_policy,
+    sign_policy_file,
+    strip_signature,
+    verify_policy,
+    verify_policy_file,
+)
 from irondome.policy_versioned.store import (
     PolicyVersion,
     VersionedPolicyStore,
     get_policy_store,
 )
 
-__all__ = ["PolicyVersion", "VersionedPolicyStore", "get_policy_store"]
+__all__ = [
+    "PolicySignature",
+    "VerifyResult",
+    "VersionedPolicyStore",
+    "PolicyVersion",
+    "generate_key",
+    "get_policy_store",
+    "key_to_hex",
+    "load_policy_with_verification",
+    "sign_policy",
+    "sign_policy_file",
+    "strip_signature",
+    "verify_policy",
+    "verify_policy_file",
+]
