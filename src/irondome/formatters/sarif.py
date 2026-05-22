@@ -7,7 +7,7 @@ Uses __version__ from package instead of hardcoded version.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Union
+from typing import Dict, List, Union
 
 from irondome import __version__
 from irondome.l3.models import SandboxResult

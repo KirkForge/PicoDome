@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from typing import Union
 
-from irondome import __version__
 from irondome.l3.models import SandboxResult, Verdict
 from irondome.l4.models import AnalysisResult, BehavioralVerdict
 from irondome.models import Severity
@@ -57,7 +56,15 @@ def _l3_table(result: SandboxResult) -> str:
     lines.append(f"║ {'Exit Code:':<16} {result.exit_code:<{width - 20}} ║")
 
     verdict_icon = _verdict_icon(result.overall_verdict)
-    lines.append(f"║ {'Verdict:':<16} {verdict_icon} {result.overall_verdict.value}{'':<{width - 23 - len(result.overall_verdict.value)}} ║")
+    lines.append(
+        f"║ {
+            'Verdict:':<16} {verdict_icon} {
+            result.overall_verdict.value}{
+                '':<{
+                    width -
+                    23 -
+                    len(
+                        result.overall_verdict.value)}} ║")
 
     if result.events:
         lines.append("╠" + "═" * (width - 2) + "╣")
@@ -92,11 +99,16 @@ def _l4_table(result: AnalysisResult) -> str:
         f"║ {'IRON DOME — L4 BEHAVIORAL ANALYSIS':^{width - 4}} ║",
         "╠" + "═" * (width - 2) + "╣",
         f"║ {'Target:':<16} {result.target:<{width - 20}} ║",
-        f"║ {'Verdict:':<16} {verdict_icon} {result.overall_verdict.value}{'':<{width - 26 - len(result.overall_verdict.value)}} ║",
+        f"║ {'Verdict:':<16} {verdict_icon}"
+        f" {result.overall_verdict.value}"
+        f"{'':<{width - 26 - len(result.overall_verdict.value)}} ║",
     ]
 
     if result.stats.duration_ms:
-        lines.append(f"║ {'Duration:':<16} {result.stats.duration_ms}ms{'':<{width - 20 - len(str(result.stats.duration_ms))}} ║")
+        lines.append(
+            f"║ {'Duration:':<16}"
+            f" {result.stats.duration_ms}ms"
+            f"{'':<{width - 20 - len(str(result.stats.duration_ms))}} ║")
 
     # Severity summary with dome labels
     if result.stats.findings_by_severity:

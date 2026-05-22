@@ -7,7 +7,6 @@ These tests MUST work without network access.
 import hashlib
 import json
 import os
-import tempfile
 import zipfile
 from pathlib import Path
 from unittest import mock

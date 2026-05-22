@@ -25,7 +25,6 @@ or a tokens file at ``~/.irondome/api-tokens``.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
@@ -33,7 +32,7 @@ import time
 import uuid
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse, parse_qs
 
 from irondome import __version__
@@ -41,7 +40,6 @@ from irondome.audit import AuditEventType, get_audit_logger
 from irondome.l3.engine import sandbox_run
 from irondome.l3.policy import default_policy
 from irondome.l4.engine import create_default_engine
-from irondome.l4.models import AnalysisResult
 from irondome.l4.profiler import profile_from_sandbox_result
 from irondome.retention import get_retention_manager
 
@@ -51,8 +49,8 @@ logger = logging.getLogger("irondome.daemon")
 
 API_VERSION = "v1"
 
-
 # ─── Token auth ─────────────────────────────────────────────────────────────
+
 
 class TokenAuth:
     """Simple bearer-token authentication.
@@ -117,8 +115,8 @@ class TokenAuth:
     def is_configured(self) -> bool:
         return len(self._tokens) > 0
 
-
 # ─── RBAC ───────────────────────────────────────────────────────────────────
+
 
 class Role(str):
     SUBMITTER = "submitter"
@@ -157,8 +155,8 @@ class RBAC:
         perms = self.ROLE_PERMISSIONS.get(role, set())
         return "*" in perms or permission in perms
 
-
 # ─── Scan job tracker ───────────────────────────────────────────────────────
+
 
 class ScanJob:
     """Track an in-flight or completed scan job."""
@@ -210,8 +208,8 @@ class ScanJobStore:
         jobs = sorted(self._jobs.values(), key=lambda j: j.created_at, reverse=True)
         return jobs[:limit]
 
-
 # ─── HTTP handler ────────────────────────────────────────────────────────────
+
 
 class IronDomeHandler(BaseHTTPRequestHandler):
     """HTTP request handler for the Iron Dome daemon."""
@@ -411,7 +409,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             return
 
         timeout = data.get("timeout", 30.0)
-        policy_name = data.get("policy")
+        data.get("policy")
 
         job_id = str(uuid.uuid4())[:8]
         job = ScanJob(job_id=job_id, command=command, actor=token[:16] if token else "unknown")
@@ -596,8 +594,8 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             "audit": audit_stats,
         })
 
-
 # ─── Daemon class ────────────────────────────────────────────────────────────
+
 
 class IronDomeDaemon:
     """Iron Dome daemon — HTTP API server for sandbox-as-a-service.

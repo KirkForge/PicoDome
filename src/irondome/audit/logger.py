@@ -19,7 +19,6 @@ import gzip
 import hashlib
 import json
 import logging
-import os
 import shutil
 import threading
 import time
@@ -27,11 +26,12 @@ import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("irondome.audit")
 
 # ─── Event types ────────────────────────────────────────────────────────────
+
 
 class AuditEventType(str, Enum):
     """Canonical event types for the audit log."""
@@ -62,8 +62,8 @@ class AuditEventType(str, Enum):
     DATA_EXPORT = "data_export"
     DATA_DELETE = "data_delete"
 
-
 # ─── Audit event model ─────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class AuditEvent:
@@ -96,8 +96,8 @@ class AuditEvent:
         """Single-line JSON for the append-only log."""
         return json.dumps(self.to_dict(), sort_keys=True, default=str)
 
-
 # ─── Audit logger ──────────────────────────────────────────────────────────
+
 
 _DEFAULT_LOG_DIR = Path.home() / ".irondome" / "audit"
 _DEFAULT_MAX_BYTES = 50 * 1024 * 1024  # 50 MiB before rotation
@@ -411,14 +411,14 @@ class AuditLogger:
 
         try:
             data = json.loads(last_line)
-            prev_hash = data.get("prev_hash", "")
+            data.get("prev_hash", "")
             # The hash we need is the SHA-256 of this line itself
             return hashlib.sha256(last_line.encode("utf-8")).hexdigest()
         except (json.JSONDecodeError, KeyError):
             return ""
 
-
 # ─── Module-level singleton ────────────────────────────────────────────────
+
 
 _audit_logger: Optional[AuditLogger] = None
 

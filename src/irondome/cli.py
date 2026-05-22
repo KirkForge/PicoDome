@@ -27,7 +27,6 @@ from irondome.formatters.github import format_github
 from irondome.formatters.cyclonedx import format_cyclonedx
 from irondome.guards import verify_determinism, diff_results, DeterministicGuard
 
-
 # Severity levels for --fail-on
 _SEVERITY_LEVELS = {
     "critical": 0,
@@ -52,7 +51,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     sub = parser.add_subparsers(dest="command", help="sub-commands")
 
     # ── version ─────────────────────────────────────────────────────
-    version_parser = sub.add_parser("version", help="Print version and exit")
+    _version_parser = sub.add_parser("version", help="Print version and exit")  # noqa: F841
 
     # ── sandbox ──────────────────────────────────────────────────────
     sandbox_parser = sub.add_parser("sandbox", help="Run a command under L3 sandbox policy")
@@ -62,7 +61,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     sandbox_parser.add_argument("--cwd", "-C", help="Working directory")
     sandbox_parser.add_argument(
         "--format", "-f",
-        choices=["json", "sarif", "table", "ml-context", "github", "cyclonedx"],
+        choices=["json", "sari", "table", "ml-context", "github", "cyclonedx"],
         default="table",
     )
     _add_common_flags(sandbox_parser)
@@ -77,7 +76,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     analyze_parser.add_argument("--input", "-i", type=Path, help="JSON file from 'irondome sandbox --format json'")
     analyze_parser.add_argument(
         "--format", "-f",
-        choices=["json", "sarif", "table", "ml-context", "github", "cyclonedx"],
+        choices=["json", "sari", "table", "ml-context", "github", "cyclonedx"],
         default="table",
     )
     analyze_parser.add_argument("--rules", "-r", nargs="*", help="Specific rule IDs to run")
@@ -91,7 +90,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     pipeline_parser.add_argument("--cwd", "-C", help="Working directory")
     pipeline_parser.add_argument(
         "--format", "-f",
-        choices=["json", "sarif", "table", "ml-context", "github", "cyclonedx"],
+        choices=["json", "sari", "table", "ml-context", "github", "cyclonedx"],
         default="table",
     )
     pipeline_parser.add_argument("--rules", "-r", nargs="*", help="Specific L4 rule IDs to run")
@@ -100,7 +99,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     # ── rules ────────────────────────────────────────────────────────
     rules_parser = sub.add_parser("rules", help="List available L4 detector rules")
     rules_parser.add_argument("--json", action="store_true", help="Output as JSON")
-
 
     # ── daemon ────────────────────────────────────────────────────────
     daemon_parser = sub.add_parser("daemon", help="Start Iron Dome daemon (HTTP API server)")
@@ -113,12 +111,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         default="http",
         help="Transport protocol: http (default) or grpc",
     )
-    daemon_parser.add_argument("--grpc-port", type=int, default=50051, help="gRPC port (default: 50051, only used with --transport grpc)")
+    daemon_parser.add_argument(
+        "--grpc-port",
+        type=int,
+        default=50051,
+        help="gRPC port (default: 50051, only used with --transport grpc)")
 
     # ── scan-grpc ─────────────────────────────────────────────────────
     scan_grpc_parser = sub.add_parser("scan-grpc", help="Scan via gRPC client")
     scan_grpc_parser.add_argument("target", nargs=argparse.REMAINDER, help="Command to scan")
-    scan_grpc_parser.add_argument("--address", default="localhost:50051", help="gRPC server address (default: localhost:50051)")
+    scan_grpc_parser.add_argument(
+        "--address",
+        default="localhost:50051",
+        help="gRPC server address (default: localhost:50051)")
     scan_grpc_parser.add_argument("--policy", "-p", help="Policy name")
     scan_grpc_parser.add_argument("--timeout", "-t", type=float, default=30.0, help="Timeout in seconds")
     scan_grpc_parser.add_argument("--cwd", "-C", help="Working directory")
@@ -129,7 +134,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # ── health ────────────────────────────────────────────────────────
     health_parser = sub.add_parser("health", help="Run health checks")
-    health_parser.add_argument("--format", "-f", choices=["json", "table"], default="table", help="Output format")
+    health_parser.add_argument("--format", "-", choices=["json", "table"], default="table", help="Output format")
 
     # ── audit-query ───────────────────────────────────────────────────
     audit_parser = sub.add_parser("audit", help="Query the audit log")
@@ -149,7 +154,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # ── policy-versioned ──────────────────────────────────────────────
     policy_v_parser = sub.add_parser("policy-versions", help="Manage versioned policies")
-    policy_v_parser.add_argument("action", choices=["list", "show", "diff", "rollback", "verify"], help="Policy action")
+    policy_v_parser.add_argument("action", choices=["list", "show", "dif", "rollback", "verify"], help="Policy action")
     policy_v_parser.add_argument("--name", help="Policy name")
     policy_v_parser.add_argument("--version", type=int, help="Policy version")
     policy_v_parser.add_argument("--version-a", type=int, help="First version for diff")
@@ -157,7 +162,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     policy_v_parser.add_argument("--author", default="cli-user", help="Author for rollback")
 
     # ── diff ──────────────────────────────────────────────────────────
-    diff_parser = sub.add_parser("diff", help="Compare two result JSON files")
+    diff_parser = sub.add_parser("dif", help="Compare two result JSON files")
     diff_parser.add_argument("file_a", type=Path, help="First result JSON file")
     diff_parser.add_argument("file_b", type=Path, help="Second result JSON file")
     diff_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed diff")
@@ -168,7 +173,12 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     notary_submit = notary_sub.add_parser("submit", help="Submit an audit entry to the notary")
     notary_submit.add_argument("--entry", type=Path, required=True, help="JSON file with the entry to notarize")
-    notary_submit.add_argument("--notary", choices=["null", "rekor"], default="null", help="Notary backend (default: null)")
+    notary_submit.add_argument(
+        "--notary",
+        choices=["null", "rekor"],
+        default="null",
+        help="Notary backend (default: null)",
+    )
     notary_submit.add_argument("--rekor-url", default="https://rekor.sigstore.dev", help="Rekor API URL")
     notary_submit.add_argument("--timeout", type=int, default=10, help="HTTP timeout in seconds")
     notary_submit.add_argument("--hmac-key", default=None, help="HMAC key (default: built-in)")
@@ -176,7 +186,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     notary_verify = notary_sub.add_parser("verify", help="Verify an audit entry against the notary")
     notary_verify.add_argument("--uuid", required=True, help="UUID of the entry to verify")
     notary_verify.add_argument("--entry", type=Path, required=True, help="JSON file with the entry to verify")
-    notary_verify.add_argument("--notary", choices=["null", "rekor"], default="null", help="Notary backend (default: null)")
+    notary_verify.add_argument(
+        "--notary",
+        choices=["null", "rekor"],
+        default="null",
+        help="Notary backend (default: null)",
+    )
     notary_verify.add_argument("--rekor-url", default="https://rekor.sigstore.dev", help="Rekor API URL")
     notary_verify.add_argument("--timeout", type=int, default=10, help="HTTP timeout in seconds")
     notary_verify.add_argument("--hmac-key", default=None, help="HMAC key (default: built-in)")
@@ -190,8 +205,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     cluster_join.add_argument("peer_address", help="Peer address (host:port)")
     cluster_join.add_argument("--port", type=int, default=8444, help="Local cluster port (default: 8444)")
     cluster_join.add_argument("--node-id", help="Custom node ID (default: auto-generated)")
-    cluster_join.add_argument("--backend", choices=["memory", "sqlite"], default="memory",
-                              help="State backend (default: memory)")
+    cluster_join.add_argument(
+        "--backend",
+        choices=["memory", "sqlite"],
+        default="memory",
+        help="State backend (default: memory)",
+    )
     cluster_join.add_argument("--heartbeat-interval", type=int, default=10,
                               help="Heartbeat interval in seconds (default: 10)")
     cluster_join.add_argument("--heartbeat-timeout", type=int, default=30,
@@ -199,11 +218,11 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # cluster status
     cluster_status = cluster_sub.add_parser("status", help="Show cluster node status")
-    cluster_status.add_argument("--format", "-f", choices=["json", "table"], default="table",
-                               help="Output format (default: table)")
+    cluster_status.add_argument("--format", "-", choices=["json", "table"], default="table",
+                                help="Output format (default: table)")
 
     # cluster leave
-    cluster_leave = cluster_sub.add_parser("leave", help="Gracefully leave the cluster")
+    _cluster_leave = cluster_sub.add_parser("leave", help="Gracefully leave the cluster")  # noqa: F841
 
     # ── init ──────────────────────────────────────────────────────────
     init_parser = sub.add_parser("init", help="Initialize Iron Dome configuration")
@@ -642,7 +661,7 @@ def _cmd_scan_grpc(args) -> int:
 
 def _cmd_health(args) -> int:
     """Run health checks."""
-    from irondome.health import check_health, check_readiness
+    from irondome.health import check_health
     checks = check_health()
     all_healthy = all(c.healthy for c in checks)
 
@@ -767,7 +786,7 @@ def _cmd_policy_versions(args) -> int:
             return 1
         pv = store.rollback(args.name, args.version, author=args.author)
         if pv is None:
-            print(f"Rollback failed", file=sys.stderr)
+            print("Rollback failed", file=sys.stderr)
             return 1
         print(f"Rolled back '{args.name}' to v{args.version} → new v{pv.version}")
         return 0
@@ -789,7 +808,7 @@ def _cmd_policy_versions(args) -> int:
 
 def _cmd_notary(args) -> int:
     """Handle notary subcommands (submit, verify)."""
-    from irondome.notary import NullNotary, RekorNotary, sign_entry, verify_entry_signature
+    from irondome.notary import NullNotary, RekorNotary, sign_entry
 
     if args.notary_command == "submit":
         if not args.entry or not args.entry.exists():
@@ -939,19 +958,29 @@ def _cmd_cluster(args) -> int:
         if args.format == "json":
             print(json.dumps(status, sort_keys=True, indent=2))
         else:
-            print(f"\n  Cluster Status")
-            print(f"  ─────────────")
+            print("\n  Cluster Status")
+            print("  ─────────────")
             print(f"  Self:       {status['self_id']}")
             print(f"  Leader:     {status['leader_id'] or 'none'}")
             print(f"  Nodes:      {status['nodes_online']} online / {status['nodes_total']} total")
             print(f"  Draining:   {status['nodes_draining']}")
-            print(f"  Scans:      {status['scans_pending']} pending / {status['scans_running']} running / {status['scans_completed']} completed")
+            print(
+                f"  Scans:      {status['scans_pending']} pending /"
+                f" {status['scans_running']} running /"
+                f" {status['scans_completed']} completed")
             print()
             if status["nodes"]:
                 print(f"  {'Node ID':<30} {'Address':<20} {'Port':<6} {'Status':<10} {'Load':<5} {'Last HB'}")
-                print(f"  {'─'*30} {'─'*20} {'─'*6} {'─'*10} {'─'*5} {'─'*20}")
+                print(f"  {'─' * 30} {'─' * 20} {'─' * 6} {'─' * 10} {'─' * 5} {'─' * 20}")
                 for n in status["nodes"]:
-                    print(f"  {n['node_id']:<30} {n['address']:<20} {n['port']:<6} {n['status']:<10} {n['load']:<5} {n['last_heartbeat']}")
+                    print(
+                        f"  {
+                            n['node_id']:<30} {
+                            n['address']:<20} {
+                            n['port']:<6} {
+                            n['status']:<10} {
+                            n['load']:<5} {
+                            n['last_heartbeat']}")
             print()
         return 0
 
@@ -1025,7 +1054,7 @@ def _compute_exit_code_sandbox(result: SandboxResult, args) -> int:
 
     # --fail-on: check severity levels
     if args.fail_on:
-        threshold = _SEVERITY_LEVELS.get(args.fail_on, 99)
+        _SEVERITY_LEVELS.get(args.fail_on, 99)
         # Sandbox events don't have severity, but DENY/KILL are bad
         if result.overall_verdict.value in ("DENY", "KILL"):
             return 1

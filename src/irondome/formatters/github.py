@@ -11,7 +11,6 @@ but is not byte-identical across runs (timestamps in GHA are runtime).
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Union
@@ -67,8 +66,8 @@ def _l3_github(result: SandboxResult, sarif_path: str) -> str:
     verdict = result.overall_verdict.value
     icon = "✅" if verdict == "ALLOW" else "🚫"
     lines.append(f"**Verdict: {icon} {verdict}**\n")
-    lines.append(f"| Field | Value |")
-    lines.append(f"|-------|-------|")
+    lines.append("| Field | Value |")
+    lines.append("|-------|-------|")
     lines.append(f"| Command | `{' '.join(result.command)}` |")
     lines.append(f"| Policy | {result.policy_name or 'default'} |")
     lines.append(f"| Exit Code | {result.exit_code} |")

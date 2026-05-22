@@ -1,7 +1,6 @@
 """Tests for webhook notifications."""
 
 import json
-import pytest
 from irondome.webhooks import (
     WebhookConfig, WebhookEvent, WebhookPayload,
     WebhookDispatcher, _sign_payload,

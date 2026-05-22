@@ -8,7 +8,6 @@ Deterministic: same input = same output. Sorted keys, no timestamps.
 
 from __future__ import annotations
 
-import json
 from typing import Union
 
 from irondome import __version__

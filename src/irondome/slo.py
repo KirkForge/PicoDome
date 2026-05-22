@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, List
 
 logger = logging.getLogger("irondome.slo")
 
@@ -60,8 +60,8 @@ class SLOMeasurement:
             "timestamp": self.timestamp,
         }
 
-
 # ─── Enterprise SLO definitions ─────────────────────────────────────────────
+
 
 SLO_AVAILABILITY = SLODefinition(
     name="availability",
@@ -129,8 +129,8 @@ ALL_SLOS = [
     SLO_DETERMINISM,
 ]
 
-
 MAX_LATENCY_SAMPLES = 10000  # Cap memory usage for SLO latency tracking
+
 
 class SLOTracker:
     """Track and measure SLO compliance.

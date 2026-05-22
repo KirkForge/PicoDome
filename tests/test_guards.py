@@ -3,7 +3,6 @@
 import hashlib
 import json
 
-import pytest
 
 from irondome.models import Finding, Severity, Verdict
 

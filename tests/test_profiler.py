@@ -1,16 +1,7 @@
 """Tests for L4 profiler — extracting behavioral profiles from sandbox results and traces."""
 
-import pytest
 
-from irondome.l3.models import Policy, SandboxEvent, SandboxResult, Verdict
-from irondome.l4.models import (
-    BehavioralProfile,
-    DnsQuery,
-    FileOperation,
-    NetworkCall,
-    ProcessSpawn,
-    TimingPoint,
-)
+from irondome.l3.models import SandboxResult, Verdict
 from irondome.l4.profiler import (
     profile_from_sandbox_result,
     profile_from_trace,

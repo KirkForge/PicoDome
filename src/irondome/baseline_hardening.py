@@ -26,7 +26,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from irondome.l4.models import Baseline
 from irondome.audit import AuditEventType, get_audit_logger

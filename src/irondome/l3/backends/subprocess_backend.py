@@ -9,13 +9,8 @@ from __future__ import annotations
 
 import logging
 import os
-import platform
 import re
-import signal
 import subprocess
-import tempfile
-import time
-from pathlib import Path
 from typing import List, Optional
 
 from irondome.l3.backends.base import SandboxBackend
@@ -28,7 +23,7 @@ from irondome.l3.models import (
     SyscallAction,
     Verdict,
 )
-from irondome.models import _now_iso, _now_ms
+from irondome.models import _now_ms
 
 logger = logging.getLogger("irondome.l3.subprocess")
 
@@ -254,11 +249,13 @@ class SubprocessBackend(SandboxBackend):
 
         patterns = [
             (r'(?i)(eval\s*\(|exec\s*\(|compile\s*\()', "L3-SUS-001", "dynamic_code_exec", Verdict.DENY),
-            (r'(?i)(subprocess\.(?:call|run|Popen|check_output|check_call)|os\.system|os\.popen|commands\.getoutput)', "L3-SUS-002", "shell_execution", Verdict.DENY),
+            (r'(?i)(subprocess\.(?:call|run|Popen|check_output|check_call)|os\.system|os\.popen|commands\.getoutput)',
+                "L3-SUS-002", "shell_execution", Verdict.DENY),
             (r'(?i)(/etc/passwd|/etc/shadow|/etc/sudoers)', "L3-SUS-003", "sensitive_file_access", Verdict.DENY),
             (r'(?i)(curl|wget|nc\s|netcat|telnet)', "L3-SUS-004", "network_tool_usage", Verdict.DENY),
             (r'(?i)(chmod\s\+x|chmod\s777)', "L3-SUS-005", "permission_escalation", Verdict.DENY),
-            (r'(?i)(base64\.(?:b64decode|b64encode|decode|encode)\s*\(|base64\s+-d\b)', "L3-SUS-006", "base64_decoding", Verdict.DENY),
+            (r'(?i)(base64\.(?:b64decode|b64encode|decode|encode)\s*\(|base64\s+-d\b)', "L3-SUS-006",
+                "base64_decoding", Verdict.DENY),
             (r'(?i)(rm\s+-rf\s+/|dd\s+if=/dev)', "L3-SUS-007", "destructive_command", Verdict.KILL),
             (r'(?i)(/proc/self|ptrace|process_vm_readv)', "L3-SUS-008", "process_introspection", Verdict.DENY),
             (r'(?i)(\.ssh/|id_rsa|id_ed25519|authorized_keys)', "L3-SUS-009", "ssh_key_access", Verdict.DENY),

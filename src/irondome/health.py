@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, List
 
 from irondome import __version__
 from irondome.l3.engine import get_backend
@@ -97,7 +97,7 @@ def check_health() -> List[HealthStatus]:
             healthy=True,
             component="storage",
             detail=f"scan_files={storage.get('scan_results', {}).get('file_count', 0)} "
-                   f"bytes={storage.get('total_bytes', 0)}",
+            f"bytes={storage.get('total_bytes', 0)}",
             timestamp=now,
         ))
     except Exception as e:

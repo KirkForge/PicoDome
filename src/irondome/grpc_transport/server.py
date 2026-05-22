@@ -9,13 +9,11 @@ when grpcio is not installed.
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 from concurrent import futures
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Optional
 
-from irondome import __version__
 from irondome.grpc_transport import is_grpc_available
 
 logger = logging.getLogger("irondome.grpc_transport.server")

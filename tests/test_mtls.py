@@ -45,6 +45,6 @@ class TestCreateSSLContext:
         import shutil
         if not shutil.which("openssl"):
             pytest.skip("openssl not available")
-        ctx = create_ssl_context(MTLSConfig(dev_mode=True))
+        ctx = create_ssl_context(MTLSConfig(dev_mode=True))  # noqa: F841
         # Dev SSL context should be created (or raise if openssl fails)
         # We just verify it doesn't crash

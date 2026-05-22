@@ -13,8 +13,6 @@ from irondome.models import (
     BehavioralVerdict,
     Finding,
     ScanStats,
-    Severity,
-    _now_iso,
 )
 
 

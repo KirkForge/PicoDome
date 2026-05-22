@@ -21,11 +21,10 @@ import os
 import sqlite3
 import threading
 import time
-import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional
 
 from irondome.audit import AuditEventType, get_audit_logger
 
@@ -38,8 +37,8 @@ DEFAULT_HEARTBEAT_TIMEOUT = 30  # seconds
 DEFAULT_MAX_MISSED_HEARTBEATS = 3
 DEFAULT_CLUSTER_PORT = 8444  # cluster communication port (distinct from daemon 8443)
 
-
 # ─── Node status ─────────────────────────────────────────────────────────────
+
 
 class NodeStatus(str, Enum):
     """Cluster node status."""
@@ -47,8 +46,8 @@ class NodeStatus(str, Enum):
     OFFLINE = "offline"
     DRAINING = "draining"
 
-
 # ─── Cluster node ───────────────────────────────────────────────────────────
+
 
 @dataclass
 class ClusterNode:
@@ -101,8 +100,8 @@ class ClusterNode:
         pid = os.getpid()
         return f"irondome-{hostname}-{pid}"
 
-
 # ─── Scan request ───────────────────────────────────────────────────────────
+
 
 @dataclass
 class ScanRequest:
@@ -135,8 +134,8 @@ class ScanRequest:
             status=data.get("status", "pending"),
         )
 
-
 # ─── State backends ─────────────────────────────────────────────────────────
+
 
 class StateBackend:
     """Abstract base class for cluster state backends."""
@@ -400,8 +399,8 @@ class SQLiteStateBackend(StateBackend):
         finally:
             conn.close()
 
-
 # ─── Cluster state ──────────────────────────────────────────────────────────
+
 
 class ClusterState:
     """Manages shared cluster state through a state backend.
@@ -621,11 +620,11 @@ class ClusterState:
                 self._backend.set_leader_id(remote_leader)
 
         logger.info("Merged state snapshot from peer (%d nodes, %d scans)",
-                     len(snapshot.get("nodes", [])),
-                     len(snapshot.get("scans", [])))
-
+                    len(snapshot.get("nodes", [])),
+                    len(snapshot.get("scans", [])))
 
 # ─── Cluster manager ────────────────────────────────────────────────────────
+
 
 class ClusterManager:
     """Orchestrates cluster lifecycle: join, leave, heartbeat, failover.
@@ -866,10 +865,10 @@ class ClusterManager:
             new_node = self._state.assign_scan(scan.scan_id)
             if new_node:
                 logger.info("Scan %s redistributed from %s to %s",
-                           scan.scan_id, node_id, new_node.node_id)
+                            scan.scan_id, node_id, new_node.node_id)
             else:
                 logger.warning("No available node for scan %s (was on failed node %s)",
-                              scan.scan_id, node_id)
+                               scan.scan_id, node_id)
 
         # Audit
         try:
@@ -965,11 +964,11 @@ class ClusterManager:
             elapsed = (now_ts or 0) - heartbeat_ts
             if elapsed > timeout_seconds:
                 logger.warning("Node %s missed %d heartbeats (elapsed: %ds), marking offline",
-                             node.node_id, self._max_missed_heartbeats, int(elapsed))
+                               node.node_id, self._max_missed_heartbeats, int(elapsed))
                 self.handle_node_failure(node.node_id)
 
-
 # ─── Utility functions ──────────────────────────────────────────────────────
+
 
 def _parse_iso_timestamp(ts: str) -> Optional[float]:
     """Parse an ISO 8601 timestamp to seconds since epoch.
@@ -979,7 +978,7 @@ def _parse_iso_timestamp(ts: str) -> Optional[float]:
     try:
         # Handle both Z and +00:00 suffixes
         ts = ts.replace("Z", "+00:00")
-        from datetime import datetime, timezone
+        from datetime import datetime
         dt = datetime.fromisoformat(ts)
         return dt.timestamp()
     except (ValueError, TypeError):
@@ -991,8 +990,8 @@ def _parse_iso_timestamp(ts: str) -> Optional[float]:
         except (ValueError, TypeError):
             return None
 
-
 # ─── Module-level singleton ─────────────────────────────────────────────────
+
 
 _cluster_manager: Optional[ClusterManager] = None
 

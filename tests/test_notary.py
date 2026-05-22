@@ -3,12 +3,8 @@
 All HTTP calls are mocked — tests must work without a live Rekor instance.
 """
 
-import hashlib
-import hmac
 import json
-import time
-from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -25,7 +21,7 @@ from irondome.notary import (
     sign_entry,
     verify_entry_signature,
 )
-from irondome.audit import AuditLogger, AuditEventType, setup_audit_logger
+from irondome.audit import AuditLogger, AuditEventType
 
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────

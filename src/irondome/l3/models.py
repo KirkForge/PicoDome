@@ -7,13 +7,11 @@ fill in non-deterministic values when needed.
 
 from __future__ import annotations
 
-import uuid
-import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-from irondome.models import Verdict, _now_iso, _generate_run_id, _generate_timestamp
+from irondome.models import Verdict
 
 
 class SyscallAction(str, Enum):

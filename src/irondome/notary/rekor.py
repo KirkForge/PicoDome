@@ -23,13 +23,12 @@ import secrets as _secrets
 import time
 import uuid
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 try:
     import urllib.request
     import urllib.error
-    from urllib.parse import urljoin
     _HAS_URLLIB = True
 except ImportError:  # pragma: no cover
     _HAS_URLLIB = False
@@ -50,8 +49,8 @@ _process_hmac_key: str = _os.environ.get(
 )
 DEFAULT_HMAC_KEY = _process_hmac_key
 
-
 # ─── Exceptions ─────────────────────────────────────────────────────────────
+
 
 class NotaryError(Exception):
     """Base exception for notary operations."""
@@ -68,8 +67,8 @@ class NotaryConnectionError(NotaryError):
 class NotaryVerificationError(NotaryError):
     """Raised when entry verification fails."""
 
-
 # ─── HMAC-SHA256 Signing ────────────────────────────────────────────────────
+
 
 def sign_entry(entry: Dict[str, Any], key: str = DEFAULT_HMAC_KEY) -> str:
     """Sign an audit entry dict with HMAC-SHA256.
@@ -110,8 +109,8 @@ def verify_entry_signature(
     expected = sign_entry(entry, key=key)
     return hmac.compare_digest(expected, signature)
 
-
 # ─── Data Models ─────────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class NotaryResult:
@@ -122,8 +121,8 @@ class NotaryResult:
     submitted_at: str = ""
     rekor_uuid: str = ""
 
-
 # ─── AuditNotary ABC ────────────────────────────────────────────────────────
+
 
 class AuditNotary(ABC):
     """Abstract base class for audit notary backends.
@@ -171,8 +170,8 @@ class AuditNotary(ABC):
             this includes the inclusion proof from the Merkle tree.
         """
 
-
 # ─── NullNotary (offline/air-gapped) ────────────────────────────────────────
+
 
 class NullNotary(AuditNotary):
     """No-op notary for offline/air-gapped environments.
@@ -239,8 +238,8 @@ class NullNotary(AuditNotary):
             "note": "No external transparency proof — NullNotary mode",
         }
 
-
 # ─── RekorNotary (Sigstore transparency log) ───────────────────────────────
+
 
 class RekorNotary(AuditNotary):
     """Rekor transparency log notary.
@@ -508,8 +507,8 @@ class RekorNotary(AuditNotary):
         except Exception as exc:
             raise NotaryConnectionError(f"Rekor proof retrieval error: {exc}")
 
-
 # ─── Module-level default notary ─────────────────────────────────────────────
+
 
 _default_notary: Optional[AuditNotary] = None
 

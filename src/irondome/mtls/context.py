@@ -24,7 +24,6 @@ import shutil
 import ssl
 import tempfile
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 logger = logging.getLogger("irondome.mtls")

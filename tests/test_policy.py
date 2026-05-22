@@ -4,10 +4,9 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
 
 from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction
-from irondome.l3.policy import default_policy, load_policy, _policy_from_dict
+from irondome.l3.policy import default_policy, load_policy
 
 
 class TestPolicyPresets:

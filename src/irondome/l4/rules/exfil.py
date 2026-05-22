@@ -76,7 +76,11 @@ def detect_exfiltration(
         findings.append(Finding(
             rule_id="L4-EXFIL-005",
             severity=Severity.CRITICAL,
-            message=f"Sensitive files read ({len(sensitive_reads)} files) followed by {len(profile.network_calls)} network calls — possible credential exfiltration",
+            message=(
+                f"Sensitive files read ({len(sensitive_reads)} files)"
+                f" followed by {len(profile.network_calls)}"
+                " network calls — possible credential exfiltration"
+            ),
             location=", ".join(sensitive_reads[:3]),
             evidence={
                 "sensitive_files": sensitive_reads[:5],

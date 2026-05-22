@@ -15,7 +15,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional
 
 from irondome.config import IronDomeConfig, load_config
 from irondome.l3.engine import sandbox_run

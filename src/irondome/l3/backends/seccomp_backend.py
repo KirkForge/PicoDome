@@ -7,7 +7,6 @@ Provides deterministic allow/deny/kill enforcement via BPF.
 from __future__ import annotations
 
 import ctypes
-import errno
 import shutil
 import logging
 import os
@@ -18,14 +17,13 @@ from typing import Dict, List, Optional, Set
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.models import (
     Policy,
-    PolicyRule,
     RuleTarget,
     SandboxEvent,
     SandboxResult,
     SyscallAction,
     Verdict,
 )
-from irondome.models import _now_iso, _now_ms
+from irondome.models import _now_ms
 
 logger = logging.getLogger("irondome.l3.seccomp")
 
@@ -255,7 +253,7 @@ class SeccompBackend(SandboxBackend):
                 timestamp_ms=int(_now_ms() - start_ms),
             ))
             stdout, stderr, exit_code = "", "", -1
-        except Exception as e:
+        except Exception:
             logger.exception("Seccomp sandbox failed")
             return self._fallback_run(command, policy, timeout, cwd, env)
 

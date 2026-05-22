@@ -7,9 +7,7 @@ from pathlib import Path
 import pytest
 
 from irondome.models import (
-    BehavioralVerdict,
     Finding,
-    ScanStats,
     Severity,
     Verdict,
 )
@@ -22,11 +20,9 @@ from irondome.l3.models import (
     SyscallAction,
 )
 from irondome.l4.models import (
-    AnalysisResult,
     Baseline,
     BehavioralProfile,
     DnsQuery,
-    DriftResult,
     FileOperation,
     NetworkCall,
     ProcessSpawn,

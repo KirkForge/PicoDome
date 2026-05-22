@@ -27,7 +27,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from irondome.audit import AuditEventType, get_audit_logger
 
@@ -340,8 +340,8 @@ class RetentionManager:
 
         return {"file_count": file_count, "total_bytes": total_bytes}
 
-
 # ─── Module-level singleton ────────────────────────────────────────────────
+
 
 _retention_manager: Optional[RetentionManager] = None
 

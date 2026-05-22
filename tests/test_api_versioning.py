@@ -1,9 +1,8 @@
 """Tests for API versioning."""
 
-import pytest
 from irondome.api_versioning import (
     APIVersion, APIVersionNegotiator, DeprecationNotice,
-    CURRENT_API_VERSION, SUPPORTED_VERSIONS,
+    CURRENT_API_VERSION,
 )
 
 

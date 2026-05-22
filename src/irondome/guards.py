@@ -173,7 +173,7 @@ def validate_findings_deterministic(findings: list) -> List[str]:
 
     Returns list of violations (empty = pass).
     """
-    guard = DeterministicGuard()
+    DeterministicGuard()
     violations: List[str] = []
 
     for f in findings:

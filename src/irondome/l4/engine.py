@@ -20,11 +20,10 @@ from irondome.l4.models import (
     DriftResult,
     Finding,
     ScanStats,
-    Severity,
 )
+from irondome.models import Severity
 from irondome.l4.baseline import load_all_baselines
 from irondome.l4.differ import find_best_baseline
-from irondome.l4.profiler import profile_from_sandbox_result
 from irondome.models import _generate_finding_id
 
 logger = logging.getLogger("irondome.l4.engine")

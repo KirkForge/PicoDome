@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import List, Optional
+from typing import List
 
 from irondome.l3.models import SandboxResult
 from irondome.l4.models import (
@@ -24,7 +24,8 @@ def profile_from_sandbox_result(result: SandboxResult) -> BehavioralProfile:
     process spawns, and timing data from stdout/stderr output.
     """
     combined = result.stdout + "\n" + result.stderr
-    package = ".".join(result.command[:2]) if len(result.command) >= 2 else result.command[0] if result.command else "unknown"
+    package = ".".join(result.command[:2]) if len(
+        result.command) >= 2 else result.command[0] if result.command else "unknown"
 
     return BehavioralProfile(
         package=package,

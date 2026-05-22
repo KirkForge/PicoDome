@@ -1,10 +1,8 @@
 """Tests for L3 sandbox execution."""
 
-import json
-import pytest
 from irondome.l3.engine import sandbox_run, SandboxEngine
 from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction, Verdict
-from irondome.l3.policy import default_policy, load_policy
+from irondome.l3.policy import default_policy
 from irondome.l3.backends.subprocess_backend import SubprocessBackend
 
 
@@ -145,7 +143,7 @@ class TestSandboxEngine:
             ),
         ]
         policy = Policy(name="test-restrictive", rules=policy_rules)
-        result = sandbox_run(
+        result = sandbox_run(  # noqa: F841
             ["python3", "-c", "print('1.2.3.4')"],
             policy=policy,
             timeout=5.0,

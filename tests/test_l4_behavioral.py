@@ -1,7 +1,6 @@
 """Tests for L4 behavioral analysis."""
 
-import pytest
-from irondome.l4.engine import L4Engine, create_default_engine, analyze
+from irondome.l4.engine import create_default_engine
 from irondome.l4.models import (
     BehavioralProfile,
     BehavioralVerdict,
@@ -9,7 +8,6 @@ from irondome.l4.models import (
     NetworkCall,
     DnsQuery,
     FileOperation,
-    ProcessSpawn,
 )
 from irondome.l4.profiler import profile_from_sandbox_result
 from irondome.l4.baseline import load_all_baselines, load_baseline

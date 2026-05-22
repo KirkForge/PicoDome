@@ -20,13 +20,7 @@ Tests cover:
 
 from __future__ import annotations
 
-import json
-import os
-import tempfile
 import threading
-import time
-from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -38,12 +32,8 @@ from irondome.cluster.manager import (
     NodeStatus,
     ScanRequest,
     SQLiteStateBackend,
-    StateBackend,
     _parse_iso_timestamp,
     DEFAULT_CLUSTER_PORT,
-    DEFAULT_HEARTBEAT_INTERVAL,
-    DEFAULT_HEARTBEAT_TIMEOUT,
-    DEFAULT_MAX_MISSED_HEARTBEATS,
     get_cluster_manager,
     setup_cluster_manager,
 )
@@ -704,7 +694,7 @@ class TestClusterManager:
         )
         # Don't start the manager — no nodes registered
         scan = ScanRequest(scan_id="s1", command=["echo", "test"])
-        result = mgr.assign_scan(scan)
+        mgr.assign_scan(scan)
         # No online nodes, so assignment should fail
         # But the scan was added to state
         assert mgr.state.backend.load_scan("s1") is not None

@@ -19,7 +19,6 @@ import hashlib
 import hmac
 import json
 import logging
-import os
 import threading
 import time
 import urllib.request
@@ -27,7 +26,6 @@ import urllib.error
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pathlib import Path
 
 logger = logging.getLogger("irondome.webhooks")
 

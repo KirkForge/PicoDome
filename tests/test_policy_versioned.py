@@ -1,7 +1,5 @@
 """Tests for the versioned policy store."""
 
-import json
-from pathlib import Path
 
 import pytest
 
@@ -77,7 +75,7 @@ class TestVersionedPolicyStore:
         assert store.load("nonexistent") is None
 
     def test_rollback(self, store, sample_policy):
-        pv1 = store.save(sample_policy, author="admin", change_description="v1")
+        pv1 = store.save(sample_policy, author="admin", change_description="v1")  # noqa: F841
         # Modify policy
         modified = Policy(
             name="test-policy",

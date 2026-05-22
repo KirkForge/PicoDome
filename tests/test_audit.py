@@ -1,12 +1,10 @@
 """Tests for the audit logging module."""
 
 import json
-import tempfile
-from pathlib import Path
 
 import pytest
 
-from irondome.audit import AuditEventType, AuditEvent, AuditLogger, setup_audit_logger
+from irondome.audit import AuditEventType, AuditEvent, AuditLogger
 
 
 @pytest.fixture
@@ -71,13 +69,13 @@ class TestAuditLogger:
         audit.record(event_type=AuditEventType.SCAN_ALERT, actor="u1", detail="alert1")
 
         log_path = audit.log_path
-        lines = [l.strip() for l in log_path.read_text().splitlines() if l.strip()]
+        lines = [line.strip() for line in log_path.read_text().splitlines() if line.strip()]
         assert len(lines) == 3
 
     def test_chain_integrity(self, audit):
-        e1 = audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="cmd1")
-        e2 = audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", detail="ok")
-        e3 = audit.record(event_type=AuditEventType.POLICY_UPDATE, actor="admin", detail="change")
+        _e1 = audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="cmd1")  # noqa: F841
+        _e2 = audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", detail="ok")  # noqa: F841
+        e3 = audit.record(event_type=AuditEventType.POLICY_UPDATE, actor="admin", detail="change")  # noqa: F841
 
         violations = audit.verify_chain()
         assert violations == []
@@ -136,12 +134,12 @@ class TestAuditLogger:
 
     def test_prev_hash_chain(self, audit):
         import hashlib
-        e1 = audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="first")
-        e2 = audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", detail="second")
+        e1 = audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="first")  # noqa: F841
+        e2 = audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", detail="second")  # noqa: F841
 
         # e2's prev_hash should be the SHA-256 of e1's JSON line
         log_path = audit.log_path
-        lines = [l.strip() for l in log_path.read_text().splitlines() if l.strip()]
+        lines = [line.strip() for line in log_path.read_text().splitlines() if line.strip()]
         line1_hash = hashlib.sha256(lines[0].encode("utf-8")).hexdigest()
 
         data2 = json.loads(lines[1])

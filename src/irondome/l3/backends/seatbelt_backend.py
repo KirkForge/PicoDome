@@ -11,8 +11,7 @@ import os
 import platform
 import subprocess
 import tempfile
-import time
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.models import (
@@ -24,7 +23,7 @@ from irondome.l3.models import (
     SyscallAction,
     Verdict,
 )
-from irondome.models import _now_iso, _now_ms
+from irondome.models import _now_ms
 
 logger = logging.getLogger("irondome.l3.seatbelt")
 
@@ -205,9 +204,9 @@ class SeatbeltBackend(SandboxBackend):
                 parts.append('file-read*')
                 if rule.target == RuleTarget.FILE_WRITE:
                     parts.append('file-write*')
-                return f'({ " ".join(parts) })' if len(parts) > 1 else None
+                return f'({" ".join(parts)})' if len(parts) > 1 else None
 
-            op = "file-read*" if rule.target == RuleTarget.FILE_READ else "file-write*"
+            _op = "file-read*" if rule.target == RuleTarget.FILE_READ else "file-write*"  # noqa: F841
             # Always include file-read-data, file-read-metadata
             if rule.target == RuleTarget.FILE_READ:
                 parts.append("file-read-data")

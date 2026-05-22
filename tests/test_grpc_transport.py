@@ -6,12 +6,8 @@ The module must degrade gracefully when grpcio is missing.
 
 from __future__ import annotations
 
-import json
-import os
-import sys
 import time
-from unittest.mock import MagicMock, patch, PropertyMock
-from dataclasses import dataclass
+from unittest.mock import MagicMock, patch
 
 import pytest
 

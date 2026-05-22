@@ -7,7 +7,7 @@ fields and random IDs are omitted from the output.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Union
+from typing import Union
 
 from irondome import __version__
 from irondome.l3.models import SandboxResult

@@ -1,6 +1,5 @@
 """Tests for L4 differ — comparing profiles against baselines."""
 
-import pytest
 
 from irondome.l4.baseline import load_all_baselines, load_baseline
 from irondome.l4.differ import compare_profile_to_baseline, find_best_baseline
@@ -12,7 +11,6 @@ from irondome.l4.models import (
     FileOperation,
     NetworkCall,
     ProcessSpawn,
-    TimingPoint,
 )
 
 

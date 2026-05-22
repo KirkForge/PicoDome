@@ -18,10 +18,8 @@ This module provides:
 from __future__ import annotations
 
 import logging
-import time
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger("irondome.api_versioning")
 
@@ -148,7 +146,10 @@ class APIVersionNegotiator:
                 version=version,
                 sunset_date=DEPRECATED_VERSIONS[version],
                 replacement=CURRENT_API_VERSION,
-                message=f"API {version} is deprecated and will be removed on {DEPRECATED_VERSIONS[version]}. Migrate to {CURRENT_API_VERSION}.",
+                message=(
+                    f"API {version} is deprecated and will be removed on "
+                    f"{DEPRECATED_VERSIONS[version]}. Migrate to {CURRENT_API_VERSION}."
+                ),
             )
             return version, deprecation
 

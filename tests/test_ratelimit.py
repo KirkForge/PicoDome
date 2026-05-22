@@ -2,9 +2,8 @@
 
 import time
 import threading
-import pytest
 
-from irondome.ratelimit import TokenBucketLimiter, RateLimitConfig, JobQueue, JobPriority, QueuedJob
+from irondome.ratelimit import TokenBucketLimiter, RateLimitConfig, JobQueue, JobPriority
 
 
 class TestTokenBucketLimiter:
@@ -116,7 +115,7 @@ class TestJobQueue:
     def test_complete_job(self):
         q = JobQueue(max_size=10)
         job = q.enqueue(command=["echo", "test"], actor="u1")
-        dequeued = q.dequeue(timeout=1.0)
+        dequeued = q.dequeue(timeout=1.0)  # noqa: F841
         q.complete(job.job_id, result={"verdict": "ALLOW"})
         result = q.get_result(job.job_id)
         assert result == {"verdict": "ALLOW"}
@@ -139,7 +138,7 @@ class TestJobQueue:
 
     def test_purge_expired(self):
         q = JobQueue(max_size=10)
-        job = q.enqueue(command=["echo", "old"], actor="u1")
+        job = q.enqueue(command=["echo", "old"], actor="u1")  # noqa: F841
         # Manually set created_at to the past
         with q._lock:
             for j in q._heap:

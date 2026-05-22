@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 
 from irondome.l4.baseline import (
-    SHIPPED_BASELINES,
     load_all_baselines,
     load_baseline,
     load_baselines_from_path,

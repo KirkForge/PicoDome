@@ -25,11 +25,10 @@ import json
 import os
 import re
 import zipfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-
+from typing import Dict, List, Optional
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -46,13 +45,11 @@ _REQUIREMENTS_LINE_PATTERN = re.compile(
 )
 _WHEEL_HASH_CHUNK_SIZE = 65536  # 64KB chunks for hashing
 
-
 # ─── Exceptions ────────────────────────────────────────────────────────────────
 
 
 class ReproducibleBuildError(Exception):
     """Raised when a reproducible build check fails."""
-
 
 # ─── ReproducibleBuild class ──────────────────────────────────────────────────
 
@@ -109,7 +106,6 @@ class ReproducibleBuild:
         if self.offline:
             args.append("--offline")
         return args
-
 
 # ─── Core functions ────────────────────────────────────────────────────────────
 
@@ -468,7 +464,6 @@ def generate_build_manifest(output_dir: str) -> str:
         encoding="utf-8",
     )
     return str(manifest_path)
-
 
 # ─── Helper functions ──────────────────────────────────────────────────────────
 

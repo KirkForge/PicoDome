@@ -1,7 +1,6 @@
 """Tests for SLO definitions and tracking."""
 
-import pytest
-from irondome.slo import SLOTracker, SLODefinition, ALL_SLOS
+from irondome.slo import SLOTracker, ALL_SLOS
 
 
 class TestSLODefinitions:

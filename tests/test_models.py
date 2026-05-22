@@ -1,7 +1,6 @@
 """Tests for shared data models (models.py, l3/models.py, l4/models.py)."""
 
 import json
-import uuid
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -23,8 +22,6 @@ from irondome.l3.models import (
 )
 from irondome.l4.models import (
     AnalysisResult,
-    Baseline,
-    BehavioralProfile,
     DnsQuery,
     DriftResult,
     FileOperation,
