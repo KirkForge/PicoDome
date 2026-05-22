@@ -57,6 +57,17 @@ def main(argv: list[str] | None = None) -> int:
     sandbox_parser.add_argument("command", nargs=argparse.REMAINDER, help="Command to execute")
     sandbox_parser.add_argument("--policy", "-p", type=Path, help="Policy file (default: built-in)")
     sandbox_parser.add_argument("--timeout", "-t", type=float, default=30.0, help="Timeout in seconds")
+    sandbox_parser.add_argument(
+        "--backend", "-b",
+        choices=["auto", "seccomp-bpf", "seatbelt", "subprocess"],
+        default="auto",
+        help="Sandbox backend: auto (default), seccomp-bpf, seatbelt, subprocess",
+    )
+    sandbox_parser.add_argument(
+        "--allow-degraded",
+        action="store_true",
+        help="Allow fallback to subprocess if requested backend is unavailable",
+    )
     sandbox_parser.add_argument("--cwd", "-C", help="Working directory")
     sandbox_parser.add_argument(
         "--format", "-f",
@@ -86,6 +97,17 @@ def main(argv: list[str] | None = None) -> int:
     pipeline_parser.add_argument("command", nargs=argparse.REMAINDER, help="Command to execute")
     pipeline_parser.add_argument("--policy", "-p", type=Path, help="Policy file")
     pipeline_parser.add_argument("--timeout", "-t", type=float, default=30.0, help="Timeout in seconds")
+    pipeline_parser.add_argument(
+        "--backend", "-b",
+        choices=["auto", "seccomp-bpf", "seatbelt", "subprocess"],
+        default="auto",
+        help="Sandbox backend: auto (default), seccomp-bpf, seatbelt, subprocess",
+    )
+    pipeline_parser.add_argument(
+        "--allow-degraded",
+        action="store_true",
+        help="Allow fallback to subprocess if requested backend is unavailable",
+    )
     pipeline_parser.add_argument("--cwd", "-C", help="Working directory")
     pipeline_parser.add_argument(
         "--format", "-f",
@@ -315,11 +337,29 @@ def _cmd_sandbox(args) -> int:
     policy = load_policy(args.policy) if args.policy else None
     deterministic = args.deterministic_output
 
+    # Resolve backend
+    from irondome.l3.engine import BackendUnavailableError, _detect_backend
+    backend_name = getattr(args, "backend", "auto") or "auto"
+    allow_degraded = getattr(args, "allow_degraded", False)
+
+    try:
+        if backend_name == "auto":
+            backend = None  # use get_backend() via sandbox_run
+        else:
+            backend = _detect_backend(
+                requested=backend_name,
+                allow_degraded=allow_degraded,
+            )
+    except BackendUnavailableError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
     result = sandbox_run(
         command=args.command,
         policy=policy,
         timeout=args.timeout,
         cwd=args.cwd,
+        backend=backend,
         deterministic=deterministic,
     )
 
@@ -419,12 +459,30 @@ def _cmd_pipeline(args) -> int:
     policy = load_policy(args.policy) if args.policy else None
     deterministic = args.deterministic_output
 
+    # Resolve backend
+    from irondome.l3.engine import BackendUnavailableError, _detect_backend
+    backend_name = getattr(args, "backend", "auto") or "auto"
+    allow_degraded = getattr(args, "allow_degraded", False)
+
+    try:
+        if backend_name == "auto":
+            backend = None  # use get_backend() via sandbox_run
+        else:
+            backend = _detect_backend(
+                requested=backend_name,
+                allow_degraded=allow_degraded,
+            )
+    except BackendUnavailableError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
     # L3
     sandbox = sandbox_run(
         command=args.command,
         policy=policy,
         timeout=args.timeout,
         cwd=args.cwd,
+        backend=backend,
         deterministic=deterministic,
     )
 

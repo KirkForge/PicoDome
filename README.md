@@ -5,7 +5,7 @@
 [![CI](https://github.com/KirkForge/IronDome/actions/workflows/ci.yml/badge.svg)](https://github.com/KirkForge/IronDome/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
 [![Deterministic](https://img.shields.io/badge/deterministic-verified-brightgreen)](https://github.com/KirkForge/IronDome/blob/main/SCAAT.md)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License: Personal Use / Commercial](https://img.shields.io/badge/license-personal%20use%20%2F%20commercial-orange)](LICENSE)
 [![SLSA L3](https://img.shields.io/badge/SLSA-L3-blueviolet)](SLSA.md)
 
 Iron Dome is a two-layer defense system for npm/Python supply chains. Companion to [PicoSentry](https://github.com/KirkForge/PicoSentry) — static scan → runtime sandbox.
@@ -49,13 +49,19 @@ irondome pipeline --workspace /path/to/monorepo
 
 Iron Dome auto-detects the best available backend:
 
-| Backend | Platform | Mechanism | Deterministic |
-|---------|----------|-----------|---------------|
-| **seccomp-bpf** | Linux | Kernel syscall filtering via libseccomp (ctypes), fork+exec | ✅ |
-| **seatbelt** | macOS | sandbox-exec with generated profile DSL | ✅ |
-| **subprocess** | Universal | Process isolation with post-hoc pattern analysis | ✅ |
+| Backend | Platform | Mechanism | Isolation Level | Enforcement |
+|---------|----------|-----------|-----------------|-------------|
+| **seccomp-bpf** | Linux | Kernel syscall filtering via libseccomp (ctypes), fork+exec | kernel_enforced | hard |
+| **seatbelt** | macOS | sandbox-exec with generated profile DSL | os_policy_enforced | hard |
+| **subprocess** | Universal | Process isolation with post-hoc pattern analysis | observational_only | best_effort |
 
-The subprocess backend is the universal fallback. It applies policy by analyzing stdout/stderr for 10 suspicious pattern categories. The seccomp and seatbelt backends provide real kernel-level enforcement.
+**Important**: The subprocess backend is **observational only** — it detects suspicious patterns in
+output but does not prevent syscalls. It is not a true sandbox. In enterprise mode
+(`IRONDOME_ENTERPRISE_MODE=1`), Iron Dome refuses to start if only the subprocess backend is available.
+
+Use `--backend seccomp-bpf` (or `IRONDOME_SANDBOX_BACKEND=seccomp-bpf`) to require a specific
+backend. If the requested backend is unavailable, Iron Dome **fails closed** by default. Use
+`--allow-degraded` (or `IRONDOME_ALLOW_DEGRADED=1`) to opt into subprocess fallback explicitly.
 
 ## L3 Suspicious Pattern Detectors
 
@@ -177,7 +183,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## License
 
-MIT — free for personal use, commercial licensing available via [Shogun](https://github.com/KirkForge/Shogun).
+KirkForge Personal Use License — free for personal, non-commercial use. Commercial use requires a license from KirkForge. See [LICENSE](LICENSE) and [Shogun](https://github.com/KirkForge/Shogun) for commercial licensing.
 
 ## Related
 

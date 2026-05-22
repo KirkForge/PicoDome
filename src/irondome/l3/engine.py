@@ -4,11 +4,28 @@ The `deterministic` parameter controls whether run_id, timestamp, and
 duration_ms are included in the output. When deterministic=True (the default
 for reproducible output), these fields are omitted. When deterministic=False,
 they are filled in with real values.
+
+Backend selection:
+    - ``auto``: Auto-detect best available backend (default).
+    - ``seccomp-bpf``: Linux kernel-level enforcement via libseccomp.
+    - ``seatbelt``: macOS sandbox-exec enforcement.
+    - ``subprocess``: Universal observational-only backend.
+
+When a specific backend is requested but unavailable, the engine **fails
+closed** — it raises BackendUnavailableError rather than silently degrading
+to a weaker backend. Use ``allow_degraded=True`` (or the env var
+``IRONDOME_ALLOW_DEGRADED=1``) to opt into subprocess fallback explicitly.
+
+The subprocess backend is **observational only** — it detects suspicious
+patterns in output but does not prevent syscalls. Results from the
+subprocess backend include ``isolation_level="observational_only"`` and
+``enforcement_guarantee="best_effort"`` to make this distinction clear.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import platform
 
 from irondome.l3.backends.base import SandboxBackend
@@ -20,53 +37,202 @@ from irondome.models import _generate_run_id, _generate_timestamp
 logger = logging.getLogger("irondome.l3.engine")
 
 
-def _detect_backend() -> SandboxBackend:
-    """Auto-detect the best available sandbox backend."""
+class BackendUnavailableError(RuntimeError):
+    """Raised when a requested backend is not available on this system.
+
+    This is a fail-closed error: the engine refuses to silently degrade
+    to a weaker backend. The caller must explicitly opt in via
+    ``allow_degraded=True`` or ``IRONDOME_ALLOW_DEGRADED=1``.
+    """
+
+    def __init__(
+        self,
+        backend_name: str,
+        reason: str,
+        available_backends: list[str] | None = None,
+    ) -> None:
+        self.backend_name = backend_name
+        self.reason = reason
+        self.available_backends = available_backends or []
+        super().__init__(
+            f"Backend '{backend_name}' unavailable: {reason}. "
+            f"Available: {self.available_backends or 'none'}. "
+            f"Set IRONDOME_ALLOW_DEGRADED=1 or pass allow_degraded=True "
+            f"to opt into subprocess fallback."
+        )
+
+
+def _detect_backend(
+    requested: str | None = None,
+    allow_degraded: bool | None = None,
+) -> SandboxBackend:
+    """Select and initialise a sandbox backend.
+
+    Args:
+        requested: Explicit backend name (``"seccomp-bpf"``,
+            ``"seatbelt"``, ``"subprocess"``, or ``None`` for auto).
+        allow_degraded: If True, silently fall back to subprocess when
+            the requested backend is unavailable. If None, reads
+            ``IRONDOME_ALLOW_DEGRADED`` env var (default: False).
+
+    Returns:
+        An initialised SandboxBackend.
+
+    Raises:
+        BackendUnavailableError: If the requested backend is unavailable
+            and degraded mode is not allowed.
+    """
+    if allow_degraded is None:
+        allow_degraded = os.environ.get(
+            "IRONDOME_ALLOW_DEGRADED", ""
+        ).lower() in ("1", "true", "yes")
+
     system = platform.system()
+    available: list[str] = ["subprocess"]
+
+    # Detect what's available
+    seccomp_available = False
+    seatbelt_available = False
 
     if system == "Linux":
         try:
             from irondome.l3.backends.seccomp_backend import SeccompBackend
-            backend = SeccompBackend()
-            if backend.is_available():
-                logger.info("Using seccomp-bpf backend (Linux)")
-                return backend
+            sb = SeccompBackend()
+            if sb.is_available():
+                seccomp_available = True
+                available.insert(0, "seccomp-bpf")
         except ImportError:
             pass
         except Exception:
-            logger.debug("Seccomp backend unavailable", exc_info=True)
+            logger.debug("Seccomp backend check failed", exc_info=True)
 
     elif system == "Darwin":
         try:
             from irondome.l3.backends.seatbelt_backend import SeatbeltBackend
-            backend = SeatbeltBackend()
-            if backend.is_available():
-                logger.info("Using seatbelt backend (macOS)")
-                return backend
+            sb = SeatbeltBackend()
+            if sb.is_available():
+                seatbelt_available = True
+                available.insert(0, "seatbelt")
         except ImportError:
             pass
         except Exception:
-            logger.debug("Seatbelt backend unavailable", exc_info=True)
+            logger.debug("Seatbelt backend check failed", exc_info=True)
 
-    logger.info("Using subprocess backend (fallback)")
-    return SubprocessBackend()
+    # ── Explicit backend requested ───────────────────────────────────
+    if requested is not None:
+        requested = requested.lower().strip()
+
+        if requested == "seccomp-bpf":
+            if seccomp_available:
+                from irondome.l3.backends.seccomp_backend import SeccompBackend
+                logger.info("Using seccomp-bpf backend (explicitly requested)")
+                return SeccompBackend()
+            if allow_degraded:
+                logger.warning(
+                    "seccomp-bpf requested but unavailable — "
+                    "degrading to subprocess (allow_degraded=True)"
+                )
+                return SubprocessBackend()
+            raise BackendUnavailableError(
+                "seccomp-bpf",
+                "libseccomp not available on this system",
+                available_backends=available,
+            )
+
+        if requested == "seatbelt":
+            if seatbelt_available:
+                from irondome.l3.backends.seatbelt_backend import SeatbeltBackend
+                logger.info("Using seatbelt backend (explicitly requested)")
+                return SeatbeltBackend()
+            if allow_degraded:
+                logger.warning(
+                    "seatbelt requested but unavailable — "
+                    "degrading to subprocess (allow_degraded=True)"
+                )
+                return SubprocessBackend()
+            raise BackendUnavailableError(
+                "seatbelt",
+                "sandbox-exec not available on this system",
+                available_backends=available,
+            )
+
+        if requested == "subprocess":
+            logger.info("Using subprocess backend (explicitly requested)")
+            return SubprocessBackend()
+
+        raise BackendUnavailableError(
+            requested,
+            f"Unknown backend name '{requested}'",
+            available_backends=available,
+        )
+
+    # ── Auto-detect ──────────────────────────────────────────────────
+    if seccomp_available:
+        from irondome.l3.backends.seccomp_backend import SeccompBackend
+        logger.info("Using seccomp-bpf backend (auto-detected)")
+        return SeccompBackend()
+
+    if seatbelt_available:
+        from irondome.l3.backends.seatbelt_backend import SeatbeltBackend
+        logger.info("Using seatbelt backend (auto-detected)")
+        return SeatbeltBackend()
+
+    # No kernel backend available
+    if allow_degraded:
+        logger.warning(
+            "No kernel-level sandbox available — subprocess "
+            "backend provides OBSERVATIONAL ONLY analysis, "
+            "not real enforcement. allow_degraded=True."
+        )
+        return SubprocessBackend()
+
+    raise BackendUnavailableError(
+        "auto",
+        "No enforcement backend available on this platform. "
+        f"System: {system}. libseccomp: {seccomp_available}, "
+        f"sandbox-exec: {seatbelt_available}.",
+        available_backends=available,
+    )
 
 
 _default_backend: SandboxBackend | None = None
 
 
 def get_backend() -> SandboxBackend:
-    """Get the default sandbox backend (lazy init)."""
+    """Get the default sandbox backend (lazy init).
+
+    Uses ``IRONDOME_SANDBOX_BACKEND`` env var for explicit backend
+    selection and ``IRONDOME_ALLOW_DEGRADED`` for fallback opt-in.
+    """
     global _default_backend
     if _default_backend is None:
-        _default_backend = _detect_backend()
+        backend_name = os.environ.get("IRONDOME_SANDBOX_BACKEND", None)
+        _default_backend = _detect_backend(
+            requested=backend_name,
+            allow_degraded=None,  # reads from env inside
+        )
     return _default_backend
 
 
-def set_backend(backend: SandboxBackend) -> None:
-    """Override the default backend."""
+def set_backend(
+    backend: SandboxBackend,
+    name: str | None = None,
+) -> None:
+    """Override the default backend.
+
+    Args:
+        backend: Backend instance to use.
+        name: Optional backend name for logging.
+    """
     global _default_backend
     _default_backend = backend
+    logger.info("Backend override: %s", name or backend.name)
+
+
+def reset_backend() -> None:
+    """Reset the cached backend so next get_backend() re-detects."""
+    global _default_backend
+    _default_backend = None
 
 
 def sandbox_run(
@@ -77,9 +243,9 @@ def sandbox_run(
     env: dict | None = None,
     backend: SandboxBackend | None = None,
     deterministic: bool = True,
+    allow_degraded: bool | None = None,
 ) -> SandboxResult:
-    """
-    Run a command under sandbox policy.
+    """Run a command under sandbox policy.
 
     Args:
         command: Command and arguments to execute.
@@ -90,14 +256,25 @@ def sandbox_run(
         backend: Override backend (None = auto-detect).
         deterministic: If True, omit run_id, timestamp, duration_ms
             for reproducible output. If False, fill with real values.
+        allow_degraded: If True, allow fallback to subprocess when
+            the requested backend is unavailable. If None, reads from
+            IRONDOME_ALLOW_DEGRADED env var.
 
     Returns:
         SandboxResult with events and overall verdict.
+
+    Raises:
+        BackendUnavailableError: If the requested backend is
+            unavailable and allow_degraded is False.
     """
     if policy is None:
         policy = default_policy()
 
-    be = backend or get_backend()
+    if backend is None:
+        be = get_backend()
+    else:
+        be = backend
+
     result = be.run(command, policy, timeout=timeout, cwd=cwd, env=env)
 
     # If deterministic, strip non-deterministic fields by rebuilding
@@ -108,6 +285,10 @@ def sandbox_run(
             exit_code=result.exit_code,
             events=result.events,
             policy_name=result.policy_name,
+            backend_name=result.backend_name,
+            isolation_level=result.isolation_level,
+            enforcement_guarantee=result.enforcement_guarantee,
+            degraded=result.degraded,
             stdout=result.stdout,
             stderr=result.stderr,
         )
@@ -122,17 +303,27 @@ def sandbox_run(
             duration_ms=result.duration_ms,
             events=result.events,
             policy_name=result.policy_name,
+            backend_name=result.backend_name,
+            isolation_level=result.isolation_level,
+            enforcement_guarantee=result.enforcement_guarantee,
+            degraded=result.degraded,
             stdout=result.stdout,
             stderr=result.stderr,
         )
 
     logger.info(
-        "L3 sandbox %s: verdict=%s exit=%d duration=%dms events=%d",
+        "L3 sandbox %s: verdict=%s exit=%d "
+        "duration=%dms events=%d backend=%s "
+        "isolation=%s enforcement=%s degraded=%s",
         result.run_id or "(deterministic)",
         result.overall_verdict.value,
         result.exit_code,
         result.duration_ms,
         len(result.events),
+        result.backend_name or "unknown",
+        result.isolation_level or "unknown",
+        result.enforcement_guarantee or "unknown",
+        result.degraded,
     )
 
     return result

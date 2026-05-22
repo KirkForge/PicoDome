@@ -353,11 +353,28 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         })
 
     def _handle_ready(self) -> None:
-        # Check that sandbox engine works
+        # Check that sandbox backend works
         try:
             from irondome.l3.engine import get_backend
             backend = get_backend()
-            self._send_json({"status": "ready", "backend": backend.name})
+            # For enterprise mode, refuse ready if backend is observational only
+            enterprise_mode = os.environ.get(
+                "IRONDOME_ENTERPRISE_MODE", ""
+            ).lower() in ("1", "true", "yes")
+            if enterprise_mode and backend.isolation_level == "observational_only":
+                self._send_error(
+                    503,
+                    "Not ready: enterprise mode requires enforcement "
+                    f"backend, but only '{backend.name}' is available. "
+                    "Install libseccomp2 (Linux) or use macOS.",
+                )
+                return
+            self._send_json({
+                "status": "ready",
+                "backend": backend.name,
+                "isolation_level": backend.isolation_level,
+                "enforcement_guarantee": backend.enforcement_guarantee,
+            })
         except Exception as e:
             self._send_error(503, f"Not ready: {e}")
 

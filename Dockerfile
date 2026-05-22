@@ -1,15 +1,16 @@
 # =============================================================================
 # Iron Dome — Multi-stage Dockerfile
 # =============================================================================
-# Produces a minimal runtime image with Iron Dome installed as a CLI tool.
-# Iron Dome is NOT a daemon — it exposes no ports and runs as a one-shot
-# sandboxing command. Use it in CI pipelines, pre-commit hooks, or as an
-# entrypoint wrapper.
+# Produces a minimal runtime image with Iron Dome installed.
 #
-# NOTE: For full seccomp-bpf sandboxing on Linux, install libseccomp-dev
-# in the builder stage and libseccomp2 in the runtime stage. The Python
-# bindings (python-seccomp) are optional — IronDome degrades gracefully to
-# subprocess sandboxing when libseccomp is unavailable.
+# Supports both CLI and daemon modes:
+#   CLI:     irondome sandbox <command>
+#   Daemon:  irondome daemon --host 0.0.0.0 --port 8443
+#   gRPC:    irondome daemon --transport grpc
+#
+# For full seccomp-bpf kernel sandboxing, the runtime image includes
+# libseccomp2. Without it, Iron Dome falls back to the subprocess
+# backend (observational only — not suitable for enterprise mode).
 # =============================================================================
 
 # ---------------------------------------------------------------------------
@@ -19,9 +20,10 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /build
 
-# Install build dependencies
-# Uncomment the next line for seccomp support:
-# RUN apt-get update && apt-get install -y --no-install-recommends libseccomp-dev && rm -rf /var/lib/apt/lists/*
+# Install build dependencies including libseccomp-dev for seccomp backend
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libseccomp-dev && \
+    rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir --upgrade pip build wheel
 
 COPY pyproject.toml README.md LICENSE ./
@@ -35,14 +37,15 @@ RUN python -m build --wheel --no-isolation
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim AS runtime
 
-LABEL org.opencontainers.image.source="https://github.com/kirkforge/IronDome"
+LABEL org.opencontainers.image.source="https://github.com/KirkForge/IronDome"
 LABEL org.opencontainers.image.title="Iron Dome"
-LABEL org.opencontainers.image.version="0.3.0"
+LABEL org.opencontainers.image.version="0.4.0"
 LABEL org.opencontainers.image.description="Deterministic runtime sandbox and behavioral analysis engine for supply-chain security"
 
-# Install runtime dependencies
-# Uncomment the next line for seccomp support:
-# RUN apt-get update && apt-get install -y --no-install-recommends libseccomp2 && rm -rf /var/lib/apt/lists/*
+# Install runtime dependency for seccomp-bpf backend
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libseccomp2 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN groupadd --system irondome && \
@@ -54,6 +57,9 @@ WORKDIR /home/irondome
 COPY --from=builder /build/dist/*.whl /tmp/
 RUN pip install --no-cache-dir /tmp/*.whl && rm -f /tmp/*.whl
 
+# Daemon ports (HTTP and gRPC)
+EXPOSE 8443 50051
+
 # Health check — verify CLI is functional
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD irondome --version || exit 1
@@ -61,5 +67,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 # Switch to non-root user
 USER irondome
 
-# Iron Dome is a CLI tool, not a daemon — no ports exposed
+# Default: CLI mode. Override for daemon: irondome daemon --host 0.0.0.0
 ENTRYPOINT ["irondome"]
