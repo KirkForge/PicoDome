@@ -335,5 +335,6 @@ def _policy_from_dict(data: dict) -> Policy:
         name=data.get("name", "custom"),
         version=data.get("version", "1.0"),
         default_action=SyscallAction(data.get("default_action", "deny")),
+        fail_closed=data.get("fail_closed", True),
         rules=rules,
     )

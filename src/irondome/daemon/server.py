@@ -31,14 +31,16 @@ import os
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from importlib import import_module
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from irondome import __version__
 from irondome.audit import AuditEventType, get_audit_logger
+from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.engine import sandbox_run
-from irondome.l3.policy import default_policy
+from irondome.l3.policy import default_policy, load_policy
 from irondome.l4.engine import create_default_engine
 from irondome.l4.profiler import profile_from_sandbox_result
 from irondome.retention import get_retention_manager
@@ -429,12 +431,50 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             pass
 
         try:
+            # Resolve policy
+            policy_name = data.get("policy")
+            if policy_name:
+                try:
+                    policy = load_policy(name=policy_name)
+                except Exception:
+                    logger.warning(
+                        "Policy '%s' not found, using default", policy_name
+                    )
+                    policy = default_policy()
+            else:
+                policy = default_policy()
+
+            # Resolve backend
+            backend_name = data.get("backend", "auto")
+            backend: SandboxBackend | None = None
+            if backend_name != "auto":
+                backend_map = {
+                    "subprocess": "irondome.l3.backends.subprocess_backend:SubprocessBackend",
+                    "seccomp-bpf": "irondome.l3.backends.seccomp_backend:SeccompBackend",
+                    "seatbelt": "irondome.l3.backends.seatbelt_backend:SeatbeltBackend",
+                }
+                cls_path = backend_map.get(backend_name)
+                if cls_path is None:
+                    self._send_error(400, f"Unknown backend: {backend_name}")
+                    return
+                try:
+                    module_path, cls_name = cls_path.rsplit(":", 1)
+
+                    backend_cls = getattr(import_module(module_path), cls_name)
+                    backend = backend_cls()
+                    if not backend.is_available():
+                        self._send_error(503, f"Backend '{backend_name}' not available on this system")
+                        return
+                except Exception as e:
+                    self._send_error(503, f"Backend '{backend_name}' unavailable: {e}")
+                    return
+
             # Run sandbox
-            policy = default_policy()  # TODO: load by policy_name
             sandbox_result = sandbox_run(
                 command=command,
                 policy=policy,
                 timeout=timeout,
+                backend=backend,
                 deterministic=False,
             )
 
@@ -451,6 +491,12 @@ class IronDomeHandler(BaseHTTPRequestHandler):
                 "l3_verdict": sandbox_result.overall_verdict.value,
                 "l4_verdict": analysis_result.overall_verdict.value,
                 "findings_count": len(analysis_result.findings),
+                "backend": sandbox_result.backend_name,
+                "isolation_level": sandbox_result.isolation_level,
+                "enforcement_guarantee": sandbox_result.enforcement_guarantee,
+                "degraded": sandbox_result.degraded,
+                "policy_name": policy.name,
+                "policy_version": policy.version,
             }
 
             job.status = "completed"
