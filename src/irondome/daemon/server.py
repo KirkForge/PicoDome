@@ -47,6 +47,7 @@ from irondome.l4.engine import create_default_engine
 from irondome.l4.profiler import profile_from_sandbox_result
 from irondome.ratelimit import TokenBucketLimiter
 from irondome.retention import get_retention_manager
+from irondome.daemon.store import PersistentScanJobStore
 
 logger = logging.getLogger("irondome.daemon")
 
@@ -109,6 +110,9 @@ class ScanJobStore:
 
 # ─── HTTP handler ────────────────────────────────────────────────────────────
 
+
+class IronDomeHandler(BaseHTTPRequestHandler):
+    """HTTP request handler for the Iron Dome daemon."""
 
     # ── Request size limit ──────────────────────────────────────────────
 
@@ -268,9 +272,14 @@ class ScanJobStore:
         elif path == "/ready":
             self._handle_ready()
         elif path == "/metrics":
-            token = self._require_permission("scan:read")
-            if token:
+            # If metrics-only server, skip auth
+            metrics_only = getattr(self, "_metrics_only", False)
+            if metrics_only:
                 self._handle_metrics()
+            else:
+                token = self._require_permission("scan:read")
+                if token:
+                    self._handle_metrics()
 
         # Authenticated GET endpoints
         elif path == f"/api/{API_VERSION}/scans":
@@ -403,6 +412,9 @@ class ScanJobStore:
         """Submit a sandbox scan job."""
         try:
             content_length = int(self.headers.get("Content-Length", 0))
+            if content_length > self.MAX_REQUEST_SIZE:
+                self._send_error(ErrorCodes.REQUEST_TOO_LARGE)
+                return
             body = self.rfile.read(content_length).decode("utf-8")
             data = json.loads(body)
         except (json.JSONDecodeError, ValueError) as e:
@@ -424,15 +436,22 @@ class ScanJobStore:
         data.get("policy")
 
         job_id = str(uuid.uuid4())[:8]
-        job = ScanJob(job_id=job_id, command=command, actor=token[:16] if token else "unknown")
-        self.job_store.add(job)
+        actor = token[:16] if token else "unknown"
+
+        # Create job in persistent store
+        if isinstance(self.job_store, PersistentScanJobStore):
+            job_data = self.job_store.add(job_id, command, actor)
+        else:
+            job = ScanJob(job_id=job_id, command=command, actor=actor)
+            self.job_store.add(job)
+            job_data = job.to_dict()
 
         # Audit
         try:
             audit = get_audit_logger()
             audit.record(
                 event_type=AuditEventType.SCAN_START,
-                actor=job.actor,
+                actor=actor,
                 detail=f"{' '.join(command)}",
                 target=command[0] if command else "",
                 metadata={"job_id": job_id, "timeout": timeout},
@@ -509,9 +528,19 @@ class ScanJobStore:
                 "policy_version": policy.version,
             }
 
-            job.status = "completed"
-            job.completed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-            job.result = result
+            # Update job in store
+            if isinstance(self.job_store, PersistentScanJobStore):
+                self.job_store.update(
+                    job_id,
+                    status="completed",
+                    result=result,
+                )
+            else:
+                job = self.job_store.get(job_id)
+                if job:
+                    job.status = "completed"
+                    job.completed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                    job.result = result
 
             # Update metrics
             self._scan_count += 1
@@ -523,7 +552,7 @@ class ScanJobStore:
                 audit = get_audit_logger()
                 audit.record(
                     event_type=AuditEventType.SCAN_COMPLETE,
-                    actor=job.actor,
+                    actor=actor,
                     detail=f"l3={sandbox_result.overall_verdict.value} l4={analysis_result.overall_verdict.value}",
                     target=command[0] if command else "",
                     metadata={"job_id": job_id, "findings": len(analysis_result.findings)},
@@ -544,23 +573,36 @@ class ScanJobStore:
             self._send_json(result, status=201)
 
         except Exception as e:
-            job.status = "failed"
-            job.error = str(e)
+            if isinstance(self.job_store, PersistentScanJobStore):
+                self.job_store.update(job_id, status="failed", error=str(e))
+            else:
+                job = self.job_store.get(job_id)
+                if job:
+                    job.status = "failed"
+                    job.error = str(e)
             logger.exception("Scan job %s failed", job_id)
             self._send_error(ErrorCodes.SCAN_FAILED, detail=str(e))
 
     def _handle_get_scan(self, job_id: str) -> None:
-        job = self.job_store.get(job_id)
+        if isinstance(self.job_store, PersistentScanJobStore):
+            job = self.job_store.get(job_id)
+        else:
+            job = self.job_store.get(job_id)
+            if job and hasattr(job, "to_dict"):
+                job = job.to_dict()
         if job:
-            self._send_json(job.to_dict())
+            self._send_json(job)
         else:
             self._send_error(ErrorCodes.SCAN_NOT_FOUND, detail=job_id)
 
     def _handle_list_scans(self, query: dict) -> None:
         limit = int(query.get("limit", ["50"])[0])
-        jobs = self.job_store.list_recent(limit=limit)
+        if isinstance(self.job_store, PersistentScanJobStore):
+            jobs = self.job_store.list_recent(limit=limit)
+        else:
+            jobs = [j.to_dict() for j in self.job_store.list_recent(limit=limit)]
         self._send_json({
-            "scans": [j.to_dict() for j in jobs],
+            "scans": jobs,
             "count": len(jobs),
         })
 
@@ -666,17 +708,34 @@ class IronDomeDaemon:
     Configuration:
         - ``IRONDOME_DAEMON_HOST`` — bind address (default: 127.0.0.1)
         - ``IRONDOME_DAEMON_PORT`` — bind port (default: 8443)
+        - ``IRONDOME_METRICS_PORT`` — separate metrics port (default: None, same as API)
         - ``IRONDOME_API_TOKENS`` — comma-separated auth tokens
+        - ``IRONDOME_JOB_STORE_DIR`` — directory for persistent job storage
     """
 
     def __init__(
         self,
         host: str | None = None,
         port: int | None = None,
+        metrics_port: int | None = None,
+        job_store_dir: str | None = None,
     ) -> None:
         self._host = host or os.environ.get("IRONDOME_DAEMON_HOST", "127.0.0.1")
         self._port = port or int(os.environ.get("IRONDOME_DAEMON_PORT", "8443"))
+        self._metrics_port = metrics_port or (
+            int(os.environ["IRONDOME_METRICS_PORT"])
+            if "IRONDOME_METRICS_PORT" in os.environ
+            else None
+        )
         self._server: HTTPServer | None = None
+        self._metrics_server: HTTPServer | None = None
+        self._job_store_dir = job_store_dir or os.environ.get("IRONDOME_JOB_STORE_DIR")
+
+        # Set up persistent job store
+        from irondome.daemon.store import PersistentScanJobStore
+        from pathlib import Path as _Path
+        store_dir = Path(self._job_store_dir) if self._job_store_dir else None
+        IronDomeHandler.job_store = PersistentScanJobStore(store_dir=store_dir)
 
     def start(self, background: bool = False) -> None:
         """Start the daemon HTTP server."""
@@ -696,6 +755,32 @@ class IronDomeDaemon:
 
         logger.info("Iron Dome daemon starting on %s:%d", self._host, self._port)
 
+        # If metrics port is separate, start a metrics-only listener
+        if self._metrics_port and self._metrics_port != self._port:
+            metrics_handler = type(
+                "MetricsHandler",
+                (IronDomeHandler,),
+                {"_metrics_only": True},
+            )
+            self._metrics_server = HTTPServer((self._host, self._metrics_port), metrics_handler)
+            logger.info(
+                "Metrics endpoint on separate port %s:%d (no auth required)",
+                self._host,
+                self._metrics_port,
+            )
+            if background:
+                import threading
+                metrics_thread = threading.Thread(
+                    target=self._metrics_server.serve_forever, daemon=True
+                )
+                metrics_thread.start()
+            else:
+                import threading
+                metrics_thread = threading.Thread(
+                    target=self._metrics_server.serve_forever, daemon=True
+                )
+                metrics_thread.start()
+
         if background:
             import threading
             thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -711,17 +796,20 @@ class IronDomeDaemon:
         if self._server:
             self._server.shutdown()
 
-            try:
-                audit = get_audit_logger()
-                audit.record(
-                    event_type=AuditEventType.DAEMON_STOP,
-                    actor="irondome-daemon",
-                    detail="Daemon stopped",
-                )
-            except Exception:
-                pass
+        if self._metrics_server:
+            self._metrics_server.shutdown()
 
-            logger.info("Iron Dome daemon stopped")
+        try:
+            audit = get_audit_logger()
+            audit.record(
+                event_type=AuditEventType.DAEMON_STOP,
+                actor="irondome-daemon",
+                detail="Daemon stopped",
+            )
+        except Exception:
+            pass
+
+        logger.info("Iron Dome daemon stopped")
 
 
 def create_app() -> IronDomeDaemon:
