@@ -9,12 +9,12 @@ Available formatters:
 - format_cyclonedx: CycloneDX 1.5 SBOM format
 """
 
+from irondome.formatters.cyclonedx import format_cyclonedx
+from irondome.formatters.github import format_github
 from irondome.formatters.json_fmt import format_json, format_pipeline_json
+from irondome.formatters.ml_context import format_ml_context
 from irondome.formatters.sarif import format_sarif
 from irondome.formatters.table import format_table
-from irondome.formatters.ml_context import format_ml_context
-from irondome.formatters.github import format_github
-from irondome.formatters.cyclonedx import format_cyclonedx
 
 __all__ = [
     "format_json",

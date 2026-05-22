@@ -6,11 +6,6 @@ from pathlib import Path
 
 import pytest
 
-from irondome.models import (
-    Finding,
-    Severity,
-    Verdict,
-)
 from irondome.l3.models import (
     Policy,
     PolicyRule,
@@ -28,7 +23,11 @@ from irondome.l4.models import (
     ProcessSpawn,
     TimingPoint,
 )
-
+from irondome.models import (
+    Finding,
+    Severity,
+    Verdict,
+)
 
 # ─── Shared model fixtures ──────────────────────────────────────────────────
 
@@ -238,7 +237,8 @@ def tmp_json_policy_file():
             },
         ],
     }
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) \
+        as f:
         json.dump(policy_data, f)
         return Path(f.name)
 
@@ -261,6 +261,7 @@ def tmp_baselines_json_file():
             "notes": "Custom baseline for myapp",
         },
     ]
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) \
+        as f:
         json.dump(baselines_data, f)
         return Path(f.name)

@@ -1,8 +1,10 @@
 """Tests for API versioning."""
 
 from irondome.api_versioning import (
-    APIVersion, APIVersionNegotiator, DeprecationNotice,
     CURRENT_API_VERSION,
+    APIVersion,
+    APIVersionNegotiator,
+    DeprecationNotice,
 )
 
 
@@ -22,7 +24,9 @@ class TestAPIVersion:
 
 class TestDeprecationNotice:
     def test_to_header(self):
-        notice = DeprecationNotice(version="v0", sunset_date="2026-06-01", replacement="v1")
+        notice =
+            DeprecationNotice(version="v0", sunset_date="2026-06-01", \
+                replacement="v1")
         name, value = notice.to_header()
         assert name == "Deprecation"
         assert "v0" in value
@@ -37,7 +41,8 @@ class TestAPIVersionNegotiator:
 
     def test_accept_header(self):
         neg = APIVersionNegotiator()
-        version, _ = neg.negotiate(accept_header="application/vnd.irondome.v1+json")
+        version, _ =
+            neg.negotiate(accept_header="application/vnd.irondome.v1+json")
         assert version == "v1"
 
     def test_custom_header(self):

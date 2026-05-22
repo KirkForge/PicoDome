@@ -2,24 +2,23 @@
 
 import math
 from collections import Counter
-from typing import Dict, List, Optional
 
-from irondome.l4.models import BehavioralProfile, Baseline, Finding
+from irondome.l4.models import Baseline, BehavioralProfile, Finding
 from irondome.models import Severity
 
 
 def detect_entropy_anomalies(
     profile: BehavioralProfile,
-    baselines: Optional[Dict[str, Baseline]] = None,
-) -> List[Finding]:
+    baselines: dict[str, Baseline] | None = None,
+) -> list[Finding]:
     """Detect high-entropy strings indicative of encoded/encrypted payloads."""
-    findings: List[Finding] = []
+    findings: list[Finding] = []
 
     # Check file paths for high-entropy names
     for op in profile.fs_ops:
         name = op.path.split("/")[-1] if "/" in op.path else op.path
         ent = _shannon_entropy(name)
-        if ent > 4.5 and len(name) > 10:  # High entropy, long name = suspicious
+        if ent > 4.5 and len(name) > 10:  High entropy, long name = suspicious
             findings.append(Finding(
                 rule_id="L4-ENTROPY-001",
                 severity=Severity.MEDIUM,
@@ -37,9 +36,11 @@ def detect_entropy_anomalies(
                 findings.append(Finding(
                     rule_id="L4-ENTROPY-002",
                     severity=Severity.HIGH,
-                    message=f"High-entropy DNS query ({ent:.1f} bits): {dns.hostname} — possible DGA or encoded C2",
+                    message=f"High-entropy DNS query ({ent:.1f} bits): \
+                        {dns.hostname} — possible DGA or encoded C2",
                     location=dns.hostname,
-                    evidence={"entropy": round(ent, 2), "hostname": dns.hostname},
+                    evidence={"entropy": round(ent, 2), "hostname": \
+                        dns.hostname},
                 ))
 
     return findings

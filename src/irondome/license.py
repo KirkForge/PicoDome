@@ -6,10 +6,9 @@ See LICENSE for details.
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 from enum import Enum
-from typing import Optional
 
 logger = logging.getLogger("irondome.license")
 
@@ -31,7 +30,7 @@ class LicenseInfo:
         tier: LicenseTier = LicenseTier.PERSONAL,
         holder: str = "",
         organization: str = "",
-        expires: Optional[str] = None,
+        expires: str | None = None,
         key: str = "",
         source: str = "default",
     ):
@@ -65,7 +64,7 @@ class LicenseInfo:
 
 # ─── Global license state ──────────────────────────────────────────────────
 
-_cached_license: Optional[LicenseInfo] = None
+_cached_license: LicenseInfo | None = None
 
 
 def _reset_cache() -> None:
@@ -130,7 +129,7 @@ def get_license_info() -> LicenseInfo:
     return check_license()
 
 
-def _validate_key(key: str) -> Optional[LicenseInfo]:
+def _validate_key(key: str) -> LicenseInfo | None:
     """
     Validate a license key.
 
@@ -173,7 +172,7 @@ def _validate_key(key: str) -> Optional[LicenseInfo]:
     )
 
 
-def _load_license_file(path: str) -> Optional[LicenseInfo]:
+def _load_license_file(path: str) -> LicenseInfo | None:
     """
     Load license info from a JSON file.
 

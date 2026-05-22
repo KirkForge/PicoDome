@@ -9,8 +9,6 @@ Uses dome-themed severity labels (like PicoSentry's claw-pinch branding):
 
 from __future__ import annotations
 
-from typing import Union
-
 from irondome.l3.models import SandboxResult, Verdict
 from irondome.l4.models import AnalysisResult, BehavioralVerdict
 from irondome.models import Severity
@@ -25,7 +23,7 @@ _DOME_LABELS = {
 }
 
 
-def format_table(result: Union[SandboxResult, AnalysisResult]) -> str:
+def format_table(result: SandboxResult | AnalysisResult) -> str:
     """Format sandbox or analysis result as a human-readable table."""
     if isinstance(result, SandboxResult):
         return _l3_table(result)
@@ -46,12 +44,16 @@ def _l3_table(result: SandboxResult) -> str:
     if result.run_id:
         lines.append(f"║ {'Run ID:':<16} {result.run_id:<{width - 20}} ║")
     if result.timestamp:
-        lines.append(f"║ {'Timestamp:':<16} {result.timestamp:<{width - 20}} ║")
+        lines.append(
+            f"║ {'Timestamp:':<16} {result.timestamp:<{width - 20}} ║")
 
     lines.append(f"║ {'Policy:':<16} {result.policy_name:<{width - 20}} ║")
 
     if result.duration_ms:
-        lines.append(f"║ {'Duration:':<16} {result.duration_ms}ms{'':<{width - 23 - len(str(result.duration_ms))}} ║")
+        lines.append(
+            f"║ {'Duration:':<16} {result.duration_ms}ms{'':<{width - 23 - \
+                len(str(result.duration_ms))}} ║"
+            )
 
     lines.append(f"║ {'Exit Code:':<16} {result.exit_code:<{width - 20}} ║")
 
@@ -73,11 +75,16 @@ def _l3_table(result: SandboxResult) -> str:
 
         for event in result.events[:20]:
             icon = _verdict_icon(event.verdict)
-            detail = event.detail[:width - 30] if len(event.detail) > width - 30 else event.detail
-            lines.append(f"║ {icon} {event.rule_id:<16} {detail:<{width - 21}} ║")
+            detail = event.detail[:width - 30] if len(
+                event.detail) > width - 30 else event.detail
+            lines.append(
+                f"║ {icon} {event.rule_id:<16} {detail:<{width - 21}} ║")
 
         if len(result.events) > 20:
-            lines.append(f"║ {'... and ' + str(len(result.events) - 20) + ' more events':^{width - 4}} ║")
+            lines.append(
+                f"║ {'... and ' + str(len(result.events) - 20) + ' more \
+                    events':^{width - 4}} ║"
+                )
 
     lines.append("╚" + "═" * (width - 2) + "╝")
 
@@ -114,7 +121,13 @@ def _l4_table(result: AnalysisResult) -> str:
     if result.stats.findings_by_severity:
         lines.append("╠" + "═" * (width - 2) + "╣")
         lines.append(f"║ {'PINCHES BY SEVERITY':^{width - 4}} ║")
-        for sev in (Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW, Severity.INFO):
+        for sev in (
+            Severity.CRITICAL,
+            Severity.HIGH,
+            Severity.MEDIUM,
+            Severity.LOW,
+            Severity.INFO,
+        ):
             count = result.stats.findings_by_severity.get(sev.value, 0)
             if count > 0:
                 label = _DOME_LABELS.get(sev, sev.value)
@@ -122,16 +135,28 @@ def _l4_table(result: AnalysisResult) -> str:
 
     if result.findings:
         lines.append("╠" + "═" * (width - 2) + "╣")
-        lines.append(f"║ {'FINDINGS (' + str(len(result.findings)) + ')':^{width - 4}} ║")
+        lines.append(
+            f"║ {'FINDINGS (' + str(len(result.findings)) + ')':^{width - 4}} \
+                ║"
+            )
         lines.append("╟" + "─" * (width - 2) + "╢")
 
         for finding in result.findings[:20]:
-            label = _DOME_LABELS.get(finding.severity, finding.severity.value[:4])
-            msg = finding.message[:width - 30] if len(finding.message) > width - 30 else finding.message
-            lines.append(f"║ [{label:<16s}] {finding.rule_id:<10} {msg:<{width - 32}} ║")
+            label = _DOME_LABELS.get(
+                finding.severity
+                finding.severity.value[:4]
+            )
+            msg = finding.message[:width - 30] if len(
+                finding.message) > width - 30 else finding.message
+            lines.append(
+                f"║ [{label:<16s}] {finding.rule_id:<10} {msg:<{width - 32}} ║"
+                )
 
         if len(result.findings) > 20:
-            lines.append(f"║ {'... and ' + str(len(result.findings) - 20) + ' more findings':^{width - 4}} ║")
+            lines.append(
+                f"║ {'... and ' + str(len(result.findings) - 20) + ' more \
+                    findings':^{width - 4}} ║"
+                )
     else:
         lines.append("╠" + "═" * (width - 2) + "╣")
         lines.append(f"║ {'All clear. Dome intact. 🛡️':^{width - 4}} ║")
@@ -140,8 +165,10 @@ def _l4_table(result: AnalysisResult) -> str:
         lines.append("╠" + "═" * (width - 2) + "╣")
         lines.append(f"║ {'BASELINE DRIFT':^{width - 4}} ║")
         for drift in result.drift_results:
-            lines.append(f"║   Baseline: {drift.baseline_name:<{width - 16}} ║")
-            lines.append(f"║   Drift Score: {drift.score:.0%}{'':<{width - 19}} ║")
+            lines.append(
+                f"║   Baseline: {drift.baseline_name:<{width - 16}} ║")
+            lines.append(
+                f"║   Drift Score: {drift.score:.0%}{'':<{width - 19}} ║")
 
     lines.append("╚" + "═" * (width - 2) + "╝")
     return "\n".join(lines)

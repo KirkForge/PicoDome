@@ -1,6 +1,6 @@
 """Tests for SLO definitions and tracking."""
 
-from irondome.slo import SLOTracker, ALL_SLOS
+from irondome.slo import ALL_SLOS, SLOTracker
 
 
 class TestSLODefinitions:

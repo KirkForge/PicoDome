@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 # Module-level version for log output
 try:
@@ -43,7 +43,7 @@ class IronDomeJSONFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """Format a log record as a single-line JSON object."""
-        entry: Dict[str, Any] = {
+        entry: dict[str, Any] = {
             "timestamp": self._format_time(record),
             "level": record.levelname,
             "logger": record.name,
@@ -54,7 +54,8 @@ class IronDomeJSONFormatter(logging.Formatter):
             entry["irondome_version"] = __version__
 
         # Include any extra fields
-        if hasattr(record, "irondome_context") and isinstance(record.irondome_context, dict):
+        if hasattr(record, "irondome_context") and \
+            isinstance(record.irondome_context, dict):
             entry.update(record.irondome_context)
 
         # Include exception info if present
@@ -69,7 +70,9 @@ class IronDomeJSONFormatter(logging.Formatter):
     def _format_time(self, record: logging.LogRecord) -> str:
         """Format timestamp as ISO 8601 UTC."""
         try:
-            return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(record.created))
+            return
+                time.strftime("%Y-%m-%dT%H:%M:%SZ", \
+                    time.gmtime(record.created))
         except (AttributeError, OSError):
             return f"{record.created:.3f}"
 
@@ -160,12 +163,12 @@ def setup_logging(
 
 
 def get_log_context(
-    command: Optional[list] = None,
-    run_id: Optional[str] = None,
-    policy: Optional[str] = None,
-    target: Optional[str] = None,
+    command: list | None = None,
+    run_id: str | None = None,
+    policy: str | None = None,
+    target: str | None = None,
     **kwargs: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Build a context dict for structured logging.
 
@@ -181,7 +184,7 @@ def get_log_context(
     Returns:
         Dict suitable for irondome_context extra field.
     """
-    ctx: Dict[str, Any] = {}
+    ctx: dict[str, Any] = {}
 
     if command is not None:
         ctx["command"] = command

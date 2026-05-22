@@ -1,5 +1,6 @@
 """
-Tests for reproducible builds — SOURCE_DATE_EPOCH, pinned dep hashes, hermetic pip.
+Tests for reproducible builds — SOURCE_DATE_EPOCH, pinned dep hashes,
+    hermetic pip.
 
 These tests MUST work without network access.
 """
@@ -25,8 +26,8 @@ from irondome.reproducible import (
     verify_reproducible_build,
 )
 
-
-# ─── Test fixtures ─────────────────────────────────────────────────────────────
+# ─── Test fixtures
+# ─────────────────────────────────────────────────────────────
 
 
 @pytest.fixture
@@ -66,14 +67,21 @@ def sample_wheel(tmp_path):
     wheel_path = tmp_path / "irondome-0.3.0-py3-none-any.whl"
     with zipfile.ZipFile(wheel_path, "w") as zf:
         # Use epoch timestamp (1980-01-01 in DOS format = zip minimum)
-        info = zipfile.ZipInfo("irondome/__init__.py", date_time=(1980, 1, 1, 0, 0, 0))
+        info =
+            zipfile.ZipInfo("irondome/__init__.py", date_time=(1980, 1, 1, 0, \
+                0, 0))
         zf.writestr(info, '__version__ = "0.3.0"\n')
         # Add WHEEL metadata without Generated timestamp
-        info2 = zipfile.ZipInfo("irondome-0.3.0.dist-info/WHEEL", date_time=(1980, 1, 1, 0, 0, 0))
+        info2 =
+            zipfile.ZipInfo("irondome-0.3.0.dist-info/WHEEL", date_time=(1980, \
+                1, 1, 0, 0, 0))
         zf.writestr(info2, "Wheel-Version: 1.0\nRoot-Is-Purelib: true\n")
         # Add METADATA
-        info3 = zipfile.ZipInfo("irondome-0.3.0.dist-info/METADATA", date_time=(1980, 1, 1, 0, 0, 0))
-        zf.writestr(info3, "Metadata-Version: 2.1\nName: irondome\nVersion: 0.3.0\n")
+        info3 =
+            zipfile.ZipInfo("irondome-0.3.0.dist-info/METADATA", \
+                date_time=(1980, 1, 1, 0, 0, 0))
+        zf.writestr(info3, "Metadata-Version: 2.1\nName: irondome\nVersion: \
+            0.3.0\n")
     return str(wheel_path)
 
 
@@ -83,7 +91,9 @@ def sample_wheel_with_timestamps(tmp_path):
     wheel_path = tmp_path / "irondome-0.3.0-py3-none-any.whl"
     with zipfile.ZipFile(wheel_path, "w") as zf:
         # Non-epoch timestamp (2025-06-15 10:30:00)
-        info = zipfile.ZipInfo("irondome/__init__.py", date_time=(2025, 6, 15, 10, 30, 0))
+        info =
+            zipfile.ZipInfo("irondome/__init__.py", date_time=(2025, 6, 15, 10, \
+                30, 0))
         zf.writestr(info, '__version__ = "0.3.0"\n')
     return str(wheel_path)
 
@@ -93,13 +103,17 @@ def source_dir(tmp_path):
     """Create a minimal source directory for manifest generation."""
     src = tmp_path / "src" / "irondome"
     src.mkdir(parents=True)
-    (src / "__init__.py").write_text('__version__ = "0.3.0"\n', encoding="utf-8")
-    (src / "reproducible.py").write_text("# reproducible builds\n", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[build-system]\n", encoding="utf-8")
+    (src / "__init__.py").write_text('__version__ =
+        "0.3.0"\n', encoding="utf-8")
+    (src / "reproducible.py").write_text("# reproducible builds\n", \
+        encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text("[build-system]\n", \
+        encoding="utf-8")
     return str(tmp_path)
 
 
-# ─── get_source_date_epoch tests ───────────────────────────────────────────────
+# ─── get_source_date_epoch tests
+# ───────────────────────────────────────────────
 
 
 class TestGetSourceDateEpoch:
@@ -126,7 +140,9 @@ class TestGetSourceDateEpoch:
         """Without env var, fallback_timestamp should be used."""
         with mock.patch.dict(os.environ, {}, clear=True):
             os.environ.pop("SOURCE_DATE_EPOCH", None)
-            assert get_source_date_epoch(fallback_timestamp=1700000000) == 1700000000
+            assert
+                get_source_date_epoch(fallback_timestamp=1700000000) == \
+                    1700000000
 
     def test_env_var_takes_precedence_over_fallback(self):
         """SOURCE_DATE_EPOCH env var should take precedence over fallback."""
@@ -134,9 +150,12 @@ class TestGetSourceDateEpoch:
             assert get_source_date_epoch(fallback_timestamp=1700000000) == 999
 
     def test_invalid_env_var_raises(self):
-        """Non-integer SOURCE_DATE_EPOCH should raise ReproducibleBuildError."""
-        with mock.patch.dict(os.environ, {"SOURCE_DATE_EPOCH": "not-a-number"}):
-            with pytest.raises(ReproducibleBuildError, match="must be an integer"):
+        """Non-integer SOURCE_DATE_EPOCH should raise \
+            ReproducibleBuildError."""
+        with mock.patch.dict(os.environ, {"SOURCE_DATE_EPOCH": \
+            "not-a-number"}):
+            with pytest.raises(ReproducibleBuildError, match="must be an \
+                integer"):
                 get_source_date_epoch()
 
     def test_negative_env_var_raises(self):
@@ -146,7 +165,8 @@ class TestGetSourceDateEpoch:
                 get_source_date_epoch()
 
 
-# ─── pin_dependencies tests ───────────────────────────────────────────────────
+# ─── pin_dependencies tests
+# ───────────────────────────────────────────────────
 
 
 class TestPinDependencies:
@@ -159,7 +179,8 @@ class TestPinDependencies:
         assert result["lockfile"] == sample_requirements
 
         # Check setuptools entry
-        setuptools = [p for p in result["packages"] if p["name"] == "setuptools"]
+        setuptools =
+            [p for p in result["packages"] if p["name"] == "setuptools"]
         assert len(setuptools) == 1
         assert setuptools[0]["version"] == "68.0"
         assert setuptools[0]["version_op"] == ">="
@@ -179,7 +200,8 @@ class TestPinDependencies:
         for pkg in result["packages"]:
             assert pkg["hashes"] == []
             # version_op should be captured
-            assert pkg["version_op"] in ("==", ">=", "<=", "~=", "!=", ">", "<")
+            assert
+                pkg["version_op"] in ("==", ">=", "<=", "~=", "!=", ">", "<")
 
     def test_missing_lockfile_raises(self, tmp_path):
         """Should raise ReproducibleBuildError for missing file."""
@@ -191,7 +213,8 @@ class TestPinDependencies:
         """Should raise ReproducibleBuildError for empty file."""
         empty_file = tmp_path / "empty.txt"
         empty_file.write_text("# just comments\n\n", encoding="utf-8")
-        with pytest.raises(ReproducibleBuildError, match="No valid package entries"):
+        with pytest.raises(ReproducibleBuildError, match="No valid package \
+            entries"):
             pin_dependencies(str(empty_file))
 
     def test_skips_comments_and_options(self, tmp_path):
@@ -209,7 +232,8 @@ class TestPinDependencies:
         assert result["packages"][0]["name"] == "requests"
 
 
-# ─── verify_reproducible_build tests ──────────────────────────────────────────
+# ─── verify_reproducible_build tests
+# ──────────────────────────────────────────
 
 
 class TestVerifyReproducibleBuild:
@@ -266,7 +290,8 @@ class TestVerifyReproducibleBuild:
         assert checks["wheel_hash"]["passed"] is True
 
 
-# ─── hermetic_build_config tests ──────────────────────────────────────────────
+# ─── hermetic_build_config tests
+# ──────────────────────────────────────────────
 
 
 class TestHermeticBuildConfig:
@@ -310,7 +335,8 @@ class TestHermeticBuildConfig:
         assert "source_date_epoch" in json_str
 
 
-# ─── ReproducibleBuild class tests ────────────────────────────────────────────
+# ─── ReproducibleBuild class tests
+# ────────────────────────────────────────────
 
 
 class TestReproducibleBuild:
@@ -334,7 +360,9 @@ class TestReproducibleBuild:
 
     def test_env_vars(self):
         """env_vars() should return correct environment variables."""
-        rb = ReproducibleBuild(source_date_epoch=1700000000, python_hash_seed=42)
+        rb =
+            ReproducibleBuild(source_date_epoch=1700000000, \
+                python_hash_seed=42)
         env = rb.env_vars()
         assert env["SOURCE_DATE_EPOCH"] == "1700000000"
         assert env["PYTHONHASHSEED"] == "42"
@@ -361,7 +389,8 @@ class TestReproducibleBuild:
             rb.source_date_epoch = 999  # type: ignore
 
 
-# ─── generate_build_manifest tests ─────────────────────────────────────────────
+# ─── generate_build_manifest tests
+# ─────────────────────────────────────────────
 
 
 class TestGenerateBuildManifest:
@@ -376,25 +405,27 @@ class TestGenerateBuildManifest:
     def test_manifest_contains_source_files(self, source_dir):
         """Manifest should list hashed source files."""
         manifest_path = generate_build_manifest(source_dir)
-        with open(manifest_path, "r", encoding="utf-8") as f:
+        with open(manifest_path, encoding="utf-8") as f:
             manifest = json.load(f)
         assert "source_files" in manifest
         assert manifest["total_source_files"] > 0
         # Should have __init__.py
-        init_files = [k for k in manifest["source_files"] if "__init__.py" in k]
+        init_files =
+            [k for k in manifest["source_files"] if "__init__.py" in k]
         assert len(init_files) > 0
 
     def test_manifest_contains_config(self, source_dir):
         """Manifest should contain hermetic build config."""
         manifest_path = generate_build_manifest(source_dir)
-        with open(manifest_path, "r", encoding="utf-8") as f:
+        with open(manifest_path, encoding="utf-8") as f:
             manifest = json.load(f)
         assert "config" in manifest
         assert "python_hash_seed" in manifest
         assert manifest["python_hash_seed"] == 0
 
     def test_manifest_is_deterministic(self, source_dir):
-        """Running manifest generation twice should produce identical output."""
+        """Running manifest generation twice should produce identical \
+            output."""
         path1 = generate_build_manifest(source_dir)
         content1 = Path(path1).read_text(encoding="utf-8")
         path2 = generate_build_manifest(source_dir)
@@ -405,7 +436,7 @@ class TestGenerateBuildManifest:
         """Manifest should respect SOURCE_DATE_EPOCH env var."""
         with mock.patch.dict(os.environ, {"SOURCE_DATE_EPOCH": "1700000000"}):
             manifest_path = generate_build_manifest(source_dir)
-        with open(manifest_path, "r", encoding="utf-8") as f:
+        with open(manifest_path, encoding="utf-8") as f:
             manifest = json.load(f)
         assert manifest["source_date_epoch"] == 1700000000
 
@@ -416,7 +447,8 @@ class TestGenerateBuildManifest:
             generate_build_manifest(fake_dir)
 
 
-# ─── Helper function tests ────────────────────────────────────────────────────
+# ─── Helper function tests
+# ────────────────────────────────────────────────────
 
 
 class TestHelpers:

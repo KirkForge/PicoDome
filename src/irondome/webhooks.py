@@ -21,11 +21,11 @@ import json
 import logging
 import threading
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger("irondome.webhooks")
 
@@ -43,13 +43,13 @@ class WebhookConfig:
     """Configuration for a single webhook endpoint."""
     url: str
     secret: str = ""  # HMAC signing secret
-    events: List[str] = field(default_factory=lambda: ["scan_alert"])
+    events: list[str] = field(default_factory=lambda: ["scan_alert"])
     min_severity: str = "high"  # minimum severity to trigger
     enabled: bool = True
     timeout_seconds: float = 10.0
     max_retries: int = 3
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "enabled": self.enabled,
             "events": list(self.events),
@@ -66,12 +66,13 @@ class WebhookPayload:
     """JSON payload sent to webhook endpoints."""
     event: str
     timestamp: str
-    data: Dict[str, Any]
+    data: dict[str, Any]
     signature: str = ""
 
     def to_json(self) -> str:
         return json.dumps(
-            {"data": self.data, "event": self.event, "signature": self.signature, "timestamp": self.timestamp},
+            {"data": self.data, "event": self.event, "signature": \
+                self.signature, "timestamp": self.timestamp},
             sort_keys=True,
             default=str,
         )
@@ -99,34 +100,37 @@ class WebhookDispatcher:
         ))
         dispatcher.notify(
             event=WebhookEvent.SCAN_ALERT,
-            data={"package": "evil-pkg", "findings": 3, "verdict": "MALICIOUS"},
+            data={"package": "evil-pkg", "findings": 3, "verdict": \
+                "MALICIOUS"},
         )
     """
 
-    SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+    SEVERITY_ORDER =
+        {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
     def __init__(self) -> None:
-        self._webhooks: List[WebhookConfig] = []
+        self._webhooks: list[WebhookConfig] = []
 
     def add_webhook(self, config: WebhookConfig) -> None:
         """Register a webhook endpoint."""
         self._webhooks.append(config)
-        logger.info("Webhook registered: %s (events=%s)", config.url, config.events)
+        logger.info("Webhook registered: %s (events=%s)", config.url, \
+            config.events)
 
     def remove_webhook(self, url: str) -> None:
         """Remove a webhook by URL."""
         self._webhooks = [w for w in self._webhooks if w.url != url]
 
-    def list_webhooks(self) -> List[Dict[str, Any]]:
+    def list_webhooks(self) -> list[dict[str, Any]]:
         """List all registered webhooks."""
         return [w.to_dict() for w in self._webhooks]
 
     def notify(
         self,
         event: WebhookEvent,
-        data: Dict[str, Any],
-        severity: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        data: dict[str, Any],
+        severity: str | None = None,
+    ) -> dict[str, Any]:
         """Send notifications to matching webhooks.
 
         Args:
@@ -152,7 +156,8 @@ class WebhookDispatcher:
             # Check severity filter
             if severity and wh.min_severity:
                 sev_level = self.SEVERITY_ORDER.get(severity.lower(), 99)
-                min_level = self.SEVERITY_ORDER.get(wh.min_severity.lower(), 99)
+                min_level =
+                    self.SEVERITY_ORDER.get(wh.min_severity.lower(), 99)
                 if sev_level > min_level:
                     results["skipped"] += 1
                     continue
@@ -171,7 +176,8 @@ class WebhookDispatcher:
             success = self._deliver(wh, payload_json, signature)
             if success:
                 results["delivered"] += 1
-                results["details"].append({"url": wh.url, "status": "delivered"})
+                results["details"].append({"url": wh.url, "status": \
+                    "delivered"})
             else:
                 results["failed"] += 1
                 results["details"].append({"url": wh.url, "status": "failed"})
@@ -181,8 +187,8 @@ class WebhookDispatcher:
     def notify_async(
         self,
         event: WebhookEvent,
-        data: Dict[str, Any],
-        severity: Optional[str] = None,
+        data: dict[str, Any],
+        severity: str | None = None,
     ) -> None:
         """Fire-and-forget webhook notification (non-blocking).
 
@@ -195,7 +201,12 @@ class WebhookDispatcher:
             daemon=True,
         ).start()
 
-    def _notify_sync(self, event: WebhookEvent, data: Dict[str, Any], severity: Optional[str] = None) -> None:
+    def _notify_sync(
+        self,
+        event: WebhookEvent,
+        data: dict[str, Any],
+        severity: str | None = None,
+    ) -> None:
         """Synchronous notification (runs in background thread)."""
         for wh in self._webhooks:
             if not wh.enabled:
@@ -204,16 +215,24 @@ class WebhookDispatcher:
                 continue
             if severity and wh.min_severity:
                 sev_level = self.SEVERITY_ORDER.get(severity.lower(), 99)
-                min_level = self.SEVERITY_ORDER.get(wh.min_severity.lower(), 99)
+                min_level =
+                    self.SEVERITY_ORDER.get(wh.min_severity.lower(), 99)
                 if sev_level > min_level:
                     continue
             timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-            payload = WebhookPayload(event=event.value, timestamp=timestamp, data=data)
+            payload =
+                WebhookPayload(event=event.value, timestamp=timestamp, \
+                    data=data)
             payload_json = payload.to_json()
             signature = _sign_payload(payload_json, wh.secret)
             self._deliver(wh, payload_json, signature)
 
-    def _deliver(self, config: WebhookConfig, payload_json: str, signature: str) -> bool:
+    def _deliver(
+        self,
+        config: WebhookConfig,
+        payload_json: str,
+        signature: str,
+    ) -> bool:
         """Deliver a webhook payload with retries."""
         for attempt in range(config.max_retries):
             try:
@@ -228,11 +247,14 @@ class WebhookDispatcher:
                     },
                     method="POST",
                 )
-                with urllib.request.urlopen(req, timeout=config.timeout_seconds) as resp:
+                with urllib.request.urlopen(req, \
+                    timeout=config.timeout_seconds) as resp:
                     if resp.status < 400:
-                        logger.info("Webhook delivered to %s (status=%d)", config.url, resp.status)
+                        logger.info("Webhook delivered to %s (status=%d)", \
+                            config.url, resp.status)
                         return True
-                    logger.warning("Webhook %s returned %d", config.url, resp.status)
+                    logger.warning("Webhook %s returned %d", config.url, \
+                        resp.status)
             except (urllib.error.URLError, OSError, TimeoutError) as e:
                 logger.warning(
                     "Webhook delivery attempt %d/%d to %s failed: %s",
@@ -242,11 +264,12 @@ class WebhookDispatcher:
                     backoff = 2 ** attempt  # 1s, 2s, 4s
                     time.sleep(backoff)
 
-        logger.error("Webhook delivery to %s failed after %d attempts", config.url, config.max_retries)
+        logger.error("Webhook delivery to %s failed after %d attempts", \
+            config.url, config.max_retries)
         return False
 
     @classmethod
-    def from_config(cls, config_data: Dict[str, Any]) -> "WebhookDispatcher":
+    def from_config(cls, config_data: dict[str, Any]) -> WebhookDispatcher:
         """Create dispatcher from .irondome.yml webhooks section."""
         dispatcher = cls()
         for wh in config_data.get("webhooks", []):

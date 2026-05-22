@@ -26,7 +26,7 @@ import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger("irondome.audit")
 
@@ -72,15 +72,15 @@ class AuditEvent:
     actor: str
     detail: str = ""
     target: str = ""
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     # Identity fields (filled at creation time)
     event_id: str = ""
     timestamp: str = ""
     prev_hash: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize with sorted keys for consistent hashing."""
-        d: Dict[str, Any] = {
+        d: dict[str, Any] = {
             "actor": self.actor,
             "detail": self.detail,
             "event_id": self.event_id,
@@ -133,11 +133,11 @@ class AuditLogger:
 
     def __init__(
         self,
-        log_dir: Optional[Path] = None,
+        log_dir: Path | None = None,
         log_file: str = "audit.jsonl",
         max_bytes: int = _DEFAULT_MAX_BYTES,
         rotate_count: int = _DEFAULT_ROTATE_COUNT,
-        notary: Optional[Any] = None,
+        notary: Any | None = None,
     ) -> None:
         self._log_dir = log_dir or _DEFAULT_LOG_DIR
         self._log_path = self._log_dir / log_file
@@ -161,7 +161,7 @@ class AuditLogger:
         actor: str,
         detail: str = "",
         target: str = "",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> AuditEvent:
         """Record an audit event. Appends to the log file.
 
@@ -173,7 +173,11 @@ class AuditLogger:
             metadata: Additional structured data.
 
         Returns:
-            The created AuditEvent (with event_id, timestamp, prev_hash filled).
+            The created AuditEvent (
+                with event_id
+                timestamp
+                prev_hash filled
+            ).
         """
         with self._lock:
             event_id = str(uuid.uuid4())
@@ -200,10 +204,18 @@ class AuditLogger:
         if self._notary is not None:
             try:
                 notary_uuid = self._notary.submit_entry(event.to_dict())
-                logger.debug("Notarized event %s as %s", event.event_id[:8], notary_uuid[:8])
+                logger.debug(
+                    "Notarized event %s as %s",
+                    event.event_id[:8],
+                    notary_uuid[:8],
+                )
             except Exception as exc:
                 # Notary failure must NEVER block or crash the audit logger
-                logger.warning("Notary submission failed for %s: %s", event.event_id[:8], exc)
+                logger.warning(
+                    "Notary submission failed for %s: %s"
+                    event.event_id[:8]
+                    exc
+                )
 
         logger.debug(
             "Audit: %s actor=%s target=%s",
@@ -214,7 +226,7 @@ class AuditLogger:
 
         return event
 
-    def verify_chain(self, log_path: Optional[Path] = None) -> List[str]:
+    def verify_chain(self, log_path: Path | None = None) -> list[str]:
         """Verify hash-chain integrity of the audit log.
 
         Returns a list of violation descriptions. Empty list = chain is intact.
@@ -224,12 +236,12 @@ class AuditLogger:
         if not path.is_file():
             return [f"Audit log not found: {path}"]
 
-        violations: List[str] = []
+        violations: list[str] = []
         expected_prev = ""
         line_num = 0
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 for line_num, line in enumerate(f, start=1):
                     line = line.strip()
                     if not line:
@@ -252,7 +264,8 @@ class AuditLogger:
                         )
 
                     # Compute hash of this line for next comparison
-                    expected_prev = hashlib.sha256(line.encode("utf-8")).hexdigest()
+                    expected_prev = hashlib.sha256(line.encode("utf-8")).hexdigest(
+                        )
 
         except OSError as e:
             violations.append(f"Error reading audit log: {e}")
@@ -261,13 +274,13 @@ class AuditLogger:
 
     def query(
         self,
-        event_type: Optional[AuditEventType] = None,
-        actor: Optional[str] = None,
-        target: Optional[str] = None,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
+        event_type: AuditEventType | None = None,
+        actor: str | None = None,
+        target: str | None = None,
+        since: str | None = None,
+        until: str | None = None,
         limit: int = 100,
-    ) -> List[AuditEvent]:
+    ) -> list[AuditEvent]:
         """Query audit events with filters.
 
         Args:
@@ -281,13 +294,13 @@ class AuditLogger:
         Returns:
             List of matching AuditEvent objects (newest first).
         """
-        results: List[AuditEvent] = []
+        results: list[AuditEvent] = []
 
         if not self._log_path.is_file():
             return results
 
         try:
-            with open(self._log_path, "r", encoding="utf-8") as f:
+            with open(self._log_path, encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if not line:
@@ -299,7 +312,8 @@ class AuditLogger:
                         continue
 
                     # Apply filters
-                    if event_type and data.get("event_type") != event_type.value:
+                    if event_type and data.get(
+                        "event_type") != event_type.value:
                         continue
                     if actor and actor not in data.get("actor", ""):
                         continue
@@ -332,7 +346,7 @@ class AuditLogger:
         results.reverse()
         return results
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get audit log statistics."""
         if not self._log_path.is_file():
             return {"exists": False, "events": 0, "size_bytes": 0}
@@ -340,7 +354,7 @@ class AuditLogger:
         stat = self._log_path.stat()
         events = 0
         try:
-            with open(self._log_path, "r", encoding="utf-8") as f:
+            with open(self._log_path, encoding="utf-8") as f:
                 for line in f:
                     if line.strip():
                         events += 1
@@ -368,7 +382,8 @@ class AuditLogger:
     def _append_line(self, line: str) -> None:
         """Append a line to the log file with rotation."""
         # Rotate if needed
-        if self._log_path.exists() and self._log_path.stat().st_size >= self._max_bytes:
+        if self._log_path.exists() and self._log_path.stat(
+            ).st_size >= self._max_bytes:
             self._rotate()
 
         with open(self._log_path, "a", encoding="utf-8") as f:
@@ -385,9 +400,11 @@ class AuditLogger:
 
         # Compress current log to .1
         one_path = self._log_path.with_suffix(".1.jsonl.gz")
-        with open(self._log_path, "rb") as f_in:
-            with gzip.open(one_path, "wb") as f_out:
-                shutil.copyfileobj(f_in, f_out)
+        with open(self._log_path, "rb") as f_in, gzip.open(
+            one_path
+            "wb"
+        ) as f_out:
+            shutil.copyfileobj(f_in, f_out)
 
         # Truncate current log
         self._log_path.write_text("", encoding="utf-8")
@@ -399,7 +416,7 @@ class AuditLogger:
 
         last_line = ""
         try:
-            with open(self._log_path, "r", encoding="utf-8") as f:
+            with open(self._log_path, encoding="utf-8") as f:
                 for line in f:
                     if line.strip():
                         last_line = line.strip()
@@ -420,7 +437,7 @@ class AuditLogger:
 # ─── Module-level singleton ────────────────────────────────────────────────
 
 
-_audit_logger: Optional[AuditLogger] = None
+_audit_logger: AuditLogger | None = None
 
 
 def get_audit_logger() -> AuditLogger:
@@ -432,7 +449,7 @@ def get_audit_logger() -> AuditLogger:
 
 
 def setup_audit_logger(
-    log_dir: Optional[Path] = None,
+    log_dir: Path | None = None,
     max_bytes: int = _DEFAULT_MAX_BYTES,
     rotate_count: int = _DEFAULT_ROTATE_COUNT,
 ) -> AuditLogger:

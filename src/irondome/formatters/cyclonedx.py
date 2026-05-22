@@ -1,4 +1,5 @@
-"""CycloneDX SBOM formatter — enterprise standard for Software Bill of Materials.
+"""CycloneDX SBOM formatter — enterprise standard for Software Bill of \
+    Materials.
 
 Produces CycloneDX 1.5 JSON compatible with dependency-track, OWASP tools,
 and enterprise procurement pipelines.
@@ -11,7 +12,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Union
 
 from irondome import __version__
 from irondome.l3.models import SandboxResult
@@ -28,7 +28,7 @@ _SEVERITY_RATING = {
 }
 
 
-def format_cyclonedx(result: Union[SandboxResult, AnalysisResult]) -> str:
+def format_cyclonedx(result: SandboxResult | AnalysisResult) -> str:
     """
     Format a result as CycloneDX 1.5 JSON.
 
@@ -83,7 +83,10 @@ def _l3_cyclonedx(result: SandboxResult) -> str:
         vulns.append(vuln)
 
     # Root component
-    root_name = " ".join(result.command) if result.command else result.policy_name or "unknown"
+    root_name = (
+        " ".join(result.command) if result.command else result.policy_name or \
+            "unknown"
+    )
 
     bom = {
         "$schema": "https://cyclonedx.org/schema/bom-1.5.schema.json",

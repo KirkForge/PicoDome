@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from irondome.audit import AuditEventType, AuditEvent, AuditLogger
+from irondome.audit import AuditEvent, AuditEventType, AuditLogger
 
 
 @pytest.fixture
@@ -64,25 +64,43 @@ class TestAuditLogger:
         assert (audit_dir / "audit.jsonl").is_file()
 
     def test_record_appends_lines(self, audit):
-        audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="cmd1")
-        audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", detail="ok")
-        audit.record(event_type=AuditEventType.SCAN_ALERT, actor="u1", detail="alert1")
+        audit.record(event_type=AuditEventType.SCAN_START, actor="u1", \
+            detail="cmd1")
+        audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", \
+            detail="ok")
+        audit.record(event_type=AuditEventType.SCAN_ALERT, actor="u1", \
+            detail="alert1")
 
         log_path = audit.log_path
-        lines = [line.strip() for line in log_path.read_text().splitlines() if line.strip()]
+        lines =
+            [
+                line.strip() for line in log_path.read_text().splitlines() if \
+                    line.strip(),
+            ]
         assert len(lines) == 3
 
     def test_chain_integrity(self, audit):
-        _e1 = audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="cmd1")  # noqa: F841
-        _e2 = audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", detail="ok")  # noqa: F841
-        e3 = audit.record(event_type=AuditEventType.POLICY_UPDATE, actor="admin", detail="change")  # noqa: F841
+        _e1 =
+            audit.record(event_type=AuditEventType.SCAN_START, actor="u1", \
+                detail="cmd1")
+        # noqa: F841
+        _e2 =
+            audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", \
+                detail="ok")
+        # noqa: F841
+        e3 =
+            audit.record(event_type=AuditEventType.POLICY_UPDATE, \
+                actor="admin", detail="change")
+        # noqa: F841
 
         violations = audit.verify_chain()
         assert violations == []
 
     def test_chain_detects_tampering(self, audit):
-        audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="cmd1")
-        audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", detail="ok")
+        audit.record(event_type=AuditEventType.SCAN_START, actor="u1", \
+            detail="cmd1")
+        audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", \
+            detail="ok")
 
         # Tamper with the first line
         log_path = audit.log_path
@@ -96,24 +114,31 @@ class TestAuditLogger:
         assert len(violations) > 0
 
     def test_query_by_event_type(self, audit):
-        audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="cmd1")
-        audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", detail="ok")
-        audit.record(event_type=AuditEventType.POLICY_UPDATE, actor="admin", detail="change")
+        audit.record(event_type=AuditEventType.SCAN_START, actor="u1", \
+            detail="cmd1")
+        audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", \
+            detail="ok")
+        audit.record(event_type=AuditEventType.POLICY_UPDATE, actor="admin", \
+            detail="change")
 
         results = audit.query(event_type=AuditEventType.SCAN_START)
         assert len(results) == 1
         assert results[0].event_type == AuditEventType.SCAN_START
 
     def test_query_by_actor(self, audit):
-        audit.record(event_type=AuditEventType.SCAN_START, actor="alice", detail="cmd1")
-        audit.record(event_type=AuditEventType.SCAN_START, actor="bob", detail="cmd2")
-        audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="alice", detail="ok")
+        audit.record(event_type=AuditEventType.SCAN_START, actor="alice", \
+            detail="cmd1")
+        audit.record(event_type=AuditEventType.SCAN_START, actor="bob", \
+            detail="cmd2")
+        audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="alice", \
+            detail="ok")
 
         results = audit.query(actor="alice")
         assert len(results) == 2
 
     def test_get_stats(self, audit):
-        audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="cmd1")
+        audit.record(event_type=AuditEventType.SCAN_START, actor="u1", \
+            detail="cmd1")
         stats = audit.get_stats()
         assert stats["exists"] is True
         assert stats["events"] == 1
@@ -121,7 +146,8 @@ class TestAuditLogger:
 
     def test_rotation(self, audit_dir):
         # Small max_bytes to trigger rotation quickly
-        small_audit = AuditLogger(log_dir=audit_dir, max_bytes=200, rotate_count=3)
+        small_audit =
+            AuditLogger(log_dir=audit_dir, max_bytes=200, rotate_count=3)
         for i in range(50):
             small_audit.record(
                 event_type=AuditEventType.SCAN_START,
@@ -134,12 +160,22 @@ class TestAuditLogger:
 
     def test_prev_hash_chain(self, audit):
         import hashlib
-        e1 = audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="first")  # noqa: F841
-        e2 = audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", detail="second")  # noqa: F841
+        e1 =
+            audit.record(event_type=AuditEventType.SCAN_START, actor="u1", \
+                detail="first")
+        # noqa: F841
+        e2 =
+            audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", \
+                detail="second")
+        # noqa: F841
 
         # e2's prev_hash should be the SHA-256 of e1's JSON line
         log_path = audit.log_path
-        lines = [line.strip() for line in log_path.read_text().splitlines() if line.strip()]
+        lines =
+            [
+                line.strip() for line in log_path.read_text().splitlines() if \
+                    line.strip(),
+            ]
         line1_hash = hashlib.sha256(lines[0].encode("utf-8")).hexdigest()
 
         data2 = json.loads(lines[1])
@@ -171,6 +207,8 @@ class TestAuditEventTypes:
         assert AuditEventType.AUTH_FAILURE.value == "auth_failure"
 
     def test_data_governance_types(self):
-        assert AuditEventType.DATA_RETENTION_CLEANUP.value == "data_retention_cleanup"
+        assert
+            AuditEventType.DATA_RETENTION_CLEANUP.value == \
+                "data_retention_cleanup"
         assert AuditEventType.DATA_EXPORT.value == "data_export"
         assert AuditEventType.DATA_DELETE.value == "data_delete"

@@ -160,7 +160,8 @@ class TestLoadBaselinesFromPath:
                 "expected_runtime_ms_range": [200, 10000],
             },
         ]
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", \
+            delete=False) as f:
             json.dump(data, f)
             path = Path(f.name)
 

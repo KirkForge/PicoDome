@@ -3,14 +3,15 @@
 import hashlib
 import json
 
-
 from irondome.models import Finding, Severity, Verdict
 
 
 def _validate_findings_deterministic(findings: list) -> list:
     """Validate that findings contain no uuid4 or timestamps."""
     import re
-    uuid_pat = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', re.IGNORECASE)
+    uuid_pat =
+        re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1 \
+            2}', re.IGNORECASE)
     ts_pat = re.compile(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}')
     errors = []
     for f in findings:
@@ -27,12 +28,15 @@ def _check_value(val, path, rule_id, uuid_pat, ts_pat, errors):
             _check_value(v, f"{path}.{k}", rule_id, uuid_pat, ts_pat, errors)
     elif isinstance(val, list):
         for i, item in enumerate(val):
-            _check_value(item, f"{path}[{i}]", rule_id, uuid_pat, ts_pat, errors)
+            _check_value(item, f"{path}[{i}]", rule_id, uuid_pat, ts_pat, \
+                errors)
     elif isinstance(val, str):
         if uuid_pat.search(val):
-            errors.append(f"Finding {rule_id} has UUID in field '{path}': {val}")
+            errors.append(f"Finding {rule_id} has UUID in field '{path}': \
+                {val}")
         if ts_pat.search(val):
-            errors.append(f"Finding {rule_id} has timestamp in field '{path}': {val}")
+            errors.append(f"Finding {rule_id} has timestamp in field '{path}': \
+                {val}")
 
 
 def _validate_result_sorted(d: dict) -> list:
@@ -42,7 +46,8 @@ def _validate_result_sorted(d: dict) -> list:
         if isinstance(d[key], dict):
             keys = list(d[key].keys())
             if keys != sorted(keys):
-                errors.append(f"Dict key '{key}' has unsorted sub-keys: {keys}")
+                errors.append(f"Dict key '{key}' has unsorted sub-keys: \
+                    {keys}")
     return errors
 
 
@@ -129,7 +134,8 @@ class TestValidateResultSorted:
         )
         d = r.to_dict()
         errors = _validate_result_sorted(d)
-        # SandboxResult.to_dict keys are: run_id, timestamp, command, overall_verdict...
+        # SandboxResult.to_dict keys are: run_id, timestamp, command,
+        # overall_verdict...
         # This function checks sub-dicts only
         assert isinstance(errors, list)
 
@@ -210,12 +216,15 @@ class TestValidateNoRandomness:
         )
         d1 = r.to_dict()
         d2 = r.to_dict()
-        h1 = hashlib.sha256(json.dumps(d1, sort_keys=True).encode()).hexdigest()
-        h2 = hashlib.sha256(json.dumps(d2, sort_keys=True).encode()).hexdigest()
+        h1 =
+            hashlib.sha256(json.dumps(d1, sort_keys=True).encode()).hexdigest()
+        h2 =
+            hashlib.sha256(json.dumps(d2, sort_keys=True).encode()).hexdigest()
         assert h1 == h2
 
     def test_analysis_result_deterministic_hash(self):
-        """AnalysisResult with explicit fields should hash deterministically."""
+        """AnalysisResult with explicit fields should hash \
+            deterministically."""
         from irondome.l4.models import AnalysisResult, BehavioralVerdict
         ar = AnalysisResult(
             target="test",
@@ -224,15 +233,21 @@ class TestValidateNoRandomness:
         )
         d1 = ar.to_dict()
         d2 = ar.to_dict()
-        h1 = hashlib.sha256(json.dumps(d1, sort_keys=True).encode()).hexdigest()
-        h2 = hashlib.sha256(json.dumps(d2, sort_keys=True).encode()).hexdigest()
+        h1 =
+            hashlib.sha256(json.dumps(d1, sort_keys=True).encode()).hexdigest()
+        h2 =
+            hashlib.sha256(json.dumps(d2, sort_keys=True).encode()).hexdigest()
         assert h1 == h2
 
     def test_auto_uuid_breaks_determinism(self):
         """Auto-generated finding_id makes Findings non-deterministic."""
         from irondome.models import _generate_finding_id
-        f1 = Finding(rule_id="R1", severity=Severity.LOW, message="m", finding_id=_generate_finding_id())
-        f2 = Finding(rule_id="R1", severity=Severity.LOW, message="m", finding_id=_generate_finding_id())
+        f1 =
+            Finding(rule_id="R1", severity=Severity.LOW, message="m", \
+                finding_id=_generate_finding_id())
+        f2 =
+            Finding(rule_id="R1", severity=Severity.LOW, message="m", \
+                finding_id=_generate_finding_id())
         # finding_id auto-generates UUIDs, so they differ
         assert f1.finding_id != f2.finding_id
 

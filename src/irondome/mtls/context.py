@@ -4,8 +4,17 @@ Creates properly configured ssl.SSLContext for the daemon's HTTP
 server with mutual TLS (client certificate verification).
 
 Certificate management:
-- Server cert/key: from IRONDOME_TLS_CERT / IRONDOME_TLS_KEY env vars or file paths
-- CA bundle (for verifying client certs): from IRONDOME_TLS_CA env var or file path
+- Server cert/key: from IRONDOME_TLS_CERT / IRONDOME_TLS_KEY env vars or file \
+    paths
+- CA bundle (for verifying client certs): from IRONDOME_TLS_CA env var or file \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    path
 - Auto-generates self-signed certs for development (IRONDOME_TLS_DEV=1)
 
 Hardening:
@@ -24,7 +33,7 @@ import shutil
 import ssl
 import tempfile
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger("irondome.mtls")
 
@@ -45,7 +54,7 @@ class MTLSConfig:
     # Whether to verify client certificates
     verify_client: bool = True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "ca_path": self.ca_path,
             "cert_path": self.cert_path,
@@ -56,14 +65,16 @@ class MTLSConfig:
         }
 
     @classmethod
-    def from_env(cls) -> "MTLSConfig":
+    def from_env(cls) -> MTLSConfig:
         """Create config from environment variables."""
         return cls(
             cert_path=os.environ.get("IRONDOME_TLS_CERT", ""),
             key_path=os.environ.get("IRONDOME_TLS_KEY", ""),
             ca_path=os.environ.get("IRONDOME_TLS_CA", ""),
-            dev_mode=os.environ.get("IRONDOME_TLS_DEV", "").lower() in ("1", "true", "yes"),
-            verify_client=os.environ.get("IRONDOME_TLS_VERIFY_CLIENT", "1").lower() in ("1", "true", "yes"),
+            dev_mode=os.environ.get("IRONDOME_TLS_DEV", "").lower() in ("1", \
+                "true", "yes"),
+            verify_client=os.environ.get("IRONDOME_TLS_VERIFY_CLIENT", \
+                "1").lower() in ("1", "true", "yes"),
         )
 
     @property
@@ -72,7 +83,9 @@ class MTLSConfig:
         return bool(self.cert_path and self.key_path) or self.dev_mode
 
 
-def create_ssl_context(config: Optional[MTLSConfig] = None) -> Optional[ssl.SSLContext]:
+def create_ssl_context(
+    config: MTLSConfig | None = None,
+) -> ssl.SSLContext | None:
     """Create an ssl.SSLContext for the daemon with mTLS.
 
     Args:
@@ -157,7 +170,8 @@ def _create_dev_ssl_context() -> ssl.SSLContext:
     """
     import subprocess
 
-    logger.warning("Creating DEV self-signed TLS certificate — DO NOT USE IN PRODUCTION")
+    logger.warning("Creating DEV self-signed TLS certificate — DO NOT USE IN \
+        PRODUCTION")
 
     tmpdir = tempfile.mkdtemp(prefix="irondome_tls_")
     atexit.register(lambda: shutil.rmtree(tmpdir, ignore_errors=True))
@@ -181,5 +195,6 @@ def _create_dev_ssl_context() -> ssl.SSLContext:
     ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
     ctx.verify_mode = ssl.CERT_NONE  # dev mode: no client verification
 
-    logger.info("Dev SSL context created (self-signed, no client verification)")
+    logger.info("Dev SSL context created (self-signed, no client \
+        verification)")
     return ctx

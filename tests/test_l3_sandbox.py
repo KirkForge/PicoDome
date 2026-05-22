@@ -1,9 +1,15 @@
 """Tests for L3 sandbox execution."""
 
-from irondome.l3.engine import sandbox_run, SandboxEngine
-from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction, Verdict
-from irondome.l3.policy import default_policy
 from irondome.l3.backends.subprocess_backend import SubprocessBackend
+from irondome.l3.engine import SandboxEngine, sandbox_run
+from irondome.l3.models import (
+    Policy,
+    PolicyRule,
+    RuleTarget,
+    SyscallAction,
+    Verdict,
+)
+from irondome.l3.policy import default_policy
 
 
 class TestPolicy:
@@ -58,7 +64,8 @@ class TestSubprocessBackend:
     def test_run_detects_suspicious(self):
         backend = SubprocessBackend()
         result = backend.run(
-            ["python3", "-c", "print('eval(compile(open(\\\"/etc/passwd\\\")))')"],
+            ["python3", "-c", \
+                "print('eval(compile(open(\\\"/etc/passwd\\\")))')"],
             default_policy(),
         )
         assert any(e.rule_id == "L3-SUS-001" for e in result.events)
@@ -66,7 +73,9 @@ class TestSubprocessBackend:
 
     def test_run_safe_command_passes(self):
         backend = SubprocessBackend()
-        result = backend.run(["python3", "-c", "print('hello world')"], default_policy())
+        result =
+            backend.run(["python3", "-c", "print('hello world')"], \
+                default_policy())
         assert result.overall_verdict == Verdict.ALLOW
 
     def test_run_command_not_found(self):
@@ -109,7 +118,8 @@ class TestSeccompBackend:
         """Network access should be killed by seccomp."""
         result = sandbox_run([
             "python3", "-c",
-            "import urllib.request; urllib.request.urlopen('http://example.com')",
+            "import urllib.request; \
+                urllib.request.urlopen('http://example.com')",
         ], timeout=5.0)
         # Either KILL from seccomp or DENY from pattern analysis
         assert result.overall_verdict in (Verdict.KILL, Verdict.DENY)
@@ -124,7 +134,9 @@ class TestSeccompBackend:
         """Non-existent commands should produce error events."""
         result = sandbox_run(["nonexistent_command_xyzzy"])
         assert result.exit_code in (-1, 127, 1)
-        assert result.overall_verdict in (Verdict.DENY, Verdict.KILL, Verdict.ALLOW)
+        assert
+            result.overall_verdict in (Verdict.DENY, Verdict.KILL, \
+                Verdict.ALLOW)
 
 
 class TestSandboxEngine:
@@ -150,7 +162,9 @@ class TestSandboxEngine:
         )
         # With restrictive policy, network output should trigger violation
         # Either via seccomp kill or post-hoc pattern detection
-        # With seccomp, print does not trigger network syscalls. Post-hoc pattern analysis catches IP in output.
-        # The seccomp backend handles this at kernel level; subprocess backend catches it post-hoc.
+        # With seccomp, print does not trigger network syscalls. Post-hoc
+        # pattern analysis catches IP in output.
+        # The seccomp backend handles this at kernel level; subprocess backend
+        # catches it post-hoc.
         # Either way, events should exist if anything suspicious was found.
         pass  # Accept any verdict for this policy+command combination

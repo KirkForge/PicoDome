@@ -8,21 +8,20 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from irondome.audit import AuditEventType, AuditLogger
 from irondome.notary import (
     AuditNotary,
-    NullNotary,
-    RekorNotary,
+    NotaryConnectionError,
     NotaryError,
     NotaryTimeoutError,
-    NotaryConnectionError,
     NotaryVerificationError,
+    NullNotary,
+    RekorNotary,
     get_default_notary,
     set_default_notary,
     sign_entry,
     verify_entry_signature,
 )
-from irondome.audit import AuditLogger, AuditEventType
-
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -129,7 +128,8 @@ class TestHMACSigning:
     def test_verify_entry_signature_wrong_key(self, sample_entry):
         """Signature with wrong key fails verification."""
         sig = sign_entry(sample_entry, key="correct-key")
-        assert verify_entry_signature(sample_entry, sig, key="wrong-key") is False
+        assert
+            verify_entry_signature(sample_entry, sig, key="wrong-key") is False
 
     def test_verify_entry_signature_tampered_content(self, sample_entry):
         """Tampered content fails verification against original signature."""
@@ -157,7 +157,8 @@ class TestNullNotary:
 
     def test_verify_unknown_uuid(self, null_notary, sample_entry):
         """Verifying an unknown UUID returns False."""
-        assert null_notary.verify_entry("nonexistent-uuid", sample_entry) is False
+        assert
+            null_notary.verify_entry("nonexistent-uuid", sample_entry) is False
 
     def test_verify_tampered_entry(self, null_notary, sample_entry):
         """Verifying a tampered entry returns False."""
@@ -180,7 +181,12 @@ class TestNullNotary:
         proof = null_notary.get_proof("nonexistent-uuid")
         assert "error" in proof
 
-    def test_multiple_entries_independent(self, null_notary, sample_entry, sample_entry_2):
+    def test_multiple_entries_independent(
+        self,
+        null_notary,
+        sample_entry,
+        sample_entry_2,
+    ):
         """Multiple entries have independent UUIDs and signatures."""
         uuid1 = null_notary.submit_entry(sample_entry)
         uuid2 = null_notary.submit_entry(sample_entry_2)
@@ -195,7 +201,11 @@ class TestNullNotary:
         uuid = null_notary_custom_key.submit_entry(sample_entry)
         assert null_notary_custom_key.verify_entry(uuid, sample_entry) is True
 
-    def test_proof_signature_matches_sign_entry(self, null_notary, sample_entry):
+    def test_proof_signature_matches_sign_entry(
+        self,
+        null_notary,
+        sample_entry,
+    ):
         """The HMAC signature in the proof matches sign_entry()."""
         uuid = null_notary.submit_entry(sample_entry)
         proof = null_notary.get_proof(uuid)
@@ -225,9 +235,14 @@ class TestRekorNotary:
             uuid = rekor_notary.submit_entry(sample_entry)
             assert uuid == "rekor-uuid-12345"
 
-    def test_submit_fallback_on_connection_error(self, rekor_notary, sample_entry):
+    def test_submit_fallback_on_connection_error(
+        self,
+        rekor_notary,
+        sample_entry,
+    ):
         """RekorNotary falls back to local UUID when Rekor is unavailable."""
-        with patch("urllib.request.urlopen", side_effect=Exception("Connection refused")):
+        with patch("urllib.request.urlopen", side_effect=Exception("Connection \
+            refused")):
             uuid = rekor_notary.submit_entry(sample_entry)
             assert isinstance(uuid, str)
             assert len(uuid) == 36  # Local UUID format
@@ -307,7 +322,9 @@ class TestRekorNotary:
             uuid = rekor_notary.submit_entry(sample_entry)
 
         proof = rekor_notary.get_proof(uuid)
-        assert proof["hmac_signature"] == sign_entry(sample_entry, key="test-hmac-key")
+        assert
+            proof["hmac_signature"] == sign_entry(sample_entry, \
+                key="test-hmac-key")
 
     def test_custom_rekor_url(self, sample_entry):
         """RekorNotary uses custom URL."""
@@ -431,14 +448,18 @@ class TestAuditNotaryIntegration:
         mock_notary.submit_entry.return_value = "uuid"
 
         audit = AuditLogger(log_dir=audit_dir, notary=mock_notary)
-        audit.record(event_type=AuditEventType.SCAN_START, actor="u1", detail="start")
-        audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", detail="done")
-        audit.record(event_type=AuditEventType.POLICY_UPDATE, actor="admin", detail="update")
+        audit.record(event_type=AuditEventType.SCAN_START, actor="u1", \
+            detail="start")
+        audit.record(event_type=AuditEventType.SCAN_COMPLETE, actor="u1", \
+            detail="done")
+        audit.record(event_type=AuditEventType.POLICY_UPDATE, actor="admin", \
+            detail="update")
 
         assert mock_notary.submit_entry.call_count == 3
 
 
-# ─── Default Notary Module-level Tests ────────────────────────────────────────
+# ─── Default Notary Module-level Tests
+# ────────────────────────────────────────
 
 class TestDefaultNotary:
     """Tests for module-level default notary management."""
@@ -496,34 +517,39 @@ class TestRekorHTTPErrorPaths:
     def test_connection_refused_fallback(self, rekor_notary, sample_entry):
         """Connection refused falls back to local UUID."""
         import urllib.error
-        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("Connection refused")):
+        with patch("urllib.request.urlopen", \
+            side_effect=urllib.error.URLError("Connection refused")):
             uuid = rekor_notary.submit_entry(sample_entry)
             assert len(uuid) == 36  # Local UUID
 
     def test_timeout_fallback(self, rekor_notary, sample_entry):
         """Timeout falls back to local UUID."""
         import urllib.error
-        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timed out")):
+        with patch("urllib.request.urlopen", \
+            side_effect=urllib.error.URLError("timed out")):
             uuid = rekor_notary.submit_entry(sample_entry)
             assert len(uuid) == 36
 
     def test_dns_failure_fallback(self, rekor_notary, sample_entry):
         """DNS failure falls back to local UUID."""
         import urllib.error
-        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("Name or service not known")):
+        with patch("urllib.request.urlopen", \
+            side_effect=urllib.error.URLError("Name or service not known")):
             uuid = rekor_notary.submit_entry(sample_entry)
             assert len(uuid) == 36
 
     def test_verify_unknown_uuid_rekor(self, rekor_notary, sample_entry):
         """Verify unknown UUID tries Rekor then fails gracefully."""
         import urllib.error
-        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("not found")):
+        with patch("urllib.request.urlopen", \
+            side_effect=urllib.error.URLError("not found")):
             result = rekor_notary.verify_entry("unknown-uuid", sample_entry)
             assert result is False
 
     def test_get_proof_unknown_uuid_rekor(self, rekor_notary):
         """get_proof for unknown UUID returns error."""
         import urllib.error
-        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("not found")):
+        with patch("urllib.request.urlopen", \
+            side_effect=urllib.error.URLError("not found")):
             proof = rekor_notary.get_proof("unknown-uuid")
             assert "error" in proof

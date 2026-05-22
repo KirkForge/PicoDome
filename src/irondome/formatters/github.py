@@ -13,13 +13,12 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Union
 
 from irondome import __version__
+from irondome.formatters.sarif import format_sarif
 from irondome.l3.models import SandboxResult
 from irondome.l4.models import AnalysisResult
 from irondome.models import Severity
-from irondome.formatters.sarif import format_sarif
 
 # Dome-themed severity labels for markdown output
 _DOME_LABELS = {
@@ -32,7 +31,7 @@ _DOME_LABELS = {
 
 
 def format_github(
-    result: Union[SandboxResult, AnalysisResult],
+    result: SandboxResult | AnalysisResult,
     sarif_path: str = "irondome-results.sarif",
 ) -> str:
     """
@@ -100,17 +99,27 @@ def _l4_github(result: AnalysisResult, sarif_path: str) -> str:
 
     # Summary
     verdict = result.overall_verdict.value
-    icon = "✅" if verdict == "CLEAN" else ("⚠️" if verdict == "SUSPICIOUS" else "🚫")
+    icon = (
+        "✅" if verdict == "CLEAN" else ("⚠️" if verdict == "SUSPICIOUS" else \
+            "🚫")
+    )
 
     if not result.findings:
         lines.append(f"**{icon} {verdict}** — All clear. Dome intact. 🛡️\n")
     else:
-        lines.append(f"**{icon} {verdict}** — {len(result.findings)} finding(s)\n")
+        lines.append(
+            f"**{icon} {verdict}** — {len(result.findings)} finding(s)\n")
 
         # Severity breakdown
         lines.append("| Severity | Count | Label |")
         lines.append("|----------|-------|-------|")
-        for sev in (Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW, Severity.INFO):
+        for sev in (
+            Severity.CRITICAL,
+            Severity.HIGH,
+            Severity.MEDIUM,
+            Severity.LOW,
+            Severity.INFO,
+        ):
             count = result.stats.findings_by_severity.get(sev.value, 0)
             if count > 0:
                 label = _DOME_LABELS.get(sev, sev.value)

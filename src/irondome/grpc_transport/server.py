@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from concurrent import futures
-from typing import Any, Callable, Optional
+from typing import Any
 
 from irondome.grpc_transport import is_grpc_available
 
@@ -28,28 +29,42 @@ class _ScanEngine:
 
     def __init__(
         self,
-        scan_fn: Optional[Callable] = None,
-        analyze_fn: Optional[Callable] = None,
+        scan_fn: Callable | None = None,
+        analyze_fn: Callable | None = None,
     ) -> None:
         self._scan_fn = scan_fn
         self._analyze_fn = analyze_fn
 
-    def scan(self, command, policy=None, timeout=30.0, cwd=None, deterministic=False):
+    def scan(
+        self,
+        command,
+        policy=None,
+        timeout=30.0,
+        cwd=None,
+        deterministic=False,
+    ):
         """Run the L3 sandbox scan."""
         if self._scan_fn:
-            return self._scan_fn(command=command, policy=policy, timeout=timeout, cwd=cwd, deterministic=deterministic)
+            return
+                self._scan_fn(command=command, policy=policy, timeout=timeout, \
+                    cwd=cwd, deterministic=deterministic)
         from irondome.l3.engine import sandbox_run
-        return sandbox_run(command=command, policy=policy, timeout=timeout, cwd=cwd, deterministic=deterministic)
+        return
+            sandbox_run(command=command, policy=policy, timeout=timeout, \
+                cwd=cwd, deterministic=deterministic)
 
     def analyze(self, sandbox_result, rules=None, deterministic=False):
         """Run the L4 behavioral analysis."""
         if self._analyze_fn:
-            return self._analyze_fn(sandbox_result, rules=rules, deterministic=deterministic)
+            return
+                self._analyze_fn(sandbox_result, rules=rules, \
+                    deterministic=deterministic)
         from irondome.l4.engine import create_default_engine
         from irondome.l4.profiler import profile_from_sandbox_result
         engine = create_default_engine()
         profile = profile_from_sandbox_result(sandbox_result)
-        return engine.analyze(profile, rules=rules, deterministic=deterministic)
+        return
+            engine.analyze(profile, rules=rules, deterministic=deterministic)
 
 
 class IronDomeGRPCServer:
@@ -63,7 +78,9 @@ class IronDomeGRPCServer:
     Or with TLS::
 
         from irondome.mtls import MTLSConfig, create_ssl_context
-        config = MTLSConfig(cert_path="server.crt", key_path="server.key", ca_path="ca.crt")
+        config =
+            MTLSConfig(cert_path="server.crt", key_path="server.key", \
+                ca_path="ca.crt")
         server = IronDomeGRPCServer(port=50051, mtls_config=config)
         server.start()
 
@@ -75,10 +92,10 @@ class IronDomeGRPCServer:
         self,
         host: str = "[::]",
         port: int = 50051,
-        mtls_config: Optional[Any] = None,
+        mtls_config: Any | None = None,
         max_workers: int = 10,
-        scan_fn: Optional[Callable] = None,
-        analyze_fn: Optional[Callable] = None,
+        scan_fn: Callable | None = None,
+        analyze_fn: Callable | None = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -102,9 +119,12 @@ class IronDomeGRPCServer:
             )
 
         import grpc
+
         from irondome.grpc_transport._servicer import IronDomeServicer
 
-        self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=self._max_workers))
+        self._server =
+            grpc.server(futures.ThreadPoolExecutor(max_workers=self._max_worker \
+                s))
         self._servicer = IronDomeServicer(
             scan_engine=self._scan_engine,
             start_time=self._start_time,
@@ -113,13 +133,17 @@ class IronDomeGRPCServer:
         # Register servicer — we use the generated pb2/pb2_grpc if available,
         # otherwise fall back to manual registration
         try:
-            from irondome.grpc_transport.proto import irondome_pb2_grpc as pb2_grpc
-            pb2_grpc.add_IronDomeServiceServicer_to_server(self._servicer, self._server)
+            from irondome.grpc_transport.proto import (
+                irondome_pb2_grpc as pb2_grpc,
+            )
+            pb2_grpc.add_IronDomeServiceServicer_to_server(self._servicer, \
+                self._server)
         except ImportError:
             # Manual registration for when proto compilation is not done
             logger.warning(
                 "Compiled protobuf stubs not found. "
-                "Run: python -m grpc_tools.protoc -I src/irondome/grpc_transport/proto "
+                "Run: python -m grpc_tools.protoc -I \
+                    src/irondome/grpc_transport/proto "
                 "--python_out=src/irondome/grpc_transport/proto "
                 "--grpc_python_out=src/irondome/grpc_transport/proto "
                 "src/irondome/grpc_transport/proto/irondome.proto"
@@ -131,7 +155,8 @@ class IronDomeGRPCServer:
         # Configure TLS if provided
         server_credentials = None
         if self._mtls_config is not None:
-            server_credentials = self._create_server_credentials(self._mtls_config)
+            server_credentials =
+                self._create_server_credentials(self._mtls_config)
 
         address = f"{self._host}:{self._port}"
         if server_credentials:
@@ -187,13 +212,17 @@ class IronDomeGRPCServer:
         from irondome.mtls.context import MTLSConfig
 
         if not isinstance(mtls_config, MTLSConfig):
-            logger.warning("mtls_config is not an MTLSConfig instance, skipping TLS")
+            logger.warning("mtls_config is not an MTLSConfig instance, \
+                skipping TLS")
             return None
 
         if mtls_config.dev_mode:
-            logger.warning("Dev TLS mode — self-signed certs, DO NOT USE IN PRODUCTION")
-            # In dev mode, we still need certs for gRPC; use the mtls module's dev context
-            # For gRPC we need actual cert files, so dev mode with gRPC requires manual cert setup
+            logger.warning("Dev TLS mode — self-signed certs, DO NOT USE IN \
+                PRODUCTION")
+            # In dev mode, we still need certs for gRPC; use the mtls module's
+            # dev context
+            # For gRPC we need actual cert files, so dev mode with gRPC
+            # requires manual cert setup
             return None
 
         if not mtls_config.cert_path or not mtls_config.key_path:
@@ -221,7 +250,8 @@ class IronDomeGRPCServer:
                     ((private_key, cert_chain),),
                 )
 
-            logger.info("gRPC TLS credentials created (verify_client=%s)", mtls_config.verify_client)
+            logger.info("gRPC TLS credentials created (verify_client=%s)", \
+                mtls_config.verify_client)
             return credentials
         except Exception as e:
             logger.error("Failed to create gRPC TLS credentials: %s", e)

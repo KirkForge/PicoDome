@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from irondome.retention import RetentionManager, RetentionConfig, RetentionPolicy
+from irondome.retention import (
+    RetentionConfig,
+    RetentionManager,
+    RetentionPolicy,
+)
 
 
 @pytest.fixture
@@ -16,9 +20,12 @@ def retention_dir(tmp_path):
 @pytest.fixture
 def rm(retention_dir):
     config = RetentionConfig(
-        scan_results=RetentionPolicy(data_type="scan_results", ttl_days=90, secure_delete=False, max_size_mb=1),
-        audit_logs=RetentionPolicy(data_type="audit_logs", ttl_days=365, secure_delete=False, max_size_mb=1),
-        baselines=RetentionPolicy(data_type="baselines", ttl_days=0, secure_delete=False, max_size_mb=1),
+        scan_results=RetentionPolicy(data_type="scan_results", ttl_days=90, \
+            secure_delete=False, max_size_mb=1),
+        audit_logs=RetentionPolicy(data_type="audit_logs", ttl_days=365, \
+            secure_delete=False, max_size_mb=1),
+        baselines=RetentionPolicy(data_type="baselines", ttl_days=0, \
+            secure_delete=False, max_size_mb=1),
     )
     return RetentionManager(config=config, data_dir=retention_dir)
 
@@ -43,7 +50,9 @@ class TestRetentionPolicy:
 
 class TestRetentionManager:
     def test_save_scan_result(self, rm, retention_dir):
-        path = rm.save_scan_result('{"verdict": "ALLOW"}', package_name="test-pkg")
+        path =
+            rm.save_scan_result('{"verdict": "ALLOW"}', \
+                package_name="test-pkg")
         assert path.exists()
         assert "test-pkg" in path.name
         assert path.suffix == ".json"

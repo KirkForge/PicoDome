@@ -7,12 +7,11 @@ Provides deterministic allow/deny/kill enforcement via BPF.
 from __future__ import annotations
 
 import ctypes
-import shutil
 import logging
 import os
+import shutil
 import signal
 import time
-from typing import Dict, List, Optional, Set
 
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.models import (
@@ -105,7 +104,7 @@ class SeccompBackend(SandboxBackend):
     """
 
     def __init__(self):
-        self._syscall_cache: Dict[str, int] = {}
+        self._syscall_cache: dict[str, int] = {}
 
     @property
     def name(self) -> str:
@@ -127,14 +126,14 @@ class SeccompBackend(SandboxBackend):
 
     def run(
         self,
-        command: List[str],
+        command: list[str],
         policy: Policy,
-        timeout: Optional[float] = None,
-        cwd: Optional[str] = None,
-        env: Optional[dict] = None,
+        timeout: float | None = None,
+        cwd: str | None = None,
+        env: dict | None = None,
     ) -> SandboxResult:
         start_ms = _now_ms()
-        events: List[SandboxEvent] = []
+        events: list[SandboxEvent] = []
         effective_timeout = timeout or 30.0
 
         try:
@@ -144,7 +143,10 @@ class SeccompBackend(SandboxBackend):
             # Build seccomp filter
             ctx, blocked = self._build_filter(lib, policy)
             if ctx is None:
-                return self._fallback_run(command, policy, timeout, cwd, env)
+                return self._fallback_run(
+                    command, policy, timeout, cwd, env,
+                    reason="seccomp filter init failed",
+                )
 
             # Resolve full command path
             cmd_path = shutil.which(command[0])
@@ -179,7 +181,8 @@ class SeccompBackend(SandboxBackend):
                 ret = lib.seccomp_load(ctx)
                 lib.seccomp_release(ctx)
                 if ret != 0:
-                    os._exit(127)  # seccomp filter failed — exit child immediately
+                    os._exit(127)
+                    # seccomp filter failed — exit child immediately
 
                 # Prepare env
                 child_env = os.environ.copy()
@@ -206,7 +209,8 @@ class SeccompBackend(SandboxBackend):
                 lib.seccomp_release(ctx)
 
                 # Wait with timeout
-                stdout_bytes, stderr_bytes, exit_code = self._wait_with_timeout(
+                stdout_bytes, stderr_bytes, exit_code = \
+                    self._wait_with_timeout(
                     pid, out_r, err_r, effective_timeout
                 )
 
@@ -218,7 +222,8 @@ class SeccompBackend(SandboxBackend):
                         rule_id="L3-TIMEOUT-001",
                         verdict=Verdict.KILL,
                         operation="process_timeout",
-                        detail=f"Process exceeded {effective_timeout}s timeout",
+                        detail=f"Process exceeded {effective_timeout}s \
+                            timeout",
                         timestamp_ms=int(_now_ms() - start_ms),
                     ))
 
@@ -237,7 +242,8 @@ class SeccompBackend(SandboxBackend):
                             rule_id="L3-SECCOMP-KILL",
                             verdict=Verdict.KILL,
                             operation="seccomp_violation",
-                            detail=f"Blocked syscalls: {', '.join(sorted(blocked)[:10])}",
+                            detail=f"Blocked syscalls: {', \
+                                '.join(sorted(blocked)[:10])}",
                             timestamp_ms=int(_now_ms() - start_ms),
                         )
 
@@ -253,9 +259,12 @@ class SeccompBackend(SandboxBackend):
                 timestamp_ms=int(_now_ms() - start_ms),
             ))
             stdout, stderr, exit_code = "", "", -1
-        except Exception:
+        except Exception as exc:
             logger.exception("Seccomp sandbox failed")
-            return self._fallback_run(command, policy, timeout, cwd, env)
+            return self._fallback_run(
+                command, policy, timeout, cwd, env,
+                reason=f"seccomp runtime error: {exc}",
+            )
 
         duration_ms = int(_now_ms() - start_ms)
         overall = self._compute_verdict(events, exit_code)
@@ -267,6 +276,7 @@ class SeccompBackend(SandboxBackend):
             duration_ms=duration_ms,
             events=events,
             policy_name=policy.name,
+            backend_name=self.name,
             stdout=stdout,
             stderr=stderr,
         )
@@ -275,7 +285,8 @@ class SeccompBackend(SandboxBackend):
         """Set up libseccomp function signatures."""
         lib.seccomp_init.argtypes = [ctypes.c_uint32]
         lib.seccomp_init.restype = ctypes.c_void_p
-        lib.seccomp_rule_add.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int, ctypes.c_uint]
+        lib.seccomp_rule_add.argtypes =
+            [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int, ctypes.c_uint]
         lib.seccomp_rule_add.restype = ctypes.c_int
         lib.seccomp_syscall_resolve_name.argtypes = [ctypes.c_char_p]
         lib.seccomp_syscall_resolve_name.restype = ctypes.c_int
@@ -284,12 +295,12 @@ class SeccompBackend(SandboxBackend):
         lib.seccomp_release.argtypes = [ctypes.c_void_p]
 
     def _build_filter(self, lib: ctypes.CDLL, policy: Policy) -> tuple:
-        """Build seccomp BPF filter from policy. Returns (ctx, blocked_syscalls)."""
-        blocked: Set[str] = set()
+        """Build seccomp BPF filter from policy. Returns (ctx, \
+            blocked_syscalls)."""
+        blocked: set[str] = set()
 
-        if policy.default_action == SyscallAction.DENY:
-            default_action = SCMP_ACT_KILL_PROCESS
-        elif policy.default_action == SyscallAction.KILL:
+        if policy.default_action == SyscallAction.DENY or \
+            policy.default_action == SyscallAction.KILL:
             default_action = SCMP_ACT_KILL_PROCESS
         else:
             default_action = SCMP_ACT_ALLOW
@@ -311,7 +322,8 @@ class SeccompBackend(SandboxBackend):
                 for name in syscalls:
                     num = self._resolve(lib, name)
                     if num >= 0:
-                        lib.seccomp_rule_add(ctx, SCMP_ACT_KILL_PROCESS, num, 0)
+                        lib.seccomp_rule_add(ctx, SCMP_ACT_KILL_PROCESS, num, \
+                            0)
                         blocked.add(name)
 
         # Always allow essential syscalls for basic binary execution
@@ -322,7 +334,7 @@ class SeccompBackend(SandboxBackend):
 
         return ctx, blocked
 
-    def _target_to_syscalls(self, target: RuleTarget) -> Set[str]:
+    def _target_to_syscalls(self, target: RuleTarget) -> set[str]:
         """Map a RuleTarget to Linux syscall names."""
         mapping = {
             RuleTarget.FILE_READ: _FS_READ_SYSCALLS,
@@ -334,7 +346,8 @@ class SeccompBackend(SandboxBackend):
             RuleTarget.PROCESS_SPAWN: _PROCESS_SYSCALLS,
             RuleTarget.PROCESS_KILL: {"kill", "tkill", "tgkill"},
             RuleTarget.DNS_QUERY: set(),
-            RuleTarget.SIGNAL_SEND: {"kill", "tkill", "tgkill", "rt_sigqueueinfo", "pidfd_send_signal"},
+            RuleTarget.SIGNAL_SEND: {"kill", "tkill", "tgkill", \
+                "rt_sigqueueinfo", "pidfd_send_signal"},
             RuleTarget.SYSCALL_GENERIC: set(),
         }
         return mapping.get(target, set())
@@ -342,7 +355,8 @@ class SeccompBackend(SandboxBackend):
     def _resolve(self, lib: ctypes.CDLL, name: str) -> int:
         """Resolve syscall name to number, with caching."""
         if name not in self._syscall_cache:
-            self._syscall_cache[name] = lib.seccomp_syscall_resolve_name(name.encode())
+            self._syscall_cache[name] =
+                lib.seccomp_syscall_resolve_name(name.encode())
         return self._syscall_cache[name]
 
     def _wait_with_timeout(
@@ -362,7 +376,9 @@ class SeccompBackend(SandboxBackend):
                 break
 
             try:
-                rlist, _, _ = _select.select([out_fd, err_fd], [], [], min(remaining, 1.0))
+                rlist, _, _ =
+                    _select.select([out_fd, err_fd], [], [], min(remaining, \
+                        1.0))
             except (ValueError, OSError):
                 break
 
@@ -419,13 +435,21 @@ class SeccompBackend(SandboxBackend):
 
         return b"".join(stdout_chunks), b"".join(stderr_chunks), exit_code
 
-    def _posthoc_analysis(self, stdout: str, stderr: str) -> List[SandboxEvent]:
+    def _posthoc_analysis(
+        self,
+        stdout: str,
+        stderr: str,
+    ) -> list[SandboxEvent]:
         """Post-hoc pattern analysis on captured output."""
         from irondome.l3.backends.subprocess_backend import SubprocessBackend
         sb = SubprocessBackend()
         return sb._check_suspicious_patterns(stdout, stderr)
 
-    def _compute_verdict(self, events: List[SandboxEvent], exit_code: int) -> Verdict:
+    def _compute_verdict(
+        self,
+        events: list[SandboxEvent],
+        exit_code: int,
+    ) -> Verdict:
         if exit_code == -1:
             return Verdict.KILL
         for event in events:
@@ -435,7 +459,59 @@ class SeccompBackend(SandboxBackend):
                 return Verdict.DENY
         return Verdict.ALLOW
 
-    def _fallback_run(self, command, policy, timeout, cwd, env) -> SandboxResult:
-        logger.warning("Seccomp setup failed — falling back to subprocess")
-        from irondome.l3.backends.subprocess_backend import SubprocessBackend
-        return SubprocessBackend().run(command, policy, timeout=timeout, cwd=cwd, env=env)
+    def _fallback_run(
+        self,
+        command: list[str],
+        policy: Policy,
+        timeout: float | None,
+        cwd: str | None,
+        env: dict | None,
+        reason: str = "seccomp setup failed",
+    ) -> SandboxResult:
+        """Handle backend failure.
+
+        If policy.fail_closed is True (default), return a KILL verdict
+        instead of degrading to the unconfined subprocess backend.
+        Only falls back to subprocess when fail_closed=False.
+        """
+        if policy.fail_closed:
+            logger.error(
+                "FAIL-CLOSED: %s — refusing fallback to "
+                "unconfined subprocess backend",
+                reason,
+            )
+            return SandboxResult(
+                command=command,
+                overall_verdict=Verdict.KILL,
+                exit_code=-1,
+                events=[
+                    SandboxEvent(
+                        rule_id="L3-SANDBOX-DEGRADE",
+                        verdict=Verdict.KILL,
+                        operation="sandbox_degradation_blocked",
+                        detail=(
+                            f"Sandbox backend failed: {reason}. "
+                            "Fail-closed policy prevents "
+                            "unconfined execution."
+                        ),
+                    ),
+                ],
+                policy_name=policy.name,
+                backend_name=self.name,
+            )
+
+        logger.warning(
+            "FAIL-OPEN: %s — falling back to subprocess "
+            "(no real sandboxing)",
+            reason,
+        )
+        from irondome.l3.backends.subprocess_backend import (
+            SubprocessBackend,
+        )
+        return SubprocessBackend().run(
+            command,
+            policy,
+            timeout=timeout,
+            cwd=cwd,
+            env=env,
+        )

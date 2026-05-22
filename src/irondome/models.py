@@ -8,11 +8,10 @@ fill in non-deterministic values when needed.
 
 from __future__ import annotations
 
-import uuid
 import time
+import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict
 
 
 class Severity(str, Enum):
@@ -46,15 +45,15 @@ class Finding:
     severity: Severity
     message: str
     location: str = ""
-    evidence: Dict = field(default_factory=dict)
+    evidence: dict = field(default_factory=dict)
     finding_id: str = ""
 
-    def to_dict(self, deterministic: bool = False) -> Dict:
+    def to_dict(self, deterministic: bool = False) -> dict:
         """Serialize to dict. Sort keys for deterministic JSON output.
 
         In deterministic mode, omit finding_id if empty.
         """
-        d: Dict = {
+        d: dict = {
             "rule_id": self.rule_id,
             "severity": self.severity.value,
             "message": self.message,
@@ -72,18 +71,19 @@ class ScanStats:
     packages_scanned: int = 0
     files_scanned: int = 0
     duration_ms: int = 0
-    findings_by_severity: Dict[str, int] = field(default_factory=dict)
-    findings_by_rule: Dict[str, int] = field(default_factory=dict)
+    findings_by_severity: dict[str, int] = field(default_factory=dict)
+    findings_by_rule: dict[str, int] = field(default_factory=dict)
 
-    def to_dict(self, deterministic: bool = False) -> Dict:
+    def to_dict(self, deterministic: bool = False) -> dict:
         """Serialize to dict with sorted keys.
 
         In deterministic mode, omit duration_ms (timing is non-deterministic).
         """
-        d: Dict = {
+        d: dict = {
             "packages_scanned": self.packages_scanned,
             "files_scanned": self.files_scanned,
-            "findings_by_severity": dict(sorted(self.findings_by_severity.items())),
+            "findings_by_severity": \
+                dict(sorted(self.findings_by_severity.items())),
             "findings_by_rule": dict(sorted(self.findings_by_rule.items())),
         }
         if not deterministic:

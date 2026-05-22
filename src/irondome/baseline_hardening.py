@@ -26,10 +26,10 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
-from irondome.l4.models import Baseline
 from irondome.audit import AuditEventType, get_audit_logger
+from irondome.l4.models import Baseline
 
 logger = logging.getLogger("irondome.baseline_hardening")
 
@@ -42,7 +42,7 @@ class SignedBaseline:
     signed_at: str = ""
     signed_by: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "baseline": self.baseline.to_dict(),
             "signature": self.signature,
@@ -51,11 +51,14 @@ class SignedBaseline:
         }
 
     @classmethod
-    def from_baseline(cls, baseline: Baseline, secret: str, signer: str = "") -> "SignedBaseline":
+    def from_baseline(cls, baseline: Baseline, secret: str,
+                      signer: str = "") -> SignedBaseline:
         """Sign a baseline with HMAC-SHA256."""
         import time as _time
         content = json.dumps(baseline.to_dict(), sort_keys=True)
-        sig = hmac.new(secret.encode(), content.encode(), hashlib.sha256).hexdigest()
+        sig = hmac.new(secret.encode(), content.encode(), \
+            hashlib.sha256).hexdigest(
+            )
         timestamp = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
         return cls(
             baseline=baseline,
@@ -67,7 +70,9 @@ class SignedBaseline:
     def verify(self, secret: str) -> bool:
         """Verify the baseline's HMAC signature."""
         content = json.dumps(self.baseline.to_dict(), sort_keys=True)
-        expected = hmac.new(secret.encode(), content.encode(), hashlib.sha256).hexdigest()
+        expected = hmac.new(secret.encode(), content.encode(), \
+            hashlib.sha256).hexdigest(
+            )
         return hmac.compare_digest(self.signature, expected)
 
 
@@ -75,7 +80,7 @@ class SignedBaseline:
 class BaselineUpdateRateLimit:
     """Rate limit for baseline updates to prevent poisoning."""
     max_updates_per_hour: int = 2
-    _update_times: List[float] = field(default_factory=list)
+    _update_times: list[float] = field(default_factory=list)
 
     def check(self) -> bool:
         """Check if an update is allowed. Returns True if allowed."""
@@ -91,13 +96,14 @@ class BaselineUpdateRateLimit:
 
 @dataclass(frozen=True)
 class BaselineDriftCheck:
-    """Result of checking if a new baseline diverges too far from the old one."""
+    """Result of checking if a new baseline diverges too far from the old \
+        one."""
     allowed: bool
     max_drift: float
     actual_drift: float
     details: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "actual_drift": self.actual_drift,
             "allowed": self.allowed,
@@ -123,7 +129,7 @@ class HardenedBaselineManager:
     def __init__(self, signing_secret: str = "") -> None:
         self._secret = signing_secret
         self._rate_limiter = BaselineUpdateRateLimit()
-        self._last_baselines: Dict[str, Baseline] = {}
+        self._last_baselines: dict[str, Baseline] = {}
 
     def sign(self, baseline: Baseline, signer: str = "") -> SignedBaseline:
         """Sign a baseline with HMAC-SHA256."""
@@ -148,7 +154,8 @@ class HardenedBaselineManager:
                 allowed=False,
                 max_drift=self.MAX_DRIFT_THRESHOLD,
                 actual_drift=1.0,
-                details="Rate limit: too many baseline updates in the last hour",
+                details="Rate limit: too many baseline updates in the last \
+                    hour",
             )
 
         # Drift check against previous baseline
@@ -160,7 +167,8 @@ class HardenedBaselineManager:
                     allowed=False,
                     max_drift=self.MAX_DRIFT_THRESHOLD,
                     actual_drift=drift,
-                    details=f"Drift too large: {drift:.0%} exceeds {self.MAX_DRIFT_THRESHOLD:.0%}",
+                    details=f"Drift too large: {drift:.0%} exceeds {
+                        self.MAX_DRIFT_THRESHOLD:.0%}",
                 )
             return BaselineDriftCheck(
                 allowed=True,
@@ -198,17 +206,24 @@ class HardenedBaselineManager:
         drift_count = 0
         total_checks = 5
 
-        if abs(old.expected_network_calls - new.expected_network_calls) > old.expected_network_calls * 0.5 + 5:
+        if abs(
+            old.expected_network_calls - new.expected_network_calls
+            ) > old.expected_network_calls * 0.5 + 5:
             drift_count += 1
-        if abs(old.expected_dns_queries - new.expected_dns_queries) > old.expected_dns_queries * 0.5 + 3:
+        if abs(
+            old.expected_dns_queries - new.expected_dns_queries
+            ) > old.expected_dns_queries * 0.5 + 3:
             drift_count += 1
-        if abs(old.expected_fs_ops - new.expected_fs_ops) > old.expected_fs_ops * 0.5 + 50:
+        if abs(
+            old.expected_fs_ops - new.expected_fs_ops
+            ) > old.expected_fs_ops * 0.5 + 50:
             drift_count += 1
         if abs(old.expected_spawns - new.expected_spawns) > 2:
             drift_count += 1
         old_low, old_high = old.expected_runtime_ms_range
         new_low, new_high = new.expected_runtime_ms_range
-        if old_high > 0 and (new_low < old_low * 0.5 or new_high > old_high * 2):
+        if old_high > 0 and (
+            new_low < old_low * 0.5 or new_high > old_high * 2):
             drift_count += 1
 
         return drift_count / total_checks

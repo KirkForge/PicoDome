@@ -7,14 +7,13 @@ Uses __version__ from package instead of hardcoded version.
 from __future__ import annotations
 
 import json
-from typing import Dict, List, Union
 
 from irondome import __version__
 from irondome.l3.models import SandboxResult
 from irondome.l4.models import AnalysisResult
 
 
-def format_sarif(result: Union[SandboxResult, AnalysisResult]) -> str:
+def format_sarif(result: SandboxResult | AnalysisResult) -> str:
     """Format sandbox or analysis result as SARIF 2.1.0."""
     if isinstance(result, SandboxResult):
         return _l3_sarif(result)
@@ -23,7 +22,7 @@ def format_sarif(result: Union[SandboxResult, AnalysisResult]) -> str:
 
 def _l3_sarif(result: SandboxResult) -> str:
     """Format L3 sandbox result as SARIF."""
-    results: List[Dict] = []
+    results: list[dict] = []
     for event in result.events:
         results.append({
             "level": _severity_to_sarif(event.verdict.value),
@@ -42,7 +41,7 @@ def _l3_sarif(result: SandboxResult) -> str:
         })
 
     # Deduplicate rules
-    seen_rules: Dict[str, Dict] = {}
+    seen_rules: dict[str, dict] = {}
     for e in result.events:
         if e.rule_id not in seen_rules:
             seen_rules[e.rule_id] = {
@@ -51,7 +50,10 @@ def _l3_sarif(result: SandboxResult) -> str:
             }
 
     sarif = {
-        "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+        "$schema":
+            "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Sche \
+                \
+                mata/sarif-schema-2.1.0.json",
         "runs": [{
             "properties": {
                 "command": result.command,
@@ -77,7 +79,7 @@ def _l3_sarif(result: SandboxResult) -> str:
 
 def _l4_sarif(result: AnalysisResult) -> str:
     """Format L4 analysis result as SARIF."""
-    results: List[Dict] = []
+    results: list[dict] = []
     for finding in result.findings:
         results.append({
             "level": _severity_to_sarif(finding.severity.value),
@@ -92,7 +94,10 @@ def _l4_sarif(result: AnalysisResult) -> str:
         })
 
     sarif = {
-        "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+        "$schema":
+            "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Sche \
+                \
+                mata/sarif-schema-2.1.0.json",
         "runs": [{
             "properties": {
                 "overall_verdict": result.overall_verdict.value,

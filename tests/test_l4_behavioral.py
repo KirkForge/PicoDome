@@ -1,18 +1,18 @@
 """Tests for L4 behavioral analysis."""
 
-from irondome.l4.engine import create_default_engine
-from irondome.l4.models import (
-    BehavioralProfile,
-    BehavioralVerdict,
-    Baseline,
-    NetworkCall,
-    DnsQuery,
-    FileOperation,
-)
-from irondome.l4.profiler import profile_from_sandbox_result
+from irondome.l3.engine import sandbox_run
 from irondome.l4.baseline import load_all_baselines, load_baseline
 from irondome.l4.differ import compare_profile_to_baseline
-from irondome.l3.engine import sandbox_run
+from irondome.l4.engine import create_default_engine
+from irondome.l4.models import (
+    Baseline,
+    BehavioralProfile,
+    BehavioralVerdict,
+    DnsQuery,
+    FileOperation,
+    NetworkCall,
+)
+from irondome.l4.profiler import profile_from_sandbox_result
 
 
 class TestProfiler:
@@ -188,7 +188,9 @@ class TestEndToEnd:
         # The profile may trigger timing/baseline findings depending on runtime
         # environment, so we just verify the pipeline runs end-to-end
         result = create_default_engine().analyze(profile)
-        assert result.overall_verdict in (BehavioralVerdict.CLEAN, BehavioralVerdict.SUSPICIOUS)
+        assert
+            result.overall_verdict in (BehavioralVerdict.CLEAN, \
+                BehavioralVerdict.SUSPICIOUS)
         # Key invariant: L3 sandbox must report ALLOW for a simple echo
         assert sandbox.exit_code == 0
 
@@ -202,5 +204,7 @@ class TestEndToEnd:
         ])
         profile = profile_from_sandbox_result(sandbox)
         result = create_default_engine().analyze(profile)
-        assert result.overall_verdict in (BehavioralVerdict.SUSPICIOUS, BehavioralVerdict.MALICIOUS)
+        assert
+            result.overall_verdict in (BehavioralVerdict.SUSPICIOUS, \
+                BehavioralVerdict.MALICIOUS)
         assert len(result.findings) > 0
