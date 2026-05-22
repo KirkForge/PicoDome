@@ -14,6 +14,7 @@ Covers:
 
 from __future__ import annotations
 
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -27,12 +28,15 @@ from irondome.policy_versioned.signing import (
     VerifyResult,
     generate_key,
     key_to_hex,
+    load_policy_with_companion_verification,
     load_policy_with_verification,
     parse_signature,
     sign_policy,
+    sign_policy_companion,
     sign_policy_file,
     strip_signature,
     verify_policy,
+    verify_policy_companion,
     verify_policy_file,
 )
 
@@ -290,3 +294,145 @@ class TestLoadPolicyWithVerification:
         content, result = load_policy_with_verification(tmp_path / "nope.yaml", key=b"key")
         assert content == ""
         assert not result.valid
+# ─── Companion file tests ──────────────────────────────────────────────────
+
+
+class TestCompanionSigning:
+    def test_sign_creates_companion_file(self, tmp_path):
+        key = b"test-key-32-bytes-long-enough-xx"
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+
+        sig_path = sign_policy_companion(policy_file, key)
+        assert sig_path == policy_file.with_suffix(".json.sig")
+        assert sig_path.is_file()
+
+    def test_companion_sig_contains_metadata(self, tmp_path):
+        key = b"test-key-32-bytes-long-enough-xx"
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+
+        sig_path = sign_policy_companion(policy_file, key, key_id="prod")
+        sig_data = json.loads(sig_path.read_text())
+
+        assert sig_data["algorithm"] == "hmac-sha256"
+        assert len(sig_data["signature"]) == 64
+        assert sig_data["key_id"] == "prod"
+        assert sig_data["policy_file"] == "policy.json"
+        assert "timestamp" in sig_data
+
+    def test_verify_companion_valid(self, tmp_path):
+        key = b"test-key-32-bytes-long-enough-xx"
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+
+        sign_policy_companion(policy_file, key)
+        result = verify_policy_companion(policy_file, key)
+        assert result.valid
+        assert result.algorithm == "hmac-sha256"
+
+    def test_verify_companion_tampered(self, tmp_path):
+        key = b"test-key-32-bytes-long-enough-xx"
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+
+        sign_policy_companion(policy_file, key)
+
+        # Tamper with the policy
+        policy_file.write_text('{"rules": ["tampered"]}')
+
+        result = verify_policy_companion(policy_file, key)
+        assert not result.valid
+        assert "mismatch" in result.error.lower()
+
+    def test_verify_companion_wrong_key(self, tmp_path):
+        key1 = b"test-key-32-bytes-long-enough-xx"
+        key2 = b"different-key-32-bytes-long-yy"
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+
+        sign_policy_companion(policy_file, key1)
+        result = verify_policy_companion(policy_file, key2)
+        assert not result.valid
+
+    def test_verify_companion_no_sig_file(self, tmp_path):
+        key = b"test-key-32-bytes-long-enough-xx"
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+
+        result = verify_policy_companion(policy_file, key)
+        assert not result.valid
+        assert "not found" in result.error.lower()
+
+    def test_verify_companion_key_id_mismatch(self, tmp_path):
+        key = b"test-key-32-bytes-long-enough-xx"
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+
+        sign_policy_companion(policy_file, key, key_id="prod")
+        result = verify_policy_companion(policy_file, key, key_id="staging")
+        assert not result.valid
+        assert "key_id mismatch" in result.error
+
+    def test_companion_preserves_policy_file(self, tmp_path):
+        key = b"test-key-32-bytes-long-enough-xx"
+        original = '{"rules": [{"name": "test", "action": "deny"}]}'
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text(original)
+
+        sign_policy_companion(policy_file, key)
+
+        # Policy file should be unchanged
+        assert policy_file.read_text() == original
+
+
+class TestLoadPolicyWithCompanionVerification:
+    def test_unsigned_no_key(self, tmp_path):
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+
+        content, result = load_policy_with_companion_verification(policy_file, key=None)
+        assert content == '{"rules": []}'
+        assert result is None
+
+    def test_signed_valid(self, tmp_path):
+        key = b"test-key-32-bytes-long-enough-xx"
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+        sign_policy_companion(policy_file, key)
+
+        content, result = load_policy_with_companion_verification(policy_file, key=key)
+        assert "rules" in content
+        assert result is not None
+        assert result.valid
+
+    def test_signed_wrong_key(self, tmp_path):
+        key1 = b"test-key-32-bytes-long-enough-xx"
+        key2 = b"different-key-32-bytes-long-yy"
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+        sign_policy_companion(policy_file, key1)
+
+        content, result = load_policy_with_companion_verification(policy_file, key=key2)
+        assert content == ""  # rejected
+        assert not result.valid
+
+    def test_unsigned_with_key_configured(self, tmp_path):
+        key = b"test-key-32-bytes-long-enough-xx"
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+
+        content, result = load_policy_with_companion_verification(policy_file, key=key)
+        assert content == ""  # rejected
+        assert not result.valid
+
+    def test_signed_no_key(self, tmp_path):
+        key = b"test-key-32-bytes-long-enough-xx"
+        policy_file = tmp_path / "policy.json"
+        policy_file.write_text('{"rules": []}')
+        sign_policy_companion(policy_file, key)
+
+        # No key provided, no env key — load with warning
+        content, result = load_policy_with_companion_verification(policy_file, key=None)
+        assert "rules" in content  # loaded without verification
+        assert not result.valid  # but result notes it couldn't verify

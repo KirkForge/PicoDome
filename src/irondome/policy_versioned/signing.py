@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import logging
 import os
 import time
@@ -345,3 +346,148 @@ def load_policy_with_verification(path: Path, key: bytes | None = None, key_id: 
 
     logger.info("Policy %s signature verified (key_id=%s)", path, result.key_id)
     return strip_signature(content), result
+
+# ─── Companion file approach (.sig) ────────────────────────────────────────
+
+
+def sign_policy_companion(path: Path, key: bytes, key_id: str = "default") -> Path:
+    """Sign a policy file and write the signature to a companion .sig file.
+
+    This is the preferred approach for JSON policy files where inline
+    signatures would break parsing.
+
+    Args:
+        path: Path to the policy file (JSON or YAML).
+        key: HMAC key as bytes.
+        key_id: Key identifier for rotation.
+
+    Returns:
+        Path to the created .sig file.
+    """
+    content = path.read_text(encoding="utf-8")
+    sig = hmac.new(key, content.encode("utf-8"), hashlib.sha256).hexdigest()
+    timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    sig_data = {
+        "algorithm": "hmac-sha256",
+        "signature": sig,
+        "timestamp": timestamp,
+        "key_id": key_id,
+        "policy_file": path.name,
+    }
+
+    sig_path = path.with_suffix(path.suffix + ".sig")
+    sig_path.write_text(json.dumps(sig_data, indent=2) + "\n", encoding="utf-8")
+    logger.info("Signed policy file (companion): %s -> %s", path, sig_path)
+    return sig_path
+
+
+def verify_policy_companion(path: Path, key: bytes, key_id: str = "default") -> VerifyResult:
+    """Verify a policy file using its companion .sig file.
+
+    Args:
+        path: Path to the policy file.
+        key: HMAC key as bytes.
+        key_id: Expected key identifier.
+
+    Returns:
+        VerifyResult with valid=True if the signature matches.
+    """
+    sig_path = path.with_suffix(path.suffix + ".sig")
+    if not sig_path.is_file():
+        return VerifyResult(valid=False, error="companion signature file not found")
+
+    try:
+        sig_data = json.loads(sig_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return VerifyResult(valid=False, error=f"cannot read signature file: {exc}")
+
+    algo = sig_data.get("algorithm", "")
+    stored_sig = sig_data.get("signature", "")
+    stored_key_id = sig_data.get("key_id", "default")
+    timestamp = sig_data.get("timestamp", "")
+
+    if algo not in SUPPORTED_ALGORITHMS:
+        return VerifyResult(valid=False, algorithm=algo, error=f"unsupported algorithm: {algo}")
+
+    if stored_key_id != key_id:
+        return VerifyResult(
+            valid=False,
+            algorithm=algo,
+            key_id=stored_key_id,
+            error=f"key_id mismatch: expected '{key_id}', got '{stored_key_id}'",
+        )
+
+    # Compute expected HMAC over the policy file content
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return VerifyResult(valid=False, error=f"cannot read policy file: {exc}")
+
+    expected_sig = hmac.new(key, content.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    if hmac.compare_digest(expected_sig, stored_sig):
+        return VerifyResult(
+            valid=True,
+            algorithm=algo,
+            key_id=stored_key_id,
+            timestamp=timestamp,
+        )
+    else:
+        return VerifyResult(
+            valid=False,
+            algorithm=algo,
+            key_id=stored_key_id,
+            error="signature mismatch — policy may have been tampered with",
+        )
+
+
+def load_policy_with_companion_verification(
+    path: Path,
+    key: bytes | None = None,
+    key_id: str = "default",
+) -> tuple[str, VerifyResult | None]:
+    """Load a policy file, verifying its companion .sig file if present.
+
+    If a key is configured and a .sig file exists, verification is required.
+    If a key is configured but no .sig file exists, the policy is rejected.
+    If no key is configured, the policy loads without verification.
+
+    Args:
+        path: Path to the policy file.
+        key: HMAC key. If None, uses IRONDOME_POLICY_KEY env.
+        key_id: Expected key identifier.
+
+    Returns:
+        Tuple of (content, verify_result).
+    """
+    effective_key = key or _load_key()
+    sig_path = path.with_suffix(path.suffix + ".sig")
+    has_sig = sig_path.is_file()
+
+    if not has_sig and effective_key is None:
+        # No sig, no key — load normally
+        logger.debug("Policy %s has no signature and no verification key", path)
+        content = path.read_text(encoding="utf-8")
+        return content, None
+
+    if not has_sig and effective_key is not None:
+        # Key configured but no sig — reject
+        logger.warning("Policy %s is unsigned but verification key is configured — rejecting", path)
+        return "", VerifyResult(valid=False, error="policy is unsigned but key is configured")
+
+    if has_sig and effective_key is None:
+        # Sig present but no key — can't verify, warn and load
+        logger.warning("Policy %s is signed but no verification key configured — loading without verification", path)
+        content = path.read_text(encoding="utf-8")
+        return content, VerifyResult(valid=False, error="no verification key configured for signed policy")
+
+    # Both sig and key present — verify
+    result = verify_policy_companion(path, effective_key, key_id=key_id)
+    if not result.valid:
+        logger.error("Policy %s signature verification FAILED: %s", path, result.error)
+        return "", result
+
+    logger.info("Policy %s signature verified (key_id=%s)", path, result.key_id)
+    content = path.read_text(encoding="utf-8")
+    return content, result

@@ -245,6 +245,33 @@ def main(argv: list[str] | None = None) -> int:
     # cluster leave
     _cluster_leave = cluster_sub.add_parser("leave", help="Gracefully leave the cluster")  # noqa: F841
 
+    # ── sign-policy ───────────────────────────────────────────────────
+    sign_parser = sub.add_parser("sign-policy", help="Sign or verify a policy file")
+    sign_sub = sign_parser.add_subparsers(dest="sign_action", help="sign-policy sub-commands")
+
+    sign_sign = sign_sub.add_parser("sign", help="Sign a policy file with HMAC-SHA256")
+    sign_sign.add_argument("policy_file", type=Path, help="Policy file to sign")
+    sign_sign.add_argument("--key", help="HMAC key (hex-encoded). Uses IRONDOME_POLICY_KEY env if omitted")
+    sign_sign.add_argument("--key-file", type=Path, help="File containing hex-encoded HMAC key")
+    sign_sign.add_argument("--key-id", default="default", help="Key identifier for rotation (default: default)")
+    sign_sign.add_argument(
+        "--companion", action="store_true",
+        help="Write signature to a companion .sig file instead of inline",
+    )
+
+    sign_verify = sign_sub.add_parser("verify", help="Verify a signed policy file")
+    sign_verify.add_argument("policy_file", type=Path, help="Policy file to verify")
+    sign_verify.add_argument("--key", help="HMAC key (hex-encoded). Uses IRONDOME_POLICY_KEY env if omitted")
+    sign_verify.add_argument("--key-file", type=Path, help="File containing hex-encoded HMAC key")
+    sign_verify.add_argument("--key-id", default="default", help="Expected key identifier (default: default)")
+    sign_verify.add_argument(
+        "--companion", action="store_true",
+        help="Verify companion .sig file instead of inline signature",
+    )
+
+    sign_genkey = sign_sub.add_parser("generate-key", help="Generate a new HMAC-SHA256 key")
+    sign_genkey.add_argument("--output", type=Path, help="Write key to file (otherwise stdout)")
+
     # ── init ──────────────────────────────────────────────────────────
     init_parser = sub.add_parser("init", help="Initialize Iron Dome configuration")
     init_parser.add_argument("target", nargs="?", default=".", help="Target directory (default: current)")
@@ -281,6 +308,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_retention(args)
     elif args.command == "policy-versions":
         return _cmd_policy_versions(args)
+    elif args.command == "sign-policy":
+        return _cmd_sign_policy(args)
     elif args.command == "notary":
         return _cmd_notary(args)
     else:
@@ -1156,3 +1185,116 @@ def _compute_exit_code_pipeline(sandbox: SandboxResult, analysis: AnalysisResult
 
     # Default: exit 0 on CLEAN, 1 otherwise
     return 0 if analysis.overall_verdict.value == "CLEAN" else 1
+
+
+def _cmd_sign_policy(args) -> int:
+    """Handle sign-policy subcommands (sign, verify, generate-key)."""
+    from irondome.policy_versioned.signing import (
+        generate_key,
+        key_to_hex,
+        sign_policy_companion,
+        sign_policy_file,
+        verify_policy_companion,
+        verify_policy_file,
+    )
+
+    if not args.sign_action:
+        print("Usage: irondome sign-policy {sign|verify|generate-key}", file=sys.stderr)
+        return 1
+
+    if args.sign_action == "sign":
+        policy_path = args.policy_file
+        if not policy_path.is_file():
+            print(f"Error: policy file not found: {policy_path}", file=sys.stderr)
+            return 1
+
+        # Resolve key
+        key = _resolve_signing_key(args)
+        if key is None:
+            return 1
+
+        try:
+            if args.companion:
+                sig_path = sign_policy_companion(policy_path, key, key_id=args.key_id)
+                print(f"✓ Signed policy (companion): {policy_path} -> {sig_path}")
+            else:
+                sign_policy_file(policy_path, key, key_id=args.key_id)
+                print(f"✓ Signed policy: {policy_path}")
+            return 0
+        except Exception as exc:
+            print(f"Error signing policy: {exc}", file=sys.stderr)
+            return 1
+
+    elif args.sign_action == "verify":
+        policy_path = args.policy_file
+        if not policy_path.is_file():
+            print(f"Error: policy file not found: {policy_path}", file=sys.stderr)
+            return 1
+
+        # Resolve key
+        key = _resolve_signing_key(args)
+        if key is None:
+            return 1
+
+        if args.companion:
+            result = verify_policy_companion(policy_path, key, key_id=args.key_id)
+        else:
+            result = verify_policy_file(policy_path, key, key_id=args.key_id)
+
+        if result.valid:
+            print(f"✓ Policy signature VALID: {policy_path}")
+            print(f"  Algorithm: {result.algorithm}")
+            print(f"  Key ID:    {result.key_id}")
+            print(f"  Timestamp: {result.timestamp}")
+            return 0
+        else:
+            print(f"✗ Policy signature INVALID: {policy_path}", file=sys.stderr)
+            print(f"  Error: {result.error}", file=sys.stderr)
+            return 1
+
+    elif args.sign_action == "generate-key":
+        key = generate_key()
+        hex_key = key_to_hex(key)
+
+        if args.output:
+            args.output.write_text(hex_key)
+            print(f"✓ Key written to: {args.output}")
+            print(f"  Set IRONDOME_POLICY_KEY={hex_key}")
+            print(f"  Or set IRONDOME_POLICY_KEY_FILE={args.output}")
+        else:
+            print(hex_key)
+
+        return 0
+
+    else:
+        print(f"Unknown sign-policy action: {args.sign_action}", file=sys.stderr)
+        return 1
+
+
+def _resolve_signing_key(args) -> bytes | None:
+    """Resolve HMAC key from args, env, or key file."""
+    if hasattr(args, "key") and args.key:
+        try:
+            return bytes.fromhex(args.key)
+        except ValueError:
+            print("Error: --key must be hex-encoded", file=sys.stderr)
+            return None
+
+    if hasattr(args, "key_file") and args.key_file:
+        if not args.key_file.is_file():
+            print(f"Error: key file not found: {args.key_file}", file=sys.stderr)
+            return None
+        try:
+            return bytes.fromhex(args.key_file.read_text().strip())
+        except ValueError:
+            print("Error: key file must contain hex-encoded key", file=sys.stderr)
+            return None
+
+    # Fall back to env
+    from irondome.policy_versioned.signing import _load_key
+    key = _load_key()
+    if key is None:
+        print("Error: no signing key provided. Use --key, --key-file, or set IRONDOME_POLICY_KEY", file=sys.stderr)
+        return None
+
+    return key
