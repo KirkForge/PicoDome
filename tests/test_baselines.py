@@ -100,22 +100,34 @@ class TestRegisterCustomBaseline:
             allowed_paths=["/var/lib/myapp/**"],
             notes="Custom baseline for myapp",
         )
-        register_baseline(custom)
-        loaded = load_baseline("my-custom")
-        assert loaded is not None
-        assert loaded.name == "my-custom"
-        assert loaded.package == "myapp"
+        try:
+            register_baseline(custom)
+            loaded = load_baseline("my-custom")
+            assert loaded is not None
+            assert loaded.name == "my-custom"
+            assert loaded.package == "myapp"
+        finally:
+            from irondome.l4.baseline import SHIPPED_BASELINES
+            SHIPPED_BASELINES.pop("my-custom", None)
 
     def test_register_overrides_existing(self):
-        custom = Baseline(
-            name="python-script",  # Same name as shipped
-            package="python-override",
-            expected_network_calls=999,
-        )
-        register_baseline(custom)
-        loaded = load_baseline("python-script")
-        assert loaded.package == "python-override"
-        assert loaded.expected_network_calls == 999
+        # Save original to restore after test
+        from irondome.l4.baseline import SHIPPED_BASELINES
+        original = SHIPPED_BASELINES.get("python-script")
+        try:
+            custom = Baseline(
+                name="python-script",  # Same name as shipped
+                package="python-override",
+                expected_network_calls=999,
+            )
+            register_baseline(custom)
+            loaded = load_baseline("python-script")
+            assert loaded.package == "python-override"
+            assert loaded.expected_network_calls == 999
+        finally:
+            # Restore original baseline to avoid poisoning other tests
+            if original is not None:
+                SHIPPED_BASELINES["python-script"] = original
 
 
 class TestLoadBaselinesFromPath:

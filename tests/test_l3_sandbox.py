@@ -84,9 +84,12 @@ class TestSubprocessBackend:
         backend = SubprocessBackend()
         result = backend.run(["echo", "test"], default_policy())
         d = result.to_dict()
-        assert "run_id" in d
+        # run_id is omitted when empty (deterministic default)
+        assert "command" in d
         assert d["command"] == ["echo", "test"]
         assert "events" in d
+        assert "exit_code" in d
+        assert "overall_verdict" in d
 
 
 class TestSeccompBackend:

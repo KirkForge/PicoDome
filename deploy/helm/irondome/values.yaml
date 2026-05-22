@@ -1,0 +1,86 @@
+# Iron Dome Helm values
+replicaCount: 2
+
+image:
+  repository: kirkforge/irondome
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+daemon:
+  host: "0.0.0.0"
+  port: 8443
+
+auth:
+  # Comma-separated API tokens (or use existingSecret)
+  tokens: ""
+  existingSecret: ""
+
+mtls:
+  enabled: false
+  # Reference to a TLS secret with tls.crt, tls.key, ca.crt
+  existingTLSSecret: ""
+  devMode: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClass: ""
+
+ratelimit:
+  enabled: true
+  ratePerSecond: 2.0
+  burstSize: 10
+  globalRPS: 50.0
+
+webhooks:
+  enabled: false
+  endpoints: []
+  # - url: https://hooks.slack.com/services/...
+  #   secret: my-signing-secret
+  #   events: ["scan_alert"]
+  #   minSeverity: high
+
+slos:
+  enabled: true
+
+retention:
+  scanResultsDays: 90
+  auditLogsDays: 365
+  baselinesDays: 0
+  secureDelete: true
+  storageQuotaMB: 500
+
+monitoring:
+  prometheus:
+    enabled: true
+    scrape: true
+    port: 8443
+    path: /metrics
+
+service:
+  type: ClusterIP
+  port: 8443
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+healthProbe:
+  liveness:
+    initialDelaySeconds: 5
+    periodSeconds: 30
+  readiness:
+    initialDelaySeconds: 3
+    periodSeconds: 10

@@ -136,7 +136,7 @@ def _extract_spawns(output: str) -> List[ProcessSpawn]:
     spawns: List[ProcessSpawn] = []
     spawn_patterns = [
         re.compile(r'exec(?:uting)?:\s*"?([^\s"]+)"?', re.IGNORECASE),
-        re.compile(r'spawn(?:ing|ed)?:\s*"?([^\s"]+)"?', re.IGNORECASE),
+        re.compile(r'spawn(?:ing|ed)?:?\s*"?([^\s"]+)"?', re.IGNORECASE),
         re.compile(r'subprocess\.(?:run|Popen)\s*\(\s*\[?"([^\]]+)"\]?', re.IGNORECASE),
         re.compile(r'os\.system\s*\(\s*"([^"]+)"', re.IGNORECASE),
     ]

@@ -101,6 +101,42 @@ def main(argv: Optional[List[str]] = None) -> int:
     rules_parser = sub.add_parser("rules", help="List available L4 detector rules")
     rules_parser.add_argument("--json", action="store_true", help="Output as JSON")
 
+
+    # ── daemon ────────────────────────────────────────────────────────
+    daemon_parser = sub.add_parser("daemon", help="Start Iron Dome daemon (HTTP API server)")
+    daemon_parser.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
+    daemon_parser.add_argument("--port", type=int, default=8443, help="Bind port (default: 8443)")
+    daemon_parser.add_argument("--background", action="store_true", help="Run in background")
+
+    # ── health ────────────────────────────────────────────────────────
+    health_parser = sub.add_parser("health", help="Run health checks")
+    health_parser.add_argument("--format", "-f", choices=["json", "table"], default="table", help="Output format")
+
+    # ── audit-query ───────────────────────────────────────────────────
+    audit_parser = sub.add_parser("audit", help="Query the audit log")
+    audit_parser.add_argument("--event-type", help="Filter by event type")
+    audit_parser.add_argument("--actor", help="Filter by actor")
+    audit_parser.add_argument("--target", help="Filter by target")
+    audit_parser.add_argument("--since", help="Events after this ISO timestamp")
+    audit_parser.add_argument("--until", help="Events before this ISO timestamp")
+    audit_parser.add_argument("--limit", type=int, default=100, help="Max results")
+    audit_parser.add_argument("--verify", action="store_true", help="Verify chain integrity")
+    audit_parser.add_argument("--stats", action="store_true", help="Show audit log statistics")
+
+    # ── retention ──────────────────────────────────────────────────────
+    retention_parser = sub.add_parser("retention", help="Manage data retention")
+    retention_parser.add_argument("action", choices=["cleanup", "stats", "export"], help="Retention action")
+    retention_parser.add_argument("--output", type=Path, help="Output file for export")
+
+    # ── policy-versioned ──────────────────────────────────────────────
+    policy_v_parser = sub.add_parser("policy-versions", help="Manage versioned policies")
+    policy_v_parser.add_argument("action", choices=["list", "show", "diff", "rollback", "verify"], help="Policy action")
+    policy_v_parser.add_argument("--name", help="Policy name")
+    policy_v_parser.add_argument("--version", type=int, help="Policy version")
+    policy_v_parser.add_argument("--version-a", type=int, help="First version for diff")
+    policy_v_parser.add_argument("--version-b", type=int, help="Second version for diff")
+    policy_v_parser.add_argument("--author", default="cli-user", help="Author for rollback")
+
     # ── diff ──────────────────────────────────────────────────────────
     diff_parser = sub.add_parser("diff", help="Compare two result JSON files")
     diff_parser.add_argument("file_a", type=Path, help="First result JSON file")
@@ -128,6 +164,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         return _cmd_diff(args)
     elif args.command == "init":
         return _cmd_init(args)
+
+    elif args.command == "daemon":
+        return _cmd_daemon(args)
+    elif args.command == "health":
+        return _cmd_health(args)
+    elif args.command == "audit":
+        return _cmd_audit(args)
+    elif args.command == "retention":
+        return _cmd_retention(args)
+    elif args.command == "policy-versions":
+        return _cmd_policy_versions(args)
     else:
         parser.print_help()
         return 1
@@ -390,6 +437,170 @@ def _cmd_init(args) -> int:
     config_file.write_text(json.dumps(default_config, indent=2, sort_keys=True) + "\n")
     print(f"Created Iron Dome config: {config_file}")
     return 0
+
+
+def _cmd_daemon(args) -> int:
+    """Start the Iron Dome daemon."""
+    from irondome.daemon import IronDomeDaemon
+    daemon = IronDomeDaemon(host=args.host, port=args.port)
+    try:
+        daemon.start(background=args.background)
+        if args.background:
+            print(f"Iron Dome daemon started on {args.host}:{args.port}")
+        return 0
+    except KeyboardInterrupt:
+        daemon.stop()
+        return 0
+    except Exception as e:
+        print(f"Daemon error: {e}", file=sys.stderr)
+        return 1
+
+
+def _cmd_health(args) -> int:
+    """Run health checks."""
+    from irondome.health import check_health, check_readiness
+    checks = check_health()
+    all_healthy = all(c.healthy for c in checks)
+
+    if args.format == "json":
+        data = {
+            "healthy": all_healthy,
+            "checks": [c.to_dict() for c in checks],
+        }
+        print(json.dumps(data, sort_keys=True, indent=2))
+    else:
+        icon = "✓" if all_healthy else "✗"
+        print(f"\n{icon} Iron Dome Health: {'HEALTHY' if all_healthy else 'UNHEALTHY'}\n")
+        for c in checks:
+            icon = "✓" if c.healthy else "✗"
+            print(f"  {icon} {c.component}: {c.detail}")
+
+    return 0 if all_healthy else 1
+
+
+def _cmd_audit(args) -> int:
+    """Query the audit log."""
+    from irondome.audit import AuditEventType, get_audit_logger
+    audit = get_audit_logger()
+
+    if args.verify:
+        violations = audit.verify_chain()
+        if violations:
+            print("✗ Audit log chain integrity VIOLATED:")
+            for v in violations:
+                print(f"  - {v}")
+            return 1
+        else:
+            print("✓ Audit log chain integrity verified")
+            return 0
+
+    if args.stats:
+        stats = audit.get_stats()
+        print(json.dumps(stats, sort_keys=True, indent=2))
+        return 0
+
+    event_type = None
+    if args.event_type:
+        try:
+            event_type = AuditEventType(args.event_type)
+        except ValueError:
+            print(f"Unknown event type: {args.event_type}", file=sys.stderr)
+            return 1
+
+    events = audit.query(
+        event_type=event_type,
+        actor=args.actor,
+        target=args.target,
+        since=args.since,
+        until=args.until,
+        limit=args.limit,
+    )
+
+    for evt in events:
+        print(f"[{evt.timestamp}] {evt.event_type.value} actor={evt.actor} target={evt.target}")
+        if evt.detail:
+            print(f"  {evt.detail}")
+
+    return 0
+
+
+def _cmd_retention(args) -> int:
+    """Manage data retention."""
+    from irondome.retention import get_retention_manager
+    rm = get_retention_manager()
+
+    if args.action == "cleanup":
+        stats = rm.run_cleanup()
+        print(f"Cleanup: removed {stats['files_removed']} files, freed {stats['bytes_freed']} bytes")
+        if stats['errors']:
+            for err in stats['errors']:
+                print(f"  Error: {err}")
+        return 0
+    elif args.action == "stats":
+        stats = rm.get_storage_stats()
+        print(json.dumps(stats, sort_keys=True, indent=2))
+        return 0
+    elif args.action == "export":
+        output = args.output or Path("irondome-export.json")
+        rm.export_data(output)
+        print(f"Exported to {output}")
+        return 0
+    return 1
+
+
+def _cmd_policy_versions(args) -> int:
+    """Manage versioned policies."""
+    from irondome.policy_versioned import get_policy_store
+    store = get_policy_store()
+
+    if args.action == "list":
+        names = store.list_policies()
+        for name in names:
+            versions = store.list_versions(name)
+            latest = max(v.version for v in versions) if versions else 0
+            print(f"  {name} (v{latest}, {len(versions)} versions)")
+        return 0
+    elif args.action == "show":
+        if not args.name:
+            print("--name is required for 'show'", file=sys.stderr)
+            return 1
+        pv = store.load(args.name, version=args.version)
+        if pv is None:
+            print(f"Policy '{args.name}' not found", file=sys.stderr)
+            return 1
+        print(json.dumps(pv.to_dict(), sort_keys=True, indent=2))
+        return 0
+    elif args.action == "diff":
+        if not args.name or args.version_a is None or args.version_b is None:
+            print("--name, --version-a, and --version-b are required for 'diff'", file=sys.stderr)
+            return 1
+        diff = store.diff(args.name, args.version_a, args.version_b)
+        print(json.dumps(diff, sort_keys=True, indent=2))
+        return 0
+    elif args.action == "rollback":
+        if not args.name or args.version is None:
+            print("--name and --version are required for 'rollback'", file=sys.stderr)
+            return 1
+        pv = store.rollback(args.name, args.version, author=args.author)
+        if pv is None:
+            print(f"Rollback failed", file=sys.stderr)
+            return 1
+        print(f"Rolled back '{args.name}' to v{args.version} → new v{pv.version}")
+        return 0
+    elif args.action == "verify":
+        if not args.name:
+            print("--name is required for 'verify'", file=sys.stderr)
+            return 1
+        violations = store.verify_integrity(args.name)
+        if violations:
+            print(f"✗ Integrity violations for '{args.name}':")
+            for v in violations:
+                print(f"  - {v}")
+            return 1
+        else:
+            print(f"✓ Policy '{args.name}' integrity verified")
+            return 0
+    return 1
 
 
 def _output(result, args) -> None:
