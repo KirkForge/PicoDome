@@ -167,11 +167,7 @@ class NullSink(AuditSink):
 
 # ─── Sink registry ────────────────────────────────────────────────────────
 
-
-# Maps sink type names (from config) to classes
-SINK_REGISTRY: dict[str, type[AuditSink]] = {
-    "null": NullSink,
-}
+SINK_REGISTRY: dict[str, type[AuditSink]] = {}
 
 
 def register_sink(name: str, cls: type[AuditSink]) -> None:

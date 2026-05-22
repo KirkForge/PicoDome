@@ -11,6 +11,26 @@ Built-in sinks:
   SyslogSink — RFC 5424 UDP                    (B04)
 """
 
-from irondome.audit.sinks.base import AuditSink, NullSink, SinkConfig
+from irondome.audit.sinks.base import (
+    SINK_REGISTRY,
+    AuditSink,
+    NullSink,
+    SinkConfig,
+    create_sink,
+    register_sink,
+)
+from irondome.audit.sinks.file_sink import FileSink
 
-__all__ = ["AuditSink", "NullSink", "SinkConfig"]
+# Register built-in sinks
+register_sink("null", NullSink)
+register_sink("file", FileSink)
+
+__all__ = [
+    "AuditSink",
+    "NullSink",
+    "SinkConfig",
+    "SINK_REGISTRY",
+    "create_sink",
+    "register_sink",
+    "FileSink",
+]
