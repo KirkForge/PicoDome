@@ -8,6 +8,7 @@ with actor identity, timestamp, and a chain link to the previous entry.
 from __future__ import annotations
 
 from irondome.audit.logger import AuditEvent, AuditEventType, AuditLogger, get_audit_logger, setup_audit_logger
+from irondome.audit.sinks import AuditSink, NullSink, SinkConfig
 
 __all__ = [
     "AuditLogger",
@@ -15,4 +16,7 @@ __all__ = [
     "AuditEventType",
     "get_audit_logger",
     "setup_audit_logger",
+    "AuditSink",
+    "NullSink",
+    "SinkConfig",
 ]

@@ -142,6 +142,7 @@ class AuditLogger:
         max_bytes: int = _DEFAULT_MAX_BYTES,
         rotate_count: int = _DEFAULT_ROTATE_COUNT,
         notary: Any | None = None,
+        sinks: list[Any] | None = None,
     ) -> None:
         self._log_dir = log_dir or _DEFAULT_LOG_DIR
         self._log_path = self._log_dir / log_file
@@ -149,6 +150,7 @@ class AuditLogger:
         self._rotate_count = rotate_count
         self._prev_hash = ""
         self._notary = notary  # Optional AuditNotary instance
+        self._sinks: list[Any] = sinks or []  # AuditSink instances
         self._lock = threading.Lock()
 
         # Ensure directory exists
@@ -208,6 +210,14 @@ class AuditLogger:
             except Exception as exc:
                 # Notary failure must NEVER block or crash the audit logger
                 logger.warning("Notary submission failed for %s: %s", event.event_id[:8], exc)
+
+        # Forward to sinks (fire-and-forget, outside lock)
+        for sink in self._sinks:
+            try:
+                sink.send(event)
+            except Exception as exc:
+                # Sink failure must NEVER block or crash the audit logger
+                logger.warning("Sink %s failed for event %s: %s", sink.name, event.event_id[:8], exc)
 
         logger.debug(
             "Audit: %s actor=%s target=%s",
@@ -367,6 +377,19 @@ class AuditLogger:
     def log_path(self) -> Path:
         return self._log_path
 
+    def add_sink(self, sink: Any) -> None:
+        """Add an AuditSink to forward events to. Starts the sink if logger is active."""
+        self._sinks.append(sink)
+
+    def remove_sink(self, sink: Any) -> None:
+        """Remove an AuditSink. Stops the sink before removing."""
+        if sink in self._sinks:
+            try:
+                sink.stop()
+            except Exception:
+                pass
+            self._sinks.remove(sink)
+
     # ── Internal ────────────────────────────────────────────────────────
 
     def _append_line(self, line: str) -> None:
@@ -438,6 +461,7 @@ def setup_audit_logger(
     log_dir: Path | None = None,
     max_bytes: int = _DEFAULT_MAX_BYTES,
     rotate_count: int = _DEFAULT_ROTATE_COUNT,
+    sinks: list[Any] | None = None,
 ) -> AuditLogger:
     """Configure and return the global audit logger."""
     global _audit_logger
@@ -445,5 +469,12 @@ def setup_audit_logger(
         log_dir=log_dir,
         max_bytes=max_bytes,
         rotate_count=rotate_count,
+        sinks=sinks,
     )
+    # Start all sinks
+    for sink in _audit_logger._sinks:
+        try:
+            sink.start()
+        except Exception as exc:
+            logger.warning("Failed to start sink %s: %s", sink.name, exc)
     return _audit_logger
