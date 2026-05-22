@@ -64,8 +64,24 @@ class VerifyResult:
 # ─── Key management ────────────────────────────────────────────────────────
 
 
-def _load_key() -> bytes | None:
-    """Load the HMAC key from environment or file.
+def load_key() -> bytes | None:
+    """Load the HMAC key from environment, file, or K8s secret mount.
+
+    Resolution order:
+        1. IRONDOME_POLICY_KEY — hex-encoded key directly in env
+        2. IRONDOME_POLICY_KEY_FILE — path to file containing hex key
+           (K8s secret mounts: mount the secret as a file and set this var)
+        3. None — no key configured, policies load without verification
+
+    For Kubernetes, create a Secret and mount it:
+        kubectl create secret generic irondome-policy-key \\
+            --from-literal=key=<hex-encoded-key>
+        # Mount in deployment:
+        #   volumeMounts:
+        #     - name: policy-key
+        #       mountPath: /etc/irondome/keys
+        #       readOnly: true
+        # Set env: IRONDOME_POLICY_KEY_FILE=/etc/irondome/keys/key
 
     Returns:
         The HMAC key as bytes, or None if not configured.
@@ -79,7 +95,7 @@ def _load_key() -> bytes | None:
             logger.error("IRONDOME_POLICY_KEY is not valid hex")
             return None
 
-    # 2. Key file path
+    # 2. Key file path (also covers K8s secret mounts)
     key_file = os.environ.get("IRONDOME_POLICY_KEY_FILE")
     if key_file:
         try:
@@ -90,6 +106,10 @@ def _load_key() -> bytes | None:
             return None
 
     return None
+
+
+# Backward compat alias
+_load_key = load_key
 
 
 def generate_key() -> bytes:

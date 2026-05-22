@@ -16,16 +16,10 @@ from __future__ import annotations
 
 import json
 import os
-import tempfile
-from pathlib import Path
 from unittest import mock
-
-import pytest
 
 from irondome.policy_versioned.signing import (
     SIGNATURE_MARKER,
-    PolicySignature,
-    VerifyResult,
     generate_key,
     key_to_hex,
     load_policy_with_companion_verification,
@@ -98,7 +92,6 @@ class TestSigning:
         # Sign once
         policy_file.write_text(SAMPLE_POLICY)
         sign_policy_file(policy_file, key)
-        first_content = policy_file.read_text()
 
         # Sign again (should replace, not double-sign)
         sign_policy_file(policy_file, key)

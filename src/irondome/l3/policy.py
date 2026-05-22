@@ -141,12 +141,20 @@ def _rules_from_list(rules_data: list) -> list[PolicyRule]:
     return rules
 
 
-def load_policy(path: Path | None = None, name: str | None = None) -> Policy:
+def load_policy(
+    path: Path | None = None,
+    name: str | None = None,
+    verify_signature: bool = False,
+) -> Policy:
     """Load a sandbox policy from a JSON file, named policy, or return the default.
 
     Args:
         path: Path to a JSON policy file.
         name: Named policy ('default', 'strict', 'node', 'python').
+        verify_signature: If True, verify the policy's companion .sig file
+            before loading. Requires IRONDOME_POLICY_KEY or IRONDOME_POLICY_KEY_FILE
+            to be configured. Rejects unsigned policies when a key is present,
+            and logs a warning for signed policies without a key.
 
     If both are None, returns the default policy.
     If name is given, returns the named policy.
@@ -166,8 +174,20 @@ def load_policy(path: Path | None = None, name: str | None = None) -> Policy:
 
     # Load from file
     if path is not None:
-        with open(path) as f:
-            data = json.load(f)
+        if verify_signature:
+            from irondome.policy_versioned.signing import (
+                load_policy_with_companion_verification,
+            )
+
+            content, result = load_policy_with_companion_verification(path)
+            if not content and result and not result.valid:
+                raise ValueError(
+                    f"Policy signature verification failed for {path}: {result.error}"
+                )
+            data = json.loads(content)
+        else:
+            with open(path) as f:
+                data = json.load(f)
         return _policy_from_dict(data)
 
     return default_policy()

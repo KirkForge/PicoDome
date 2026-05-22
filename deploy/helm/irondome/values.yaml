@@ -15,6 +15,22 @@ daemon:
 enterprise:
   enabled: false
 
+# Policy signing configuration
+# Sign policies with HMAC-SHA256 and verify on load.
+# In K8s, create a Secret and mount it as a file:
+#   kubectl create secret generic irondome-policy-key \
+#     --from-literal=key=<hex-encoded-key>
+policySigning:
+  # Enable signature verification when loading policy files
+  verify: false
+  # Key ID for rotation (default: "default")
+  keyId: "default"
+  # Reference to a K8s Secret containing the policy signing key
+  # The secret must have a key named "key" with the hex-encoded HMAC key
+  existingSecret: ""
+  # Or set directly (not recommended for production — use existingSecret)
+  key: ""
+
 auth:
   # Comma-separated API tokens (or use existingSecret)
   # WARNING: Change this in production! Tokens must be >= 32 chars in enterprise mode.
