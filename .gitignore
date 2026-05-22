@@ -42,3 +42,12 @@ Thumbs.db
 # Packaging
 *.whl
 *.tar.gz
+# Node (may have JS tooling)
+node_modules/
+
+# Env files
+.env
+.env.*
+
+# Coverage directory
+coverage/
