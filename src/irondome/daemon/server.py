@@ -221,6 +221,28 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             return auth_header[7:].strip()
         return None
 
+    def _resolve_tenant(self, token: str | None) -> Any:
+        """Resolve the tenant for this request.
+
+        Uses X-Tenant header and token-to-tenant mapping from the
+        TenantRegistry. Falls back to DEFAULT_TENANT.
+
+        Returns:
+            TenantId for this request.
+        """
+        from irondome.tenant import get_tenant_registry
+
+        registry = get_tenant_registry()
+        header_tenant = self.headers.get("X-Tenant")
+
+        # Resolve token hash for mapping
+        token_hash = ""
+        if token and token != "no-auth-dev-mode":
+            import hashlib
+            token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+        return registry.resolve_tenant(token_hash, header_tenant=header_tenant)
+
     def _require_auth(self) -> str | None:
         """Validate authentication. Returns token or sends 401.
 
@@ -369,6 +391,10 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             token = self._require_permission("audit:read")
             if token:
                 self._handle_audit_query(query)
+        elif path == f"/api/{API_VERSION}/tenants":
+            token = self._require_permission("audit:read")
+            if token:
+                self._handle_list_tenants()
         elif path == f"/api/{API_VERSION}/stats":
             token = self._require_permission("scan:read")
             if token:
@@ -512,6 +538,9 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         job_id = str(uuid.uuid4())[:8]
         actor = token[:16] if token else "unknown"
 
+        # Resolve tenant
+        tenant_id = self._resolve_tenant(token)
+
         # Create job in persistent store
         if isinstance(self.job_store, PersistentScanJobStore):
             self.job_store.add(job_id, command, actor)
@@ -527,7 +556,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
                 actor=actor,
                 detail=f"{' '.join(command)}",
                 target=command[0] if command else "",
-                metadata={"job_id": job_id, "timeout": timeout},
+                metadata={"job_id": job_id, "timeout": timeout, "tenant_id": str(tenant_id)},
             )
         except Exception:
             pass
@@ -747,6 +776,24 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         self._send_json({
             "events": [e.to_dict() for e in events],
             "count": len(events),
+        })
+
+    def _handle_list_tenants(self) -> None:
+        """List registered tenants (admin endpoint)."""
+        from irondome.tenant import get_tenant_registry
+
+        registry = get_tenant_registry()
+        tenants = registry.list_tenants()
+        self._send_json({
+            "tenants": [
+                {
+                    "tenant_id": str(ctx.tenant_id),
+                    "display_name": ctx.display_name,
+                    "is_default": ctx.is_default,
+                }
+                for ctx in tenants
+            ],
+            "count": len(tenants),
         })
 
     def _handle_stats(self) -> None:
