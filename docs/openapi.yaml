@@ -1,0 +1,575 @@
+openapi: "3.0.3"
+info:
+  title: Iron Dome API
+  description: |
+    Iron Dome — Deterministic runtime sandbox and behavioral analysis engine
+    for supply-chain security.
+
+    ## Authentication
+    All endpoints except `/health` and `/ready` require a Bearer token via the
+    `Authorization` header. Tokens are configured via `IRONDOME_API_TOKENS`
+    or `~/.irondome/api-tokens`.
+
+    Token format: `irondome-<role>-<secret>` (e.g., `irondome-admin-abc123`)
+
+    Roles: `admin` (all permissions), `reader` (read-only), `submitter` (scan+read)
+
+    ## Error Codes
+    Every error response includes a machine-readable `code` field:
+
+    | Code | Status | Description |
+    |------|--------|-------------|
+    | INVALID_JSON | 400 | Invalid JSON body |
+    | MISSING_COMMAND | 400 | Missing or invalid command field |
+    | INVALID_BACKEND | 400 | Unknown backend name |
+    | INVALID_POLICY | 400 | Invalid policy definition |
+    | UNAUTHORIZED | 401 | Invalid or missing token |
+    | FORBIDDEN | 403 | Insufficient permissions |
+    | COMMAND_DENIED | 403 | Command denied by server policy |
+    | ENTERPRISE_ENFORCEMENT | 403 | Enterprise mode requires enforcement backend |
+    | NOT_FOUND | 404 | Resource not found |
+    | SCAN_NOT_FOUND | 404 | Scan job not found |
+    | POLICY_NOT_FOUND | 404 | Policy not found |
+    | REQUEST_TOO_LARGE | 413 | Request body exceeds 10MB limit |
+    | RATE_LIMITED | 429 | Rate limit exceeded |
+    | SCAN_FAILED | 500 | Scan execution failed |
+    | INTERNAL_ERROR | 500 | Internal server error |
+    | NOT_READY | 503 | Service not ready |
+    | BACKEND_UNAVAILABLE | 503 | Requested backend unavailable |
+  version: "0.4.0"
+  contact:
+    name: KirkForge
+    url: https://github.com/KirkForge/IronDome
+
+servers:
+  - url: http://localhost:8443
+    description: Local development
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns service health status. No authentication required.
+      security: []
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /ready:
+    get:
+      summary: Readiness probe
+      description: |
+        Returns service readiness including sandbox backend status.
+        In enterprise mode, returns 503 if only subprocess backend available.
+      security: []
+      operationId: getReady
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
+        "503":
+          description: Service not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      description: |
+        Returns Prometheus-format metrics. Requires `scan:read` permission
+        on the main port. If `IRONDOME_METRICS_PORT` is set, metrics are
+        available on that port without authentication.
+      operationId: getMetrics
+      responses:
+        "200":
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/v1/scan:
+    post:
+      summary: Submit a sandbox scan job
+      description: |
+        Submit a command for sandbox execution. Requires `scan:submit` permission.
+        Commands in the deny list (shells, sudo, network tools, etc.) will be
+        rejected with COMMAND_DENIED.
+      operationId: submitScan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScanRequest"
+      responses:
+        "201":
+          description: Scan completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Command denied or insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Request too large (max 10MB)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/scan/{jobId}:
+    get:
+      summary: Get scan result by ID
+      description: Retrieve a previously submitted scan job result. Requires `scan:read` permission.
+      operationId: getScan
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scan job found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanJob"
+        "404":
+          description: Scan job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/scans:
+    get:
+      summary: List recent scans
+      description: List recent scan jobs. Requires `scan:read` permission.
+      operationId: listScans
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of scan jobs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanListResponse"
+
+  /api/v1/policies:
+    get:
+      summary: List policies
+      description: List available sandbox policies. Requires `policy:read` permission.
+      operationId: listPolicies
+      responses:
+        "200":
+          description: List of policy names
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyListResponse"
+    post:
+      summary: Create or update a policy
+      description: Create or update a sandbox policy. Requires `policy:write` permission (admin only).
+      operationId: createPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyCreateRequest"
+      responses:
+        "201":
+          description: Policy created/updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyVersion"
+        "400":
+          description: Invalid policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/policies/{name}:
+    get:
+      summary: Get policy detail
+      description: Get a specific policy by name. Requires `policy:read` permission.
+      operationId: getPolicy
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Policy found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyVersion"
+        "404":
+          description: Policy not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/baselines:
+    get:
+      summary: List baselines
+      description: List available behavioral baselines. Requires `baseline:read` permission.
+      operationId: listBaselines
+      responses:
+        "200":
+          description: List of baselines
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BaselineListResponse"
+
+  /api/v1/audit:
+    get:
+      summary: Query audit log
+      description: Query the audit log. Requires `audit:read` permission.
+      operationId: queryAudit
+      parameters:
+        - name: event_type
+          in: query
+          schema:
+            type: string
+        - name: actor
+          in: query
+          schema:
+            type: string
+        - name: target
+          in: query
+          schema:
+            type: string
+        - name: since
+          in: query
+          schema:
+            type: string
+        - name: until
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditListResponse"
+
+  /api/v1/stats:
+    get:
+      summary: System statistics
+      description: Get system statistics. Requires `scan:read` permission.
+      operationId: getStats
+      responses:
+        "200":
+          description: System statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsResponse"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Bearer token authentication. Token format: `irondome-<role>-<secret>`
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        version:
+          type: string
+          example: "0.4.0"
+        api_version:
+          type: string
+          example: "v1"
+        uptime_seconds:
+          type: integer
+          example: 3600
+
+    ReadyResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ready"
+        backend:
+          type: string
+          example: "seccomp-bpf"
+        isolation_level:
+          type: string
+          enum: [kernel_enforced, os_policy_enforced, observational_only]
+          example: "kernel_enforced"
+        enforcement_guarantee:
+          type: string
+          enum: [hard, best_effort, none]
+          example: "hard"
+
+    ScanRequest:
+      type: object
+      required:
+        - command
+      properties:
+        command:
+          type: array
+          items:
+            type: string
+          example: ["ls", "-la", "/tmp"]
+        policy:
+          type: string
+          description: Policy name (default: built-in deny-by-default)
+          example: "strict"
+        timeout:
+          type: number
+          default: 30.0
+          example: 30.0
+        backend:
+          type: string
+          enum: [auto, seccomp-bpf, seatbelt, subprocess]
+          default: auto
+          description: |
+            Sandbox backend. Use `auto` for auto-detection.
+            If the requested backend is unavailable and `allow_degraded` is not set,
+            returns BACKEND_UNAVAILABLE (503).
+
+    ScanResult:
+      type: object
+      properties:
+        job_id:
+          type: string
+          example: "a1b2c3d4"
+        sandbox:
+          type: object
+          description: L3 sandbox result
+        analysis:
+          type: object
+          description: L4 behavioral analysis result
+        l3_verdict:
+          type: string
+          enum: [ALLOW, DENY, KILL, ERROR, TIMEOUT]
+          example: "ALLOW"
+        l4_verdict:
+          type: string
+          enum: [CLEAN, SUSPICIOUS, MALICIOUS, UNKNOWN]
+          example: "CLEAN"
+        findings_count:
+          type: integer
+          example: 0
+        backend:
+          type: string
+          example: "seccomp-bpf"
+        isolation_level:
+          type: string
+          enum: [kernel_enforced, os_policy_enforced, observational_only]
+          example: "kernel_enforced"
+        enforcement_guarantee:
+          type: string
+          enum: [hard, best_effort, none]
+          example: "hard"
+        degraded:
+          type: boolean
+          example: false
+        policy_name:
+          type: string
+          example: "strict"
+        policy_version:
+          type: integer
+          example: 1
+
+    ScanJob:
+      type: object
+      properties:
+        job_id:
+          type: string
+        command:
+          type: array
+          items:
+            type: string
+        actor:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        result:
+          $ref: "#/components/schemas/ScanResult"
+          nullable: true
+        error:
+          type: string
+          nullable: true
+
+    ScanListResponse:
+      type: object
+      properties:
+        scans:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScanJob"
+        count:
+          type: integer
+
+    PolicyListResponse:
+      type: object
+      properties:
+        policies:
+          type: array
+          items:
+            type: string
+        count:
+          type: integer
+
+    PolicyVersion:
+      type: object
+      properties:
+        name:
+          type: string
+        version:
+          type: integer
+        author:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        change_description:
+          type: string
+        policy:
+          type: object
+
+    PolicyCreateRequest:
+      type: object
+      description: Policy definition (same format as policy YAML)
+      additionalProperties: true
+
+    BaselineListResponse:
+      type: object
+      properties:
+        baselines:
+          type: object
+          additionalProperties:
+            type: object
+        count:
+          type: integer
+
+    AuditListResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            type: object
+        count:
+          type: integer
+
+    StatsResponse:
+      type: object
+      properties:
+        version:
+          type: string
+        uptime_seconds:
+          type: integer
+        scans_total:
+          type: integer
+        scans_avg_ms:
+          type: number
+        alerts_total:
+          type: integer
+        storage:
+          type: object
+        audit:
+          type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Machine-readable error code
+          enum:
+            - INVALID_JSON
+            - MISSING_COMMAND
+            - INVALID_BACKEND
+            - INVALID_POLICY
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - COMMAND_DENIED
+            - ENTERPRISE_ENFORCEMENT
+            - NOT_FOUND
+            - SCAN_NOT_FOUND
+            - POLICY_NOT_FOUND
+            - REQUEST_TOO_LARGE
+            - RATE_LIMITED
+            - SCAN_FAILED
+            - INTERNAL_ERROR
+            - NOT_READY
+            - BACKEND_UNAVAILABLE
+        status:
+          type: integer
+          description: HTTP status code
+        detail:
+          type: string
+          description: Additional context about the error
+          nullable: true

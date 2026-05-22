@@ -4,22 +4,36 @@ replicaCount: 2
 image:
   repository: kirkforge/irondome
   pullPolicy: IfNotPresent
-  tag: "latest"
+  # Overrides the image tag whose default is the chart appVersion
+  tag: ""
 
 daemon:
   host: "0.0.0.0"
   port: 8443
 
+# Enterprise mode: requires enforcement backend, no dev bypass
+enterprise:
+  enabled: false
+
 auth:
   # Comma-separated API tokens (or use existingSecret)
+  # WARNING: Change this in production! Tokens must be >= 32 chars in enterprise mode.
   tokens: ""
   existingSecret: ""
+  # Set to true to auto-generate a secret with a random admin token
+  createSecret: true
 
 mtls:
   enabled: false
   # Reference to a TLS secret with tls.crt, tls.key, ca.crt
   existingTLSSecret: ""
   devMode: false
+
+metrics:
+  # If true, expose /metrics on a separate port without auth
+  separatePort: false
+  # Port for metrics (only used if separatePort is true)
+  port: 9100
 
 resources:
   requests:
@@ -68,6 +82,18 @@ monitoring:
 service:
   type: ClusterIP
   port: 8443
+
+serviceAccount:
+  create: true
+  name: ""
+
+rbac:
+  create: true
+
+networkPolicy:
+  enabled: true
+  ingress:
+    from: []
 
 securityContext:
   runAsNonRoot: true
