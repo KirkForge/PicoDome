@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/KirkForge/IronDome/schemas/irondome-analysis-result.schema.json",
+  "title": "IronDome Analysis Result",
+  "description": "JSON Schema for Iron Dome L4 behavioral analysis output",
+  "type": "object",
+  "required": ["target", "findings", "overall_verdict", "stats"],
+  "properties": {
+    "target": {
+      "type": "string",
+      "description": "Target package or command that was analyzed"
+    },
+    "findings": {
+      "type": "array",
+      "description": "List of behavioral findings",
+      "items": {
+        "type": "object",
+        "required": ["rule_id", "severity", "message"],
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "description": "Detector rule ID (e.g., L4-TIME, L4-EXFIL)",
+            "pattern": "^L4-[A-Z]+$"
+          },
+          "severity": {
+            "type": "string",
+            "description": "Finding severity level",
+            "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable finding description"
+          },
+          "location": {
+            "type": "string",
+            "description": "Location of the finding (file, command, etc.)"
+          },
+          "evidence": {
+            "type": "object",
+            "description": "Structured evidence for the finding",
+            "additionalProperties": true
+          },
+          "finding_id": {
+            "type": "string",
+            "description": "Unique finding ID (empty in deterministic mode, UUID in non-deterministic mode)"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "overall_verdict": {
+      "type": "string",
+      "description": "Overall behavioral verdict",
+      "enum": ["CLEAN", "SUSPICIOUS", "MALICIOUS"]
+    },
+    "profile": {
+      "type": "object",
+      "description": "Behavioral profile extracted from sandbox execution",
+      "properties": {
+        "package": { "type": "string" },
+        "entrypoint": { "type": "string" },
+        "exit_code": { "type": "integer" },
+        "dns_queries_count": { "type": "integer" },
+        "fs_ops_count": { "type": "integer" },
+        "network_calls_count": { "type": "integer" },
+        "spawns_count": { "type": "integer" },
+        "stderr_len": { "type": "integer" },
+        "stdout_len": { "type": "integer" },
+        "timing_points_count": { "type": "integer" },
+        "total_runtime_ms": {
+          "type": "integer",
+          "description": "Only present in non-deterministic mode"
+        }
+      }
+    },
+    "drift_results": {
+      "type": "array",
+      "description": "Baseline drift comparison results",
+      "items": {
+        "type": "object",
+        "required": ["baseline_name", "score"],
+        "properties": {
+          "baseline_name": { "type": "string" },
+          "score": {
+            "type": "number",
+            "description": "Drift score: 0.0 = identical, 1.0 = completely different"
+          },
+          "network_drift": { "type": "boolean" },
+          "dns_drift": { "type": "boolean" },
+          "fs_drift": { "type": "boolean" },
+          "spawn_drift": { "type": "boolean" },
+          "timing_drift": { "type": "boolean" },
+          "details": { "type": "string" }
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "description": "Aggregate statistics",
+      "required": ["findings_by_severity", "findings_by_rule"],
+      "properties": {
+        "packages_scanned": { "type": "integer" },
+        "files_scanned": { "type": "integer" },
+        "findings_by_severity": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "findings_by_rule": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "duration_ms": {
+          "type": "integer",
+          "description": "Only present in non-deterministic mode"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

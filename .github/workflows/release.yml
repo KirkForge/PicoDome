@@ -1,0 +1,302 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  # ── Quality Gates ────────────────────────────────────────────────
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-release-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: pip-release-${{ runner.os }}-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run tests
+        run: python -m pytest -v
+
+  mypy:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install mypy
+
+      - name: Run mypy
+        run: mypy src/irondome
+
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install ruff
+
+      - name: Ruff lint
+        run: ruff check src/ tests/
+
+      - name: Ruff format check
+        run: ruff format --check src/ tests/
+
+  # ── Build ─────────────────────────────────────────────────────────
+  build:
+    name: Build Wheel & Sdist
+    needs: [test, mypy, lint]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(python -c "from irondome import __version__; print(__version__)" 2>/dev/null || echo "unknown")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building IronDome version: $VERSION"
+
+      - name: Build wheel and sdist
+        run: python -m build
+
+      - name: Verify wheel imports
+        run: |
+          pip install dist/irondome-*.whl
+          python -c "from irondome import __version__; print(f'irondome {__version__} imported successfully')"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 30
+
+  # ── Sigstore Signing ──────────────────────────────────────────────
+  sign:
+    name: Sign with Sigstore
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Sign artifacts with Sigstore
+        uses: sigstore/gh-action-sigstore-python@v3.0.0
+        with:
+          inputs: |
+            dist/*.whl
+            dist/*.tar.gz
+
+      - name: Upload signatures
+        uses: actions/upload-artifact@v4
+        with:
+          name: signatures
+          path: |
+            dist/*.whl.sigstore
+            dist/*.tar.gz.sigstore
+          retention-days: 30
+
+  # ── SLSA Provenance ──────────────────────────────────────────────
+  provenance:
+    name: Generate SLSA Provenance
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Generate SHA-256 checksums
+        run: |
+          cd dist
+          sha256sum *.whl *.tar.gz > checksums-sha256.txt
+          cat checksums-sha256.txt
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums
+          path: dist/checksums-sha256.txt
+          retention-days: 30
+
+  # ── GitHub Release ────────────────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    needs: [build, sign, provenance]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          cp artifacts/dist/*.whl release-assets/ 2>/dev/null || true
+          cp artifacts/dist/*.tar.gz release-assets/ 2>/dev/null || true
+          cp artifacts/dist/*.whl.sigstore release-assets/ 2>/dev/null || true
+          cp artifacts/dist/*.tar.gz.sigstore release-assets/ 2>/dev/null || true
+          cp artifacts/checksums/checksums-sha256.txt release-assets/ 2>/dev/null || true
+          ls -la release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release-assets/*.whl
+            release-assets/*.tar.gz
+            release-assets/*.sigstore
+            release-assets/checksums-sha256.txt
+          body: |
+            ## IronDome ${{ needs.build.outputs.version }}
+
+            ### Verification
+            - **Sigstore signatures**: `.whl.sigstore` and `.tar.gz.sigstore` files
+            - **SHA-256 checksums**: `checksums-sha256.txt`
+            - **SLSA provenance**: Generated during build
+
+            ### Install
+            ```bash
+            pip install irondome==${{ needs.build.outputs.version }}
+            ```
+
+            ### Verify
+            ```bash
+            # Verify checksums
+            sha256sum -c checksums-sha256.txt
+
+            # Verify Sigstore signature
+            python -m sigstore verify identity \
+              --issuer https://github.com/login/oauth \
+              --identity-uri https://github.com/KirkForge/IronDome \
+              irondome-*.whl
+            ```
+
+  # ── PyPI Publish ──────────────────────────────────────────────────
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [build, sign]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/irondome/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI (Trusted Publishing / OIDC)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: true
+
+  # ── SLSA Verification ────────────────────────────────────────────
+  verify:
+    name: Verify SLSA Provenance
+    needs: [release, publish-pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install IronDome from PyPI
+        run: |
+          python -m pip install --upgrade pip
+          pip install irondome
+
+      - name: Verify version matches
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          INSTALLED_VERSION=$(python -c "from irondome import __version__; print(__version__)")
+          echo "Tag version: $TAG_VERSION"
+          echo "Installed version: $INSTALLED_VERSION"
+          if [ "$TAG_VERSION" != "$INSTALLED_VERSION" ]; then
+            echo "VERSION MISMATCH: tag=$TAG_VERSION installed=$INSTALLED_VERSION"
+            exit 1
+          fi
+          echo "✓ Version verified: $INSTALLED_VERSION"
+
+      - name: Verify IronDome works
+        run: |
+          irondome version
+          irondome pipeline echo "release-verify"

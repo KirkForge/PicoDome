@@ -1,0 +1,49 @@
+Iron Dome License
+=================
+
+Copyright (c) 2026 KirkForge
+
+Personal Use
+------------
+Iron Dome is free for personal, non-commercial use. This includes:
+- Individual developers using Iron Dome for their own projects
+- Open-source projects and their maintainers
+- Educational and research purposes
+- Personal learning and experimentation
+
+Commercial Use
+--------------
+Commercial use of Iron Dome requires a license from KirkForge.
+This includes but is not limited to:
+- Use within a commercial organization or business
+- Integration into commercial products or services
+- Use by teams within a company (regardless of team size)
+- Use in CI/CD pipelines for commercial software development
+- Use by contractors working on behalf of a commercial entity
+
+For commercial licensing, see https://github.com/KirkForge/Shogun or
+contact licensing@kirkforge.com.
+
+Open Source Contribution
+-------------------------
+Contributions to Iron Dome are welcome and are licensed under the
+KirkForge Contributor License Agreement (CLA). By submitting a pull
+request, you agree that your contribution can be used under both the
+personal-use license and the commercial license.
+
+Warranty
+--------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Shogun
+------
+The commercial licensing layer for Iron Dome and PicoSentry is provided
+by Shogun (https://github.com/KirkForge/Shogun). Shogun gives licensed
+organizations a command center for fleet-wide sandbox management, policy
+orchestration, alert aggregation, and compliance reporting.

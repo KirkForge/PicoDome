@@ -1,0 +1,7 @@
+- id: irondome-sandbox
+  name: Iron Dome sandbox
+  description: Run commands under Iron Dome sandbox policy
+  entry: irondome pipeline
+  language: python
+  types: [python]
+  stages: [pre-commit]

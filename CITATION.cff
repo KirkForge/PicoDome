@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Iron Dome"
+version: 0.3.0
+date-released: 2026-05-22
+authors:
+  - name: KirkForge
+license: MIT
+url: "https://github.com/kirkforge/IronDome"
+repository-code: "https://github.com/kirkforge/IronDome"
+keywords:
+  - sandbox
+  - seccomp
+  - behavioral-analysis
+  - supply-chain
+  - security
+  - deterministic
+  - irondome
+abstract: >-
+  Iron Dome is a deterministic runtime sandbox and behavioral analysis engine
+  for supply-chain security. It couples real kernel-level sandboxing (seccomp-bpf
+  on Linux, seatbelt on macOS) with multi-signal behavioral detection — timing
+  anomalies, data exfiltration, entropy spikes, honeypot access, and baseline
+  drift — to catch threats that static scanners miss. Iron Dome is the L3/L4
+  runtime companion to PicoSentry (L2 static scanner), completing a layered
+  defense-in-depth pipeline from install to execution.
+references:
+  - type: software
+    title: "PicoSentry"
+    version: 0.15.0
+    url: "https://github.com/kirkforge/PicoSentry"
+    description: >-
+      L2 deterministic offline npm/pnpm supply-chain scanner — the static
+      analysis companion that runs before Iron Dome's runtime sandboxing.
