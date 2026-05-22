@@ -36,13 +36,16 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from irondome.auth import AuthError, RBAC, Role, TokenAuth
 from irondome import __version__
 from irondome.audit import AuditEventType, get_audit_logger
+from irondome.errors import ErrorCode, ErrorCodes
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.engine import sandbox_run
 from irondome.l3.policy import default_policy, load_policy
 from irondome.l4.engine import create_default_engine
 from irondome.l4.profiler import profile_from_sandbox_result
+from irondome.ratelimit import TokenBucketLimiter
 from irondome.retention import get_retention_manager
 
 logger = logging.getLogger("irondome.daemon")
@@ -50,112 +53,6 @@ logger = logging.getLogger("irondome.daemon")
 # ─── API version ────────────────────────────────────────────────────────────
 
 API_VERSION = "v1"
-
-# ─── Token auth ─────────────────────────────────────────────────────────────
-
-
-class TokenAuth:
-    """Simple bearer-token authentication.
-
-    Tokens are loaded from:
-    1. ``IRONDOME_API_TOKENS`` env var (comma-separated)
-    2. ``~/.irondome/api-tokens`` file (one token per line)
-
-    Token format: ``irondome-<role>-<secret>`` (e.g., ``irondome-admin-abc123``)
-    """
-
-    def __init__(self, rbac: RBAC | None = None) -> None:
-        self._tokens: set = set()
-        self._rbac = rbac
-        self._load_tokens()
-
-    def _load_tokens(self) -> None:
-        # From environment
-        env_tokens = os.environ.get("IRONDOME_API_TOKENS", "")
-        for token in env_tokens.split(","):
-            token = token.strip()
-            if token:
-                self._tokens.add(token)
-                self._register_role(token)
-
-        # From file
-        token_file = Path.home() / ".irondome" / "api-tokens"
-        if token_file.is_file():
-            try:
-                for line in token_file.read_text(encoding="utf-8").splitlines():
-                    line = line.strip()
-                    if line and not line.startswith("#"):
-                        self._tokens.add(line)
-                        self._register_role(line)
-            except OSError:
-                pass
-
-        logger.info("Loaded %d API token(s)", len(self._tokens))
-
-    def _register_role(self, token: str) -> None:
-        """Parse token format irondome-<role>-<secret> and register with RBAC."""
-        if self._rbac and token.startswith("irondome-"):
-            parts = token.split("-", 2)
-            if len(parts) >= 3:
-                role = parts[1]
-                self._rbac.register_token(token, role)
-
-    def validate(self, token: str) -> bool:
-        """Check if a token is valid."""
-        if not self._tokens:
-            if os.environ.get("IRONDOME_DEV_MODE", "").lower() in ("1", "true", "yes"):
-                logger.warning("DEV MODE: No API tokens configured — all requests authenticated")
-                return True
-            logger.warning(
-                "No API tokens configured — rejecting all requests. "
-                "Set IRONDOME_API_TOKENS or IRONDOME_DEV_MODE=1"
-            )
-            return False
-        return token in self._tokens
-
-    @property
-    def is_configured(self) -> bool:
-        return len(self._tokens) > 0
-
-# ─── RBAC ───────────────────────────────────────────────────────────────────
-
-
-class Role(str):
-    SUBMITTER = "submitter"
-    READER = "reader"
-    ADMIN = "admin"
-
-
-class RBAC:
-    """Simple role-based access control.
-
-    Tokens are registered explicitly with their role. No role is
-    extracted from the token string — this prevents spoofing via
-    token prefix parsing.
-    """
-
-    ROLE_PERMISSIONS = {
-        Role.SUBMITTER: {"scan:submit", "scan:read", "health"},
-        Role.READER: {"scan:read", "policy:read", "baseline:read", "audit:read", "health"},
-        Role.ADMIN: {"*"},  # all permissions
-    }
-
-    def __init__(self) -> None:
-        self._token_roles: dict[str, str] = {}
-
-    def register_token(self, token: str, role: str) -> None:
-        """Register a token with a specific role."""
-        self._token_roles[token] = role
-
-    def get_role(self, token: str) -> str:
-        """Look up role for a token from the registered mapping."""
-        return self._token_roles.get(token, Role.READER)
-
-    def has_permission(self, token: str, permission: str) -> bool:
-        """Check if a token's role has a specific permission."""
-        role = self.get_role(token)
-        perms = self.ROLE_PERMISSIONS.get(role, set())
-        return "*" in perms or permission in perms
 
 # ─── Scan job tracker ───────────────────────────────────────────────────────
 
@@ -213,15 +110,51 @@ class ScanJobStore:
 # ─── HTTP handler ────────────────────────────────────────────────────────────
 
 
-class IronDomeHandler(BaseHTTPRequestHandler):
-    """HTTP request handler for the Iron Dome daemon."""
+    # ── Request size limit ──────────────────────────────────────────────
 
-    # Set by the server at creation time
-    # Set by the server at creation time
+    MAX_REQUEST_SIZE = 10 * 1024 * 1024  # 10 MB
+
+    # ── Command deny list ────────────────────────────────────────────────
+
+    # Commands that are always rejected regardless of policy.
+    # Prevents privilege escalation via the daemon API.
+    DENIED_COMMANDS: set[str] = {
+        "rm", "rmdir", "mkfs", "dd", "format",
+        "shutdown", "reboot", "halt", "poweroff",
+        "passwd", "useradd", "userdel", "usermod",
+        "groupadd", "groupdel",
+        "iptables", "ip6tables", "nft",
+        "systemctl", "service",
+        "mount", "umount",
+        "crontab",
+        "ssh", "telnet", "nc", "ncat",
+        "curl", "wget",  # network exfil vectors
+        "bash", "sh", "zsh", "fish",  # shell injection
+        "python", "python3", "perl", "ruby", "node",  # script injection
+        "sudo", "su", "doas",  # privilege escalation
+        "chmod", "chown", "chgrp", "chattr",
+    }
+
+    def _validate_command(self, command: list[str]) -> str | None:
+        """Validate a scan command against the deny list.
+
+        Returns an error message if the command is denied, None if allowed.
+        """
+        if not command:
+            return "Empty command"
+        base = command[0]
+        # Strip path prefix — /usr/bin/rm → rm
+        import os as _os
+        base_name = _os.path.basename(base)
+        if base_name in self.DENIED_COMMANDS:
+            return f"Command '{base_name}' is denied by server policy"
+        return None
+
     # Set by the server at creation time
     rbac: RBAC = RBAC()
     auth: TokenAuth = TokenAuth(rbac=rbac)
     job_store: ScanJobStore = ScanJobStore()
+    rate_limiter: TokenBucketLimiter = TokenBucketLimiter()
     _start_time: float = time.time()
     _scan_count: int = 0
     _scan_total_ms: int = 0
@@ -238,8 +171,45 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_error(self, status: int, message: str) -> None:
-        self._send_json({"error": message, "status": status}, status)
+    def _send_error(
+        self,
+        status_or_code: int | ErrorCode,
+        message_or_code: str | ErrorCode | None = None,
+        detail: str | None = None,
+    ) -> None:
+        """Send a JSON error response.
+
+        Supports two calling conventions:
+        1. _send_error(400, "Bad request")  — legacy
+        2. _send_error(ErrorCodes.INVALID_JSON) — structured
+        3. _send_error(ErrorCodes.COMMAND_DENIED, detail="rm is blocked") — structured with detail
+        """
+        if isinstance(status_or_code, ErrorCode):
+            code = status_or_code
+            status = code.status
+            message = code.message
+            if isinstance(message_or_code, str):
+                detail = message_or_code  # second arg is detail when first is ErrorCode
+        elif isinstance(message_or_code, ErrorCode):
+            # _send_error(int, ErrorCode) — shouldn't happen but handle
+            code = message_or_code
+            status = status_or_code
+            message = code.message
+        else:
+            status = status_or_code
+            message = message_or_code or "Unknown error"
+            code = None
+
+        response = {
+            "error": message,
+            "status": status,
+        }
+        if code:
+            response["code"] = code.key
+        if detail:
+            response["detail"] = detail
+
+        self._send_json(response, status)
 
     def _get_token(self) -> str | None:
         """Extract bearer token from Authorization header."""
@@ -256,7 +226,13 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             return "no-auth-dev-mode"
 
         if not token or not self.auth.validate(token):
-            self._send_error(401, "Unauthorized: invalid or missing token")
+            self._send_error(ErrorCodes.UNAUTHORIZED)
+            return None
+
+        # Rate limiting
+        actor = token[:16] if token else "anonymous"
+        if not self.rate_limiter.allow(actor=actor):
+            self._send_error(ErrorCodes.RATE_LIMITED)
             return None
 
         return token
@@ -268,7 +244,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             return None
 
         if not self.rbac.has_permission(token, permission):
-            self._send_error(403, f"Forbidden: insufficient permissions ({permission})")
+            self._send_error(ErrorCodes.FORBIDDEN, detail=f"Insufficient permissions ({permission})")
             return None
 
         return token
@@ -276,6 +252,12 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     # ── GET ──────────────────────────────────────────────────────────────
 
     def do_GET(self) -> None:
+        # Request size limit
+        content_length = self.headers.get("Content-Length")
+        if content_length and int(content_length) > self.MAX_REQUEST_SIZE:
+            self._send_error(ErrorCodes.REQUEST_TOO_LARGE)
+            return
+
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
         query = parse_qs(parsed.query)
@@ -322,11 +304,17 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             if token:
                 self._handle_stats()
         else:
-            self._send_error(404, f"Not found: {path}")
+            self._send_error(ErrorCodes.NOT_FOUND, detail=path)
 
     # ── POST ─────────────────────────────────────────────────────────────
 
     def do_POST(self) -> None:
+        # Request size limit
+        content_length = self.headers.get("Content-Length")
+        if content_length and int(content_length) > self.MAX_REQUEST_SIZE:
+            self._send_error(ErrorCodes.REQUEST_TOO_LARGE)
+            return
+
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
 
@@ -339,7 +327,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             if token:
                 self._handle_create_policy(token)
         else:
-            self._send_error(404, f"Not found: {path}")
+            self._send_error(ErrorCodes.NOT_FOUND, detail=path)
 
     # ── Route handlers ───────────────────────────────────────────────────
 
@@ -363,10 +351,9 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             ).lower() in ("1", "true", "yes")
             if enterprise_mode and backend.isolation_level == "observational_only":
                 self._send_error(
-                    503,
-                    "Not ready: enterprise mode requires enforcement "
-                    f"backend, but only '{backend.name}' is available. "
-                    "Install libseccomp2 (Linux) or use macOS.",
+                    ErrorCodes.ENTERPRISE_ENFORCEMENT,
+                    detail=f"Only '{backend.name}' backend available — "
+                           "install libseccomp2 (Linux) or use macOS",
                 )
                 return
             self._send_json({
@@ -376,7 +363,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
                 "enforcement_guarantee": backend.enforcement_guarantee,
             })
         except Exception as e:
-            self._send_error(503, f"Not ready: {e}")
+            self._send_error(ErrorCodes.NOT_READY, detail=str(e))
 
     def _handle_metrics(self) -> None:
         """Prometheus-format metrics endpoint."""
@@ -419,12 +406,18 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length).decode("utf-8")
             data = json.loads(body)
         except (json.JSONDecodeError, ValueError) as e:
-            self._send_error(400, f"Invalid JSON body: {e}")
+            self._send_error(ErrorCodes.INVALID_JSON, detail=str(e))
             return
 
         command = data.get("command")
         if not command or not isinstance(command, list):
-            self._send_error(400, "Missing or invalid 'command' field (must be a list)")
+            self._send_error(ErrorCodes.MISSING_COMMAND)
+            return
+
+        # Command deny-list check
+        deny_error = self._validate_command(command)
+        if deny_error:
+            self._send_error(ErrorCodes.COMMAND_DENIED, detail=deny_error)
             return
 
         timeout = data.get("timeout", 30.0)
@@ -472,7 +465,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
                 }
                 cls_path = backend_map.get(backend_name)
                 if cls_path is None:
-                    self._send_error(400, f"Unknown backend: {backend_name}")
+                    self._send_error(ErrorCodes.INVALID_BACKEND, detail=backend_name)
                     return
                 try:
                     module_path, cls_name = cls_path.rsplit(":", 1)
@@ -480,10 +473,10 @@ class IronDomeHandler(BaseHTTPRequestHandler):
                     backend_cls = getattr(import_module(module_path), cls_name)
                     backend = backend_cls()
                     if not backend.is_available():
-                        self._send_error(503, f"Backend '{backend_name}' not available on this system")
+                        self._send_error(ErrorCodes.BACKEND_UNAVAILABLE, detail=backend_name)
                         return
                 except Exception as e:
-                    self._send_error(503, f"Backend '{backend_name}' unavailable: {e}")
+                    self._send_error(ErrorCodes.BACKEND_UNAVAILABLE, detail=str(e))
                     return
 
             # Run sandbox
@@ -554,14 +547,14 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             job.status = "failed"
             job.error = str(e)
             logger.exception("Scan job %s failed", job_id)
-            self._send_error(500, f"Scan failed: {e}")
+            self._send_error(ErrorCodes.SCAN_FAILED, detail=str(e))
 
     def _handle_get_scan(self, job_id: str) -> None:
         job = self.job_store.get(job_id)
         if job:
             self._send_json(job.to_dict())
         else:
-            self._send_error(404, f"Scan job not found: {job_id}")
+            self._send_error(ErrorCodes.SCAN_NOT_FOUND, detail=job_id)
 
     def _handle_list_scans(self, query: dict) -> None:
         limit = int(query.get("limit", ["50"])[0])
@@ -584,7 +577,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         if pv:
             self._send_json(pv.to_dict())
         else:
-            self._send_error(404, f"Policy not found: {name}")
+            self._send_error(ErrorCodes.POLICY_NOT_FOUND, detail=name)
 
     def _handle_create_policy(self, token: str) -> None:
         """Create or update a policy."""
@@ -593,7 +586,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length).decode("utf-8")
             data = json.loads(body)
         except (json.JSONDecodeError, ValueError) as e:
-            self._send_error(400, f"Invalid JSON body: {e}")
+            self._send_error(ErrorCodes.INVALID_JSON, detail=str(e))
             return
 
         from irondome.l3.policy import _policy_from_dict
@@ -607,7 +600,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             pv = store.save(policy, author=author, change_description=description)
             self._send_json(pv.to_dict(), status=201)
         except Exception as e:
-            self._send_error(400, f"Invalid policy: {e}")
+            self._send_error(ErrorCodes.INVALID_POLICY, detail=str(e))
 
     def _handle_list_baselines(self) -> None:
         from irondome.l4.baseline import load_all_baselines
