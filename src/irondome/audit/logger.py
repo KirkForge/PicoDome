@@ -136,12 +136,14 @@ class AuditLogger:
         log_file: str = "audit.jsonl",
         max_bytes: int = _DEFAULT_MAX_BYTES,
         rotate_count: int = _DEFAULT_ROTATE_COUNT,
+        notary: Optional[Any] = None,
     ) -> None:
         self._log_dir = log_dir or _DEFAULT_LOG_DIR
         self._log_path = self._log_dir / log_file
         self._max_bytes = max_bytes
         self._rotate_count = rotate_count
         self._prev_hash = ""
+        self._notary = notary  # Optional AuditNotary instance
 
         # Ensure directory exists
         self._log_dir.mkdir(parents=True, exist_ok=True)
@@ -190,6 +192,15 @@ class AuditLogger:
 
         # Update chain: hash of this line becomes prev_hash for next
         self._prev_hash = hashlib.sha256(line.encode("utf-8")).hexdigest()
+
+        # Optionally notarize the event
+        if self._notary is not None:
+            try:
+                notary_uuid = self._notary.submit_entry(event.to_dict())
+                logger.debug("Notarized event %s as %s", event.event_id[:8], notary_uuid[:8])
+            except Exception as exc:
+                # Notary failure must NEVER block or crash the audit logger
+                logger.warning("Notary submission failed for %s: %s", event.event_id[:8], exc)
 
         logger.debug(
             "Audit: %s actor=%s target=%s",

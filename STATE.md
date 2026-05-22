@@ -1,8 +1,9 @@
 # Iron Dome — State & Status
 
-**Version:** 0.3.0 | **Repo:** https://github.com/KirkForge/IronDome
-**Tests:** 295/295 passing | **Backends:** 3 (seccomp, seatbelt, subprocess)
+**Version:** 0.4.0 | **Repo:** https://github.com/KirkForge/IronDome
+**Tests:** 332/332 passing (37 gRPC transport) | **Backends:** 3 (seccomp, seatbelt, subprocess)
 **Formatters:** 6 (json, sarif, table, ml-context, github, cyclonedx)
+**Transports:** 2 (HTTP, gRPC)
 **Status:** Active development — enterprise-grade
 
 ---
@@ -22,7 +23,12 @@ CLI (cli.py)
      → Baselines (l4/baseline.py) — 5 shipped baselines
   → Formatters (formatters/*.py) — json, sarif, table, ml-context, github, cyclonedx
   → Guards (guards.py) — 4-layer determinism enforcement
-  → Config (config.py) — .irondome.yml loader with env overrides
+  → Daemon (daemon/) — HTTP API server with auth, RBAC, metrics
+  → gRPC Transport (grpc_transport/) — optional high-throughput gRPC transport
+     → Server (grpc_transport/server.py) — IronDomeGRPCServer wraps scan engine
+     → Client (grpc_transport/client.py) — IronDomeGRPCClient with retry logic
+     → Servicer (grpc_transport/_servicer.py) — IronDomeService RPC handlers
+     → Proto (grpc_transport/proto/irondome.proto) — protobuf schema
   → License (license.py) — personal/commercial tier enforcement
   → Logging (logging.py) — structured JSON logging for SIEM
   → Models (models.py) — frozen dataclasses, determinism by design
@@ -55,11 +61,24 @@ The built-in policy (`iron-dome-default`) is deny-by-default with explicit allow
 | L4-HONEY | Honeypot touches | Known-suspicious paths, priv-esc binary spawns | No |
 | L4-BASE | Baseline drift | Compare profile metrics against shipped baselines | Yes |
 
-## Enterprise Infrastructure (v0.3.0)
+## Enterprise Infrastructure (v0.4.0)
 
 - **4-layer determinism guard stack** (Models → Guard → Diff → CI Gate)
 - **6 output formats** (json, sarif, table, ml-context, github, cyclonedx)
-- **Structured JSON logging** for SIEM integration
+- **Structured audit logging** with SHA-256 hash chaining (14 event types)
+- **Policy versioning** with author, timestamp, diff, rollback, integrity verification
+- **Data retention** with configurable TTL, secure deletion, storage quotas, compliance export
+- **Health and readiness** checks (backend, audit chain, storage)
+- **Daemon mode** with HTTP API (12 endpoints), token auth, RBAC, Prometheus metrics
+- **gRPC transport** (optional) for high-throughput daemon mode — Scan, Health, GetPolicy, QueryAudit RPCs
+- **mTLS transport security** with TLS 1.2+, strong ciphers, client cert verification
+- **Rate limiting** with token-bucket per-actor limits and priority job queuing
+- **Webhook notifications** with HMAC-SHA256 signing, severity filtering, retry with backoff
+- **Baseline hardening** with HMAC signing, drift detection, update rate limiting
+- **API versioning** with negotiation, deprecation notices, backward compatibility
+- **SLO tracking** with 7 defined service-level objectives
+- **Kubernetes deployment** with health probes, RBAC, Prometheus annotations
+- **Helm chart** with configurable replicas, mTLS, rate limiting, SLOs, monitoring
 - **Config file support** (.irondome.yml) with env overrides
 - **Workspace scanning** for monorepos
 - **License enforcement** (personal/commercial tiers)
@@ -68,12 +87,14 @@ The built-in policy (`iron-dome-default`) is deny-by-default with explicit allow
 - **Security policy** (SECURITY.md) with vulnerability reporting
 - **Threat model** documented (docs/security/threat-model.md)
 - **Operational runbooks** (docs/runbooks/)
+- **SOC 2 Type I readiness** assessment and evidence matrix (docs/compliance/)
 - **Pre-commit hook** (.pre-commit-hooks.yaml)
 - **Docker support** (Dockerfile)
 - **Citation metadata** (CITATION.cff)
 
 ## Version History
 
+- v0.4.0 — Enterprise governance: audit logging, policy versioning, data retention, daemon mode (HTTP API + token auth + RBAC), mTLS, rate limiting, webhooks, baseline hardening, API versioning, SLOs, K8s deployment, Helm chart, SOC 2 Type I readiness documentation, gRPC transport (optional), 332 tests
 - v0.3.0 — Enterprise-grade infrastructure: SECURITY.md, CONTRIBUTING.md, SLSA.md, SCAAT.md, CITATION.cff, Dockerfile, .pre-commit-hooks.yaml, MANIFEST.in, mypy.ini, .editorconfig, .gitattributes, enterprise gap analysis, JSON schemas, CI scripts, release pipeline with Sigstore + SLSA L3, expanded pyproject.toml, 295 tests, 6 output formats, 4-layer guard stack
 - v0.2.0 — Real seccomp backend (libseccomp ctypes + fork/exec), real seatbelt backend (sandbox-exec), 33 tests
 - v0.1.0 — Initial release: L3 sandbox, L4 behavioral analysis, CLI, formatters, 28 tests

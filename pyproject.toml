@@ -145,3 +145,20 @@ fail_under = 42
 # Future: switch to setuptools_scm for git tag versioning
 # [tool.setuptools_scm]
 # fallback_version = "0.0.0"
+
+[tool.irondome.reproducible]
+# Reproducible build configuration for IronDome.
+# IronDome's core thesis is determinism — builds MUST be bit-for-bit reproducible.
+source_date_epoch = "env"  # Read from SOURCE_DATE_EPOCH env var ("env") or fixed integer
+python_hash_seed = 0       # Fixed hash seed for deterministic dict ordering
+require_hashes = true      # All deps must be pinned with hashes (pip --require-hashes)
+no_build_isolation = true  # Don't use pip's build isolation (--no-build-isolation)
+offline = true             # No network access during build (--offline)
+hash_algorithm = "sha256"  # Algorithm for dependency hash pinning
+reference_hash_file = ".build-hash-reference"  # File storing reference build hash
+
+[tool.irondome.reproducible.requires_hashes]
+# Pattern for hash-pinned requirements lines.
+# Format: package==version --hash=algorithm:hash
+pattern = "^(?P<name>[a-zA-Z0-9_.-]+)==(?P<version>[^;\\s]+)\\s*(?:--hash=(?P<algo>sha\\d+):(?P<hash>[a-f0-9]+))*$"
+algorithms = ["sha256", "sha384", "sha512"]

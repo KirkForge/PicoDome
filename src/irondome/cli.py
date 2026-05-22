@@ -107,6 +107,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     daemon_parser.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
     daemon_parser.add_argument("--port", type=int, default=8443, help="Bind port (default: 8443)")
     daemon_parser.add_argument("--background", action="store_true", help="Run in background")
+    daemon_parser.add_argument(
+        "--transport",
+        choices=["http", "grpc"],
+        default="http",
+        help="Transport protocol: http (default) or grpc",
+    )
+    daemon_parser.add_argument("--grpc-port", type=int, default=50051, help="gRPC port (default: 50051, only used with --transport grpc)")
+
+    # ── scan-grpc ─────────────────────────────────────────────────────
+    scan_grpc_parser = sub.add_parser("scan-grpc", help="Scan via gRPC client")
+    scan_grpc_parser.add_argument("target", nargs=argparse.REMAINDER, help="Command to scan")
+    scan_grpc_parser.add_argument("--address", default="localhost:50051", help="gRPC server address (default: localhost:50051)")
+    scan_grpc_parser.add_argument("--policy", "-p", help="Policy name")
+    scan_grpc_parser.add_argument("--timeout", "-t", type=float, default=30.0, help="Timeout in seconds")
+    scan_grpc_parser.add_argument("--cwd", "-C", help="Working directory")
+    scan_grpc_parser.add_argument("--tls-cert", help="Client TLS certificate path")
+    scan_grpc_parser.add_argument("--tls-key", help="Client TLS key path")
+    scan_grpc_parser.add_argument("--tls-ca", help="CA certificate path for mTLS")
+    scan_grpc_parser.add_argument("--retries", type=int, default=3, help="Max retry attempts (default: 3)")
 
     # ── health ────────────────────────────────────────────────────────
     health_parser = sub.add_parser("health", help="Run health checks")
@@ -143,6 +162,49 @@ def main(argv: Optional[List[str]] = None) -> int:
     diff_parser.add_argument("file_b", type=Path, help="Second result JSON file")
     diff_parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed diff")
 
+    # ── notary ────────────────────────────────────────────────────────
+    notary_parser = sub.add_parser("notary", help="Audit transparency notary (Rekor/Sigstore)")
+    notary_sub = notary_parser.add_subparsers(dest="notary_command", help="notary sub-commands")
+
+    notary_submit = notary_sub.add_parser("submit", help="Submit an audit entry to the notary")
+    notary_submit.add_argument("--entry", type=Path, required=True, help="JSON file with the entry to notarize")
+    notary_submit.add_argument("--notary", choices=["null", "rekor"], default="null", help="Notary backend (default: null)")
+    notary_submit.add_argument("--rekor-url", default="https://rekor.sigstore.dev", help="Rekor API URL")
+    notary_submit.add_argument("--timeout", type=int, default=10, help="HTTP timeout in seconds")
+    notary_submit.add_argument("--hmac-key", default=None, help="HMAC key (default: built-in)")
+
+    notary_verify = notary_sub.add_parser("verify", help="Verify an audit entry against the notary")
+    notary_verify.add_argument("--uuid", required=True, help="UUID of the entry to verify")
+    notary_verify.add_argument("--entry", type=Path, required=True, help="JSON file with the entry to verify")
+    notary_verify.add_argument("--notary", choices=["null", "rekor"], default="null", help="Notary backend (default: null)")
+    notary_verify.add_argument("--rekor-url", default="https://rekor.sigstore.dev", help="Rekor API URL")
+    notary_verify.add_argument("--timeout", type=int, default=10, help="HTTP timeout in seconds")
+    notary_verify.add_argument("--hmac-key", default=None, help="HMAC key (default: built-in)")
+
+    # ── cluster ─────────────────────────────────────────────────────
+    cluster_parser = sub.add_parser("cluster", help="Manage daemon cluster mode")
+    cluster_sub = cluster_parser.add_subparsers(dest="cluster_action", help="cluster sub-commands")
+
+    # cluster join
+    cluster_join = cluster_sub.add_parser("join", help="Join a cluster via peer address")
+    cluster_join.add_argument("peer_address", help="Peer address (host:port)")
+    cluster_join.add_argument("--port", type=int, default=8444, help="Local cluster port (default: 8444)")
+    cluster_join.add_argument("--node-id", help="Custom node ID (default: auto-generated)")
+    cluster_join.add_argument("--backend", choices=["memory", "sqlite"], default="memory",
+                              help="State backend (default: memory)")
+    cluster_join.add_argument("--heartbeat-interval", type=int, default=10,
+                              help="Heartbeat interval in seconds (default: 10)")
+    cluster_join.add_argument("--heartbeat-timeout", type=int, default=30,
+                              help="Heartbeat timeout in seconds (default: 30)")
+
+    # cluster status
+    cluster_status = cluster_sub.add_parser("status", help="Show cluster node status")
+    cluster_status.add_argument("--format", "-f", choices=["json", "table"], default="table",
+                               help="Output format (default: table)")
+
+    # cluster leave
+    cluster_leave = cluster_sub.add_parser("leave", help="Gracefully leave the cluster")
+
     # ── init ──────────────────────────────────────────────────────────
     init_parser = sub.add_parser("init", help="Initialize Iron Dome configuration")
     init_parser.add_argument("target", nargs="?", default=".", help="Target directory (default: current)")
@@ -165,8 +227,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     elif args.command == "init":
         return _cmd_init(args)
 
+    elif args.command == "cluster":
+        return _cmd_cluster(args)
     elif args.command == "daemon":
         return _cmd_daemon(args)
+    elif args.command == "scan-grpc":
+        return _cmd_scan_grpc(args)
     elif args.command == "health":
         return _cmd_health(args)
     elif args.command == "audit":
@@ -175,6 +241,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return _cmd_retention(args)
     elif args.command == "policy-versions":
         return _cmd_policy_versions(args)
+    elif args.command == "notary":
+        return _cmd_notary(args)
     else:
         parser.print_help()
         return 1
@@ -441,19 +509,135 @@ def _cmd_init(args) -> int:
 
 def _cmd_daemon(args) -> int:
     """Start the Iron Dome daemon."""
-    from irondome.daemon import IronDomeDaemon
-    daemon = IronDomeDaemon(host=args.host, port=args.port)
-    try:
-        daemon.start(background=args.background)
-        if args.background:
-            print(f"Iron Dome daemon started on {args.host}:{args.port}")
-        return 0
-    except KeyboardInterrupt:
-        daemon.stop()
-        return 0
-    except Exception as e:
-        print(f"Daemon error: {e}", file=sys.stderr)
+    transport = getattr(args, 'transport', 'http')
+
+    if transport == "grpc":
+        from irondome.grpc_transport import is_grpc_available, IronDomeGRPCServer
+
+        if not is_grpc_available():
+            print("Error: grpcio is not installed. Install with: pip install grpcio", file=sys.stderr)
+            return 1
+
+        grpc_port = getattr(args, 'grpc_port', 50051)
+        host = args.host
+
+        # Check for mTLS config
+        mtls_config = None
+        try:
+            from irondome.mtls.context import MTLSConfig
+            mtls_config = MTLSConfig.from_env()
+            if not mtls_config.is_configured:
+                mtls_config = None
+        except Exception:
+            pass
+
+        server = IronDomeGRPCServer(
+            host=host,
+            port=grpc_port,
+            mtls_config=mtls_config,
+        )
+        try:
+            print(f"Starting Iron Dome gRPC daemon on {host}:{grpc_port}")
+            server.start()
+            return 0
+        except KeyboardInterrupt:
+            server.stop()
+            return 0
+        except Exception as e:
+            print(f"gRPC daemon error: {e}", file=sys.stderr)
+            return 1
+    else:
+        # HTTP daemon (default)
+        from irondome.daemon import IronDomeDaemon
+        daemon = IronDomeDaemon(host=args.host, port=args.port)
+        try:
+            daemon.start(background=args.background)
+            if args.background:
+                print(f"Iron Dome daemon started on {args.host}:{args.port}")
+            return 0
+        except KeyboardInterrupt:
+            daemon.stop()
+            return 0
+        except Exception as e:
+            print(f"Daemon error: {e}", file=sys.stderr)
+            return 1
+
+
+def _cmd_scan_grpc(args) -> int:
+    """Scan via gRPC client."""
+    from irondome.grpc_transport import is_grpc_available
+
+    if not is_grpc_available():
+        print("Error: grpcio is not installed. Install with: pip install grpcio", file=sys.stderr)
         return 1
+
+    from irondome.grpc_transport.client import IronDomeGRPCClient
+
+    command = args.target
+    if not command:
+        print("Error: no command specified", file=sys.stderr)
+        return 1
+
+    # Build mTLS config if cert paths provided
+    mtls_config = None
+    if args.tls_cert or args.tls_key or args.tls_ca:
+        try:
+            from irondome.mtls.context import MTLSConfig
+            mtls_config = MTLSConfig(
+                cert_path=args.tls_cert or "",
+                key_path=args.tls_key or "",
+                ca_path=args.tls_ca or "",
+                verify_client=bool(args.tls_ca),
+            )
+        except Exception as e:
+            print(f"Error configuring mTLS: {e}", file=sys.stderr)
+            return 1
+
+    client = IronDomeGRPCClient(
+        target=args.address,
+        mtls_config=mtls_config,
+        timeout=args.timeout,
+        max_retries=args.retries,
+    )
+
+    try:
+        result = client.scan(
+            command=command,
+            policy=args.policy,
+            timeout=args.timeout,
+            cwd=args.cwd,
+        )
+
+        # Output result
+        if result.result_json:
+            try:
+                data = json.loads(result.result_json)
+                print(json.dumps(data, sort_keys=True, indent=2))
+            except json.JSONDecodeError:
+                print(result.result_json)
+        else:
+            print(f"Verdict: {result.verdict}")
+            print(f"Exit code: {result.exit_code}")
+            if result.l3_verdict:
+                print(f"L3 verdict: {result.l3_verdict}")
+            if result.l4_verdict:
+                print(f"L4 verdict: {result.l4_verdict}")
+            print(f"Findings: {result.findings_count}")
+
+        # Exit code based on verdict
+        bad_verdicts = {"DENY", "KILL", "MALICIOUS", "SUSPICIOUS"}
+        if result.verdict in bad_verdicts:
+            return 1
+        return 0
+
+    except ConnectionError as e:
+        print(f"Connection error: {e}", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"Scan error: {e}", file=sys.stderr)
+        return 1
+    finally:
+        client.close()
 
 
 def _cmd_health(args) -> int:
@@ -601,6 +785,190 @@ def _cmd_policy_versions(args) -> int:
             print(f"✓ Policy '{args.name}' integrity verified")
             return 0
     return 1
+
+
+def _cmd_notary(args) -> int:
+    """Handle notary subcommands (submit, verify)."""
+    from irondome.notary import NullNotary, RekorNotary, sign_entry, verify_entry_signature
+
+    if args.notary_command == "submit":
+        if not args.entry or not args.entry.exists():
+            print(f"Error: entry file not found: {args.entry}", file=sys.stderr)
+            return 1
+
+        try:
+            with open(args.entry) as f:
+                entry = json.load(f)
+        except (json.JSONDecodeError, OSError) as exc:
+            print(f"Error: failed to read entry file: {exc}", file=sys.stderr)
+            return 1
+
+        hmac_key = args.hmac_key or "irondome-notary-default-hmac-key"
+
+        if args.notary == "rekor":
+            notary = RekorNotary(
+                rekor_url=args.rekor_url,
+                timeout=args.timeout,
+                hmac_key=hmac_key,
+            )
+        else:
+            notary = NullNotary(hmac_key=hmac_key)
+
+        # Sign locally first
+        signature = sign_entry(entry, key=hmac_key)
+        print(f"HMAC-SHA256 signature: {signature}")
+
+        # Submit to notary
+        try:
+            uuid = notary.submit_entry(entry)
+            print(f"Entry submitted: {uuid}")
+            print(f"Notary backend: {args.notary}")
+        except Exception as exc:
+            print(f"Error: notary submission failed: {exc}", file=sys.stderr)
+            return 1
+
+        return 0
+
+    elif args.notary_command == "verify":
+        if not args.entry or not args.entry.exists():
+            print(f"Error: entry file not found: {args.entry}", file=sys.stderr)
+            return 1
+
+        try:
+            with open(args.entry) as f:
+                entry = json.load(f)
+        except (json.JSONDecodeError, OSError) as exc:
+            print(f"Error: failed to read entry file: {exc}", file=sys.stderr)
+            return 1
+
+        hmac_key = args.hmac_key or "irondome-notary-default-hmac-key"
+
+        if args.notary == "rekor":
+            notary = RekorNotary(
+                rekor_url=args.rekor_url,
+                timeout=args.timeout,
+                hmac_key=hmac_key,
+            )
+        else:
+            notary = NullNotary(hmac_key=hmac_key)
+
+        try:
+            verified = notary.verify_entry(args.uuid, entry)
+            if verified:
+                print(f"✓ Entry {args.uuid} verified successfully")
+                return 0
+            else:
+                print(f"✗ Entry {args.uuid} verification FAILED", file=sys.stderr)
+                return 1
+        except Exception as exc:
+            print(f"Error: verification failed: {exc}", file=sys.stderr)
+            return 1
+
+    else:
+        print("Usage: irondome notary {submit|verify}", file=sys.stderr)
+        return 1
+
+
+def _cmd_cluster(args) -> int:
+    """Manage daemon cluster mode."""
+    from irondome.cluster import (
+        ClusterManager, ClusterNode, MemoryStateBackend, SQLiteStateBackend, NodeStatus,
+    )
+
+    action = getattr(args, "cluster_action", None)
+
+    if action == "join":
+        # Parse peer address
+        peer = args.peer_address
+        if ":" in peer:
+            peer_host, peer_port_str = peer.rsplit(":", 1)
+            try:
+                peer_port = int(peer_port_str)
+            except ValueError:
+                print(f"Error: invalid peer address: {peer}", file=sys.stderr)
+                return 1
+        else:
+            peer_host = peer
+            peer_port = 8444
+
+        # Select backend
+        backend = MemoryStateBackend() if args.backend == "memory" else SQLiteStateBackend()
+
+        manager = ClusterManager(
+            address="0.0.0.0",
+            port=args.port,
+            node_id=args.node_id,
+            backend=backend,
+            heartbeat_interval=args.heartbeat_interval,
+            heartbeat_timeout=args.heartbeat_timeout,
+        )
+        manager.start()
+
+        # Register the peer node
+        peer_node = ClusterNode(
+            node_id=f"peer-{peer_host}-{peer_port}",
+            address=peer_host,
+            port=peer_port,
+            status=NodeStatus.ONLINE,
+            last_heartbeat="",
+            load=0,
+        )
+        manager.state.add_node(peer_node)
+
+        # Re-elect leader
+        manager.state.elect_leader()
+
+        status = manager.get_status()
+        print(f"✓ Joined cluster as node {manager.node_id}")
+        print(f"  Peer: {peer_host}:{peer_port}")
+        print(f"  Leader: {status['leader_id'] or 'none'}")
+        print(f"  Nodes: {status['nodes_online']} online, {status['nodes_total']} total")
+        print(f"  Backend: {args.backend}")
+        return 0
+
+    elif action == "status":
+        # Try to get running cluster manager, or create a read-only one
+        try:
+            from irondome.cluster.manager import _cluster_manager
+            manager = _cluster_manager or ClusterManager()
+        except Exception:
+            manager = ClusterManager()
+
+        status = manager.get_status()
+
+        if args.format == "json":
+            print(json.dumps(status, sort_keys=True, indent=2))
+        else:
+            print(f"\n  Cluster Status")
+            print(f"  ─────────────")
+            print(f"  Self:       {status['self_id']}")
+            print(f"  Leader:     {status['leader_id'] or 'none'}")
+            print(f"  Nodes:      {status['nodes_online']} online / {status['nodes_total']} total")
+            print(f"  Draining:   {status['nodes_draining']}")
+            print(f"  Scans:      {status['scans_pending']} pending / {status['scans_running']} running / {status['scans_completed']} completed")
+            print()
+            if status["nodes"]:
+                print(f"  {'Node ID':<30} {'Address':<20} {'Port':<6} {'Status':<10} {'Load':<5} {'Last HB'}")
+                print(f"  {'─'*30} {'─'*20} {'─'*6} {'─'*10} {'─'*5} {'─'*20}")
+                for n in status["nodes"]:
+                    print(f"  {n['node_id']:<30} {n['address']:<20} {n['port']:<6} {n['status']:<10} {n['load']:<5} {n['last_heartbeat']}")
+            print()
+        return 0
+
+    elif action == "leave":
+        try:
+            from irondome.cluster.manager import _cluster_manager
+            manager = _cluster_manager or ClusterManager()
+        except Exception:
+            manager = ClusterManager()
+
+        manager.stop()
+        print(f"✓ Left cluster (node {manager.node_id})")
+        return 0
+
+    else:
+        print("Usage: irondome cluster {join|status|leave}", file=sys.stderr)
+        return 1
 
 
 def _output(result, args) -> None:

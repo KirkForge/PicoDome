@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-05-22
+
+### Added
+- **gRPC transport** (PR-21) — optional high-throughput transport for daemon mode
+  - `src/irondome/grpc_transport/` package with server, client, servicer, and proto
+  - `irondome.proto` — protobuf schema with Scan, Health, GetPolicy, QueryAudit RPCs
+  - `IronDomeGRPCServer` — wraps existing scan engine, serves on configurable port (default 50051)
+  - `IronDomeGRPCClient` — sync/async scan methods, TLS/mTLS support, retry logic
+  - `irondome daemon --transport grpc` — start daemon with gRPC transport
+  - `irondome scan-grpc <target>` — scan via gRPC client
+  - Dependency injection so module degrades gracefully without grpcio
+  - All gRPC calls audit-logged
+  - 37 tests (module availability, server, client, servicer, scan engine, CLI, proto)
+
+### Changed
+- **SOC 2 Type I readiness assessment** — comprehensive mapping of Trust Services Criteria (CC6.1–CC8.1, A1.1, C1.1, PI1.1, PI1.3) to IronDome controls
+- **SOC 2 evidence matrix** — detailed mapping of controls to source code, tests, and documentation with gap analysis
+- **Structured audit logging** — hash-chained append-only JSON-lines log with 14 event types, query API, rotation
+- **Policy versioning** — author, timestamp, change description, content hashing, diff, rollback, integrity verification
+- **Data retention** — configurable TTL (90/365/∞ days), secure deletion (overwrite+random+truncate+unlink), storage quotas, compliance export
+- **Health and readiness checks** — backend, audit chain, and storage status endpoints
+- **Daemon mode** — HTTP API server (12 endpoints), token-based authentication, RBAC (3 roles), Prometheus metrics
+- **mTLS transport security** — TLS 1.2+ minimum, strong cipher suites, client cert verification, dev self-signed mode
+- **Rate limiting** — token-bucket per-actor limiting with configurable burst, global RPS cap, priority job queuing
+- **Webhook notifications** — HMAC-SHA256 signed payloads, severity filtering, retry with exponential backoff
+- **Baseline hardening** — HMAC signing, update rate limiting (2/hour), drift detection (50% threshold), audit logging
+- **API versioning** — URL path, Accept header, and custom header negotiation with deprecation notices
+- **SLO tracking** — 7 service-level objectives (availability 99.9%, latency p50/p95/p99, throughput, error rate, determinism)
+- **Kubernetes deployment** — Deployment, Service, PVC, RBAC, ServiceAccount, health probes, Prometheus annotations
+- **Helm chart** — configurable replicas, mTLS, rate limiting, webhooks, retention, SLOs, monitoring
+
 ## [0.3.0] - 2026-05-22
 
 ### Added
