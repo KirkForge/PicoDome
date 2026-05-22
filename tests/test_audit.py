@@ -170,6 +170,10 @@ class TestAuditEventTypes:
         assert AuditEventType.AUTH_SUCCESS.value == "auth_success"
         assert AuditEventType.AUTH_FAILURE.value == "auth_failure"
 
+    def test_security_enforcement_types(self):
+        assert AuditEventType.COMMAND_DENIED.value == "command_denied"
+        assert AuditEventType.RATE_LIMITED.value == "rate_limited"
+
     def test_data_governance_types(self):
         assert AuditEventType.DATA_RETENTION_CLEANUP.value == "data_retention_cleanup"
         assert AuditEventType.DATA_EXPORT.value == "data_export"

@@ -57,6 +57,10 @@ class AuditEventType(str, Enum):
     AUTH_SUCCESS = "auth_success"
     AUTH_FAILURE = "auth_failure"
 
+    # Security enforcement
+    COMMAND_DENIED = "command_denied"
+    RATE_LIMITED = "rate_limited"
+
     # Data governance
     DATA_RETENTION_CLEANUP = "data_retention_cleanup"
     DATA_EXPORT = "data_export"

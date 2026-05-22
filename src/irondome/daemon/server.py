@@ -223,31 +223,93 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         return None
 
     def _require_auth(self) -> str | None:
-        """Validate authentication. Returns token or sends 401."""
+        """Validate authentication. Returns token or sends 401.
+
+        Emits AUTH_SUCCESS or AUTH_FAILURE audit events for every auth attempt.
+        Emits RATE_LIMITED when an actor exceeds their rate limit.
+        """
         token = self._get_token()
 
         if not self.auth.is_configured:
             return "no-auth-dev-mode"
 
-        if not token or not self.auth.validate(token):
+        if not token:
+            # No token provided at all
+            try:
+                audit = get_audit_logger()
+                audit.record(
+                    event_type=AuditEventType.AUTH_FAILURE,
+                    actor="anonymous",
+                    detail="No Authorization header provided",
+                )
+            except Exception:
+                pass
+            self._send_error(ErrorCodes.UNAUTHORIZED)
+            return None
+
+        if not self.auth.validate(token):
+            # Token provided but invalid
+            actor = token[:16]
+            try:
+                audit = get_audit_logger()
+                audit.record(
+                    event_type=AuditEventType.AUTH_FAILURE,
+                    actor=actor,
+                    detail="Invalid token",
+                )
+            except Exception:
+                pass
             self._send_error(ErrorCodes.UNAUTHORIZED)
             return None
 
         # Rate limiting
-        actor = token[:16] if token else "anonymous"
+        actor = token[:16]
         if not self.rate_limiter.allow(actor=actor):
+            try:
+                audit = get_audit_logger()
+                audit.record(
+                    event_type=AuditEventType.RATE_LIMITED,
+                    actor=actor,
+                    detail="Request rate limit exceeded",
+                )
+            except Exception:
+                pass
             self._send_error(ErrorCodes.RATE_LIMITED)
             return None
+
+        # Successful auth — emit AUTH_SUCCESS
+        try:
+            audit = get_audit_logger()
+            audit.record(
+                event_type=AuditEventType.AUTH_SUCCESS,
+                actor=actor,
+                detail="Token authenticated",
+            )
+        except Exception:
+            pass
 
         return token
 
     def _require_permission(self, permission: str) -> str | None:
-        """Require auth + permission. Returns token or sends 403."""
+        """Require auth + permission. Returns token or sends 403.
+
+        Emits AUTH_FAILURE when a valid token lacks the required permission.
+        """
         token = self._require_auth()
         if token is None:
             return None
 
         if not self.rbac.has_permission(token, permission):
+            actor = token[:16]
+            try:
+                audit = get_audit_logger()
+                audit.record(
+                    event_type=AuditEventType.AUTH_FAILURE,
+                    actor=actor,
+                    detail=f"Insufficient permissions ({permission})",
+                )
+            except Exception:
+                pass
             self._send_error(ErrorCodes.FORBIDDEN, detail=f"Insufficient permissions ({permission})")
             return None
 
@@ -429,6 +491,19 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         # Command deny-list check
         deny_error = self._validate_command(command)
         if deny_error:
+            # Audit the command denial
+            actor = token[:16] if token else "unknown"
+            try:
+                audit = get_audit_logger()
+                audit.record(
+                    event_type=AuditEventType.COMMAND_DENIED,
+                    actor=actor,
+                    detail=deny_error,
+                    target=command[0] if command else "",
+                    metadata={"command": command},
+                )
+            except Exception:
+                pass
             self._send_error(ErrorCodes.COMMAND_DENIED, detail=deny_error)
             return
 
