@@ -429,11 +429,21 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
     def _handle_health(self) -> None:
         uptime = int(time.time() - self._start_time)
+
+        # Check Redis health
+        redis_health = {}
+        try:
+            from irondome.redis_health import check_redis_health
+            redis_health = check_redis_health()
+        except Exception:
+            redis_health = {"connected": False, "mode": "in-memory"}
+
         self._send_json({
             "status": "healthy",
             "version": __version__,
             "api_version": API_VERSION,
             "uptime_seconds": uptime,
+            "redis": redis_health,
         })
 
     def _handle_ready(self) -> None:
