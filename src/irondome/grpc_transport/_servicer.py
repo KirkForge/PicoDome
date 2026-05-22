@@ -290,45 +290,35 @@ class _DictProxy:
 def add_servicer_manually(servicer, server):
     """Add servicer to a gRPC server using manual method registration.
 
-    This is used when compiled proto stubs are not available.
-    It creates generic handlers for each RPC method.
+    Used when compiled proto stubs are not available.
+    Creates generic RPC handlers for each method.
     """
     import grpc
-    from grpc import protos_and_services as _pas
-
-    # Manual method handlers
-    scan_handler = grpc.unary_unary_rpc_method_handler(
-        servicer.Scan,
-        request_deserializer=lambda x: x,  # raw bytes
-        response_serializer=lambda x: x,
-    )
-    health_handler = grpc.unary_unary_rpc_method_handler(
-        servicer.Health,
-        request_deserializer=lambda x: x,
-        response_serializer=lambda x: x,
-    )
-    get_policy_handler = grpc.unary_unary_rpc_method_handler(
-        servicer.GetPolicy,
-        request_deserializer=lambda x: x,
-        response_serializer=lambda x: x,
-    )
-    query_audit_handler = grpc.unary_unary_rpc_method_handler(
-        servicer.QueryAudit,
-        request_deserializer=lambda x: x,
-        response_serializer=lambda x: x,
-    )
 
     service_name = "irondome.IronDomeService"
-    handlers = {
-        f"/{service_name}/Scan": scan_handler,
-        f"/{service_name}/Health": health_handler,
-        f"/{service_name}/GetPolicy": get_policy_handler,
-        f"/{service_name}/QueryAudit": query_audit_handler,
+
+    rpc_method_handlers = {
+        "Scan": grpc.unary_unary_rpc_method_handler(
+            servicer.Scan,
+            request_deserializer=lambda x: x,
+            response_serializer=lambda x: x,
+        ),
+        "Health": grpc.unary_unary_rpc_method_handler(
+            servicer.Health,
+            request_deserializer=lambda x: x,
+            response_serializer=lambda x: x,
+        ),
+        "GetPolicy": grpc.unary_unary_rpc_method_handler(
+            servicer.GetPolicy,
+            request_deserializer=lambda x: x,
+            response_serializer=lambda x: x,
+        ),
+        "QueryAudit": grpc.unary_unary_rpc_method_handler(
+            servicer.QueryAudit,
+            request_deserializer=lambda x: x,
+            response_serializer=lambda x: x,
+        ),
     }
 
-    generic_handler = grpc.method_service_handler(
-        service_name,
-        handlers,
-    )
-
-    server.add_generic_rpc_handlers((generic_handler,))
+    handler = grpc.ServiceRpcHandlers(service_name, rpc_method_handlers)
+    server.add_generic_rpc_handlers((handler,))

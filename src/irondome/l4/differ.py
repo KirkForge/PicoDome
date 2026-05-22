@@ -70,15 +70,19 @@ def compare_profile_to_baseline(
                 f"Timing: {profile.total_runtime_ms}ms (expected {low}-{high}ms)"
             )
 
-    # Domain checks
+    # Domain checks — compare hostname if available, skip if only an IP address
     if baseline.allowed_domains and "*" not in baseline.allowed_domains:
         for call in profile.network_calls:
-            if call.address not in baseline.allowed_domains:
-                if not network_drift:
-                    network_drift = True
-                    drift_count += 1
-                drift_flags.append(f"Unexpected domain: {call.address}")
-                break
+            # NetworkCall.address is typically an IP; check if it looks like a domain
+            # (contains letters, not just digits/dots/colns)
+            if not call.address.replace(".", "").replace(":", "").isdigit():
+                # Address looks like a domain name
+                if call.address not in baseline.allowed_domains:
+                    if not network_drift:
+                        network_drift = True
+                        drift_count += 1
+                    drift_flags.append(f"Unexpected domain: {call.address}")
+                    break
 
     # Path checks
     if baseline.allowed_paths and "**" not in baseline.allowed_paths:

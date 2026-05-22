@@ -254,7 +254,6 @@ def apply_env_overrides(config: IronDomeConfig) -> IronDomeConfig:
         elif lower in ("false", "0", "no"):
             setattr(config, attr_name, False)
         else:
-            # Try numeric, fall back to string
             try:
                 val = float(env_val)
                 # Use int if no decimal part and attribute expects int
@@ -263,7 +262,8 @@ def apply_env_overrides(config: IronDomeConfig) -> IronDomeConfig:
                 else:
                     setattr(config, attr_name, val)
             except ValueError:
-                setattr(config, attr_name, env_val)
+                logger.warning("Invalid value for %s: %s (expected number)", env_name, env_val)
+                continue
 
     return config
 

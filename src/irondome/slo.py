@@ -130,6 +130,8 @@ ALL_SLOS = [
 ]
 
 
+MAX_LATENCY_SAMPLES = 10000  # Cap memory usage for SLO latency tracking
+
 class SLOTracker:
     """Track and measure SLO compliance.
 
@@ -150,6 +152,8 @@ class SLOTracker:
     def record_scan(self, duration_ms: float, success: bool) -> None:
         """Record a scan result."""
         self._latency_samples.append(duration_ms)
+        if len(self._latency_samples) > MAX_LATENCY_SAMPLES:
+            self._latency_samples = self._latency_samples[-MAX_LATENCY_SAMPLES:]
         self._total_scans += 1
         if not success:
             self._failed_scans += 1

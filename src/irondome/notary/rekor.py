@@ -18,6 +18,8 @@ import hashlib
 import hmac
 import json
 import logging
+import os as _os
+import secrets as _secrets
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -38,7 +40,15 @@ logger = logging.getLogger("irondome.notary")
 
 DEFAULT_REKOR_URL = "https://rekor.sigstore.dev"
 DEFAULT_TIMEOUT_SECONDS = 10
-DEFAULT_HMAC_KEY = "irondome-notary-default-hmac-key"
+
+# Generate a per-process random key if not configured via env var.
+# WARNING: This key is different across process restarts. For persistent
+# verification, set IRONDOME_NOTARY_HMAC_KEY in your environment.
+_process_hmac_key: str = _os.environ.get(
+    "IRONDOME_NOTARY_HMAC_KEY",
+    f"irondome-local-{_secrets.token_hex(16)}",
+)
+DEFAULT_HMAC_KEY = _process_hmac_key
 
 
 # ─── Exceptions ─────────────────────────────────────────────────────────────
@@ -175,6 +185,11 @@ class NullNotary(AuditNotary):
     def __init__(self, hmac_key: str = DEFAULT_HMAC_KEY) -> None:
         self._hmac_key = hmac_key
         self._entries: Dict[str, Dict[str, Any]] = {}
+        if not _os.environ.get("IRONDOME_NOTARY_HMAC_KEY"):
+            logger.warning(
+                "NullNotary: Using process-local HMAC key. "
+                "Set IRONDOME_NOTARY_HMAC_KEY for persistent verification."
+            )
 
     def submit_entry(self, entry: Dict[str, Any]) -> str:
         """Sign entry locally and store it. No network call.
@@ -248,6 +263,11 @@ class RekorNotary(AuditNotary):
         self._timeout = timeout
         self._hmac_key = hmac_key
         self._entries: Dict[str, Dict[str, Any]] = {}
+        if not _os.environ.get("IRONDOME_NOTARY_HMAC_KEY"):
+            logger.warning(
+                "RekorNotary: Using process-local HMAC key. "
+                "Set IRONDOME_NOTARY_HMAC_KEY for persistent verification."
+            )
 
     def submit_entry(self, entry: Dict[str, Any]) -> str:
         """Submit an audit entry to the Rekor transparency log.

@@ -17,8 +17,10 @@ Hardening:
 
 from __future__ import annotations
 
+import atexit
 import logging
 import os
+import shutil
 import ssl
 import tempfile
 from dataclasses import dataclass
@@ -99,13 +101,9 @@ def create_ssl_context(config: Optional[MTLSConfig] = None) -> Optional[ssl.SSLC
 
     # Set minimum TLS version
     try:
-        min_ver = getattr(ssl, f"{"TLS" if config.min_tls_version.startswith("TLS") else "SSL"}Protocol_{config.min_tls_version.lstrip('TLSv')}", None)
-        if min_ver is not None:
-            ctx.minimum_version = min_ver
-        else:
-            ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-    except AttributeError:
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    except AttributeError:
+        pass
 
     # Load server certificate and key
     try:
@@ -124,7 +122,7 @@ def create_ssl_context(config: Optional[MTLSConfig] = None) -> Optional[ssl.SSLC
         ctx.verify_mode = ssl.CERT_REQUIRED
     elif config.verify_client:
         # Use system CA bundle
-        ctx.load_default_certs()
+        ctx.set_default_verify_paths()
         ctx.verify_mode = ssl.CERT_REQUIRED
     else:
         ctx.verify_mode = ssl.CERT_NONE
@@ -162,25 +160,27 @@ def _create_dev_ssl_context() -> ssl.SSLContext:
 
     logger.warning("Creating DEV self-signed TLS certificate — DO NOT USE IN PRODUCTION")
 
-    with tempfile.TemporaryDirectory(prefix="irondome_tls_") as tmpdir:
-        cert_path = os.path.join(tmpdir, "server.crt")
-        key_path = os.path.join(tmpdir, "server.key")
+    tmpdir = tempfile.mkdtemp(prefix="irondome_tls_")
+    atexit.register(lambda: shutil.rmtree(tmpdir, ignore_errors=True))
 
-        try:
-            subprocess.run([
-                "openssl", "req", "-x509", "-newkey", "rsa:2048",
-                "-keyout", key_path, "-out", cert_path,
-                "-days", "1", "-nodes",
-                "-subj", "/CN=irondome-dev/O=KirkForge",
-            ], check=True, capture_output=True, timeout=10)
-        except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            logger.error("Failed to generate dev TLS cert: %s", e)
-            raise RuntimeError(f"Cannot generate dev TLS cert: {e}") from e
+    cert_path = os.path.join(tmpdir, "server.crt")
+    key_path = os.path.join(tmpdir, "server.key")
 
-        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-        ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
-        ctx.verify_mode = ssl.CERT_NONE  # dev mode: no client verification
+    try:
+        subprocess.run([
+            "openssl", "req", "-x509", "-newkey", "rsa:2048",
+            "-keyout", key_path, "-out", cert_path,
+            "-days", "1", "-nodes",
+            "-subj", "/CN=irondome-dev/O=KirkForge",
+        ], check=True, capture_output=True, timeout=10)
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        logger.error("Failed to generate dev TLS cert: %s", e)
+        raise RuntimeError(f"Cannot generate dev TLS cert: {e}") from e
 
-        logger.info("Dev SSL context created (self-signed, no client verification)")
-        return ctx
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
+    ctx.verify_mode = ssl.CERT_NONE  # dev mode: no client verification
+
+    logger.info("Dev SSL context created (self-signed, no client verification)")
+    return ctx

@@ -314,6 +314,8 @@ def scan_workspace(
                     analysis.overall_verdict.value,
                 )
 
+            except (KeyboardInterrupt, SystemExit):
+                raise
             except Exception as e:
                 project_ok = False
                 error_msg = f"{rel}: {e}"

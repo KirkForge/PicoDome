@@ -178,8 +178,10 @@ class SeccompBackend(SandboxBackend):
                         pass
 
                 # Load seccomp filter
-                lib.seccomp_load(ctx)
+                ret = lib.seccomp_load(ctx)
                 lib.seccomp_release(ctx)
+                if ret != 0:
+                    os._exit(127)  # seccomp filter failed — exit child immediately
 
                 # Prepare env
                 child_env = os.environ.copy()

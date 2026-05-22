@@ -22,6 +22,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -119,17 +121,25 @@ class VersionedPolicyStore:
         )
 
         path = policy_dir / f"v{next_version}.json"
-        path.write_text(
-            json.dumps(pv.to_dict(), indent=2, sort_keys=True, default=str),
-            encoding="utf-8",
-        )
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".json", dir=policy_dir)
+        try:
+            with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+                f.write(json.dumps(pv.to_dict(), indent=2, sort_keys=True, default=str))
+            os.replace(tmp_path, path)
+        except Exception:
+            os.unlink(tmp_path)
+            raise
 
-        # Update latest pointer
+        # Update latest pointer atomically
         latest_path = policy_dir / "latest.json"
-        latest_path.write_text(
-            json.dumps(pv.to_dict(), indent=2, sort_keys=True, default=str),
-            encoding="utf-8",
-        )
+        tmp_fd2, tmp_path2 = tempfile.mkstemp(suffix=".json", dir=policy_dir)
+        try:
+            with os.fdopen(tmp_fd2, "w", encoding="utf-8") as f:
+                f.write(json.dumps(pv.to_dict(), indent=2, sort_keys=True, default=str))
+            os.replace(tmp_path2, latest_path)
+        except Exception:
+            os.unlink(tmp_path2)
+            raise
 
         logger.info(
             "Policy '%s' v%d saved by %s: %s",

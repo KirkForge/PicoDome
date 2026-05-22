@@ -20,6 +20,7 @@ import hmac
 import json
 import logging
 import os
+import threading
 import time
 import urllib.request
 import urllib.error
@@ -178,6 +179,41 @@ class WebhookDispatcher:
                 results["details"].append({"url": wh.url, "status": "failed"})
 
         return results
+
+    def notify_async(
+        self,
+        event: WebhookEvent,
+        data: Dict[str, Any],
+        severity: Optional[str] = None,
+    ) -> None:
+        """Fire-and-forget webhook notification (non-blocking).
+
+        Spawns a background thread for delivery. Use this instead of
+        ``notify()`` when you don't want to block the caller.
+        """
+        threading.Thread(
+            target=self._notify_sync,
+            args=(event, data, severity),
+            daemon=True,
+        ).start()
+
+    def _notify_sync(self, event: WebhookEvent, data: Dict[str, Any], severity: Optional[str] = None) -> None:
+        """Synchronous notification (runs in background thread)."""
+        for wh in self._webhooks:
+            if not wh.enabled:
+                continue
+            if event.value not in wh.events and "*" not in wh.events:
+                continue
+            if severity and wh.min_severity:
+                sev_level = self.SEVERITY_ORDER.get(severity.lower(), 99)
+                min_level = self.SEVERITY_ORDER.get(wh.min_severity.lower(), 99)
+                if sev_level > min_level:
+                    continue
+            timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            payload = WebhookPayload(event=event.value, timestamp=timestamp, data=data)
+            payload_json = payload.to_json()
+            signature = _sign_payload(payload_json, wh.secret)
+            self._deliver(wh, payload_json, signature)
 
     def _deliver(self, config: WebhookConfig, payload_json: str, signature: str) -> bool:
         """Deliver a webhook payload with retries."""

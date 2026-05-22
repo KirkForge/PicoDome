@@ -60,10 +60,13 @@ class TokenAuth:
     Tokens are loaded from:
     1. ``IRONDOME_API_TOKENS`` env var (comma-separated)
     2. ``~/.irondome/api-tokens`` file (one token per line)
+
+    Token format: ``irondome-<role>-<secret>`` (e.g., ``irondome-admin-abc123``)
     """
 
-    def __init__(self) -> None:
+    def __init__(self, rbac: Optional[RBAC] = None) -> None:
         self._tokens: set = set()
+        self._rbac = rbac
         self._load_tokens()
 
     def _load_tokens(self) -> None:
@@ -73,6 +76,7 @@ class TokenAuth:
             token = token.strip()
             if token:
                 self._tokens.add(token)
+                self._register_role(token)
 
         # From file
         token_file = Path.home() / ".irondome" / "api-tokens"
@@ -82,16 +86,31 @@ class TokenAuth:
                     line = line.strip()
                     if line and not line.startswith("#"):
                         self._tokens.add(line)
+                        self._register_role(line)
             except OSError:
                 pass
 
         logger.info("Loaded %d API token(s)", len(self._tokens))
 
+    def _register_role(self, token: str) -> None:
+        """Parse token format irondome-<role>-<secret> and register with RBAC."""
+        if self._rbac and token.startswith("irondome-"):
+            parts = token.split("-", 2)
+            if len(parts) >= 3:
+                role = parts[1]
+                self._rbac.register_token(token, role)
+
     def validate(self, token: str) -> bool:
         """Check if a token is valid."""
         if not self._tokens:
-            # No tokens configured = open access (dev mode)
-            return True
+            if os.environ.get("IRONDOME_DEV_MODE", "").lower() in ("1", "true", "yes"):
+                logger.warning("DEV MODE: No API tokens configured — all requests authenticated")
+                return True
+            logger.warning(
+                "No API tokens configured — rejecting all requests. "
+                "Set IRONDOME_API_TOKENS or IRONDOME_DEV_MODE=1"
+            )
+            return False
         return token in self._tokens
 
     @property
@@ -110,8 +129,9 @@ class Role(str):
 class RBAC:
     """Simple role-based access control.
 
-    Token format: ``irondome-<role>-<hash>`` (e.g., ``irondome-admin-abc123``)
-    Role is extracted from the token prefix.
+    Tokens are registered explicitly with their role. No role is
+    extracted from the token string — this prevents spoofing via
+    token prefix parsing.
     """
 
     ROLE_PERMISSIONS = {
@@ -120,13 +140,16 @@ class RBAC:
         Role.ADMIN: {"*"},  # all permissions
     }
 
+    def __init__(self) -> None:
+        self._token_roles: Dict[str, str] = {}
+
+    def register_token(self, token: str, role: str) -> None:
+        """Register a token with a specific role."""
+        self._token_roles[token] = role
+
     def get_role(self, token: str) -> str:
-        """Extract role from token prefix."""
-        if token.startswith("irondome-"):
-            parts = token.split("-", 2)
-            if len(parts) >= 2:
-                return parts[1]
-        return Role.READER  # default role
+        """Look up role for a token from the registered mapping."""
+        return self._token_roles.get(token, Role.READER)
 
     def has_permission(self, token: str, permission: str) -> bool:
         """Check if a token's role has a specific permission."""
@@ -194,8 +217,10 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     """HTTP request handler for the Iron Dome daemon."""
 
     # Set by the server at creation time
-    auth: TokenAuth = TokenAuth()
+    # Set by the server at creation time
+    # Set by the server at creation time
     rbac: RBAC = RBAC()
+    auth: TokenAuth = TokenAuth(rbac=rbac)
     job_store: ScanJobStore = ScanJobStore()
     _start_time: float = time.time()
     _scan_count: int = 0
@@ -261,7 +286,9 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         elif path == "/ready":
             self._handle_ready()
         elif path == "/metrics":
-            self._handle_metrics()
+            token = self._require_permission("scan:read")
+            if token:
+                self._handle_metrics()
 
         # Authenticated GET endpoints
         elif path == f"/api/{API_VERSION}/scans":

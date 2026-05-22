@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import shutil
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -144,6 +145,7 @@ class AuditLogger:
         self._rotate_count = rotate_count
         self._prev_hash = ""
         self._notary = notary  # Optional AuditNotary instance
+        self._lock = threading.Lock()
 
         # Ensure directory exists
         self._log_dir.mkdir(parents=True, exist_ok=True)
@@ -173,27 +175,28 @@ class AuditLogger:
         Returns:
             The created AuditEvent (with event_id, timestamp, prev_hash filled).
         """
-        event_id = str(uuid.uuid4())
-        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        with self._lock:
+            event_id = str(uuid.uuid4())
+            timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-        event = AuditEvent(
-            event_type=event_type,
-            actor=actor,
-            detail=detail,
-            target=target,
-            metadata=metadata or {},
-            event_id=event_id,
-            timestamp=timestamp,
-            prev_hash=self._prev_hash,
-        )
+            event = AuditEvent(
+                event_type=event_type,
+                actor=actor,
+                detail=detail,
+                target=target,
+                metadata=metadata or {},
+                event_id=event_id,
+                timestamp=timestamp,
+                prev_hash=self._prev_hash,
+            )
 
-        line = event.to_json_line()
-        self._append_line(line)
+            line = event.to_json_line()
+            self._append_line(line)
 
-        # Update chain: hash of this line becomes prev_hash for next
-        self._prev_hash = hashlib.sha256(line.encode("utf-8")).hexdigest()
+            # Update chain: hash of this line becomes prev_hash for next
+            self._prev_hash = hashlib.sha256(line.encode("utf-8")).hexdigest()
 
-        # Optionally notarize the event
+        # Optionally notarize the event (fire-and-forget, outside lock)
         if self._notary is not None:
             try:
                 notary_uuid = self._notary.submit_entry(event.to_dict())
