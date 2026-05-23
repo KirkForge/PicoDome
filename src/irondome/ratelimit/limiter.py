@@ -34,8 +34,8 @@ class RateLimitConfig:
     max_actors: int = 10000
     # Seconds before an idle actor's bucket is evicted
     idle_timeout_seconds: int = 3600
-    # Global requests per second across all actors (0 = unlimited)
-    global_rps: float = 0.0
+    # Global requests per second across all actors
+    global_rps: float = 25.0
 
     def to_dict(self) -> dict[str, Any]:
         return {

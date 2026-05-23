@@ -871,6 +871,8 @@ class IronDomeDaemon:
         - ``IRONDOME_SYSLOG_HOST`` — Syslog server host (default: 127.0.0.1)
         - ``IRONDOME_SYSLOG_PORT`` — Syslog server port (default: 514)
         - ``IRONDOME_FILE_SINK_DIR`` — Directory for file sink output
+        - ``IRONDOME_GLOBAL_RPS`` — global requests per second across all actors (default: 25.0)
+        - ``IRONDOME_RATE_PER_SECOND`` — per-actor requests per second (default: 2.0)
     """
 
     def __init__(
@@ -896,6 +898,18 @@ class IronDomeDaemon:
 
         store_dir = _Path(self._job_store_dir) if self._job_store_dir else None
         IronDomeHandler.job_store = PersistentScanJobStore(store_dir=store_dir)
+
+        # Set up rate limiter from environment
+        from irondome.ratelimit import RateLimitConfig
+
+        global_rps = float(os.environ.get("IRONDOME_GLOBAL_RPS", "25.0"))
+        rate_per_second = float(os.environ.get("IRONDOME_RATE_PER_SECOND", "2.0"))
+        IronDomeHandler.rate_limiter = TokenBucketLimiter(
+            RateLimitConfig(
+                rate_per_second=rate_per_second,
+                global_rps=global_rps,
+            )
+        )
 
         # Set up audit sinks
         self._sinks = self._init_sinks()
