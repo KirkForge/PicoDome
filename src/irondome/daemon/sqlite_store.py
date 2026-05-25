@@ -213,7 +213,8 @@ class SQLiteScanJobStore:
             Job dict, or None if not found.
         """
         self._ensure_schema()
-        conn = self._get_conn()
+        with self._lock:
+            conn = self._get_conn()
         cursor = conn.execute("SELECT * FROM jobs WHERE job_id = ?", (job_id,))
         row = cursor.fetchone()
         if row is None:
@@ -230,7 +231,8 @@ class SQLiteScanJobStore:
             List of job dicts.
         """
         self._ensure_schema()
-        conn = self._get_conn()
+        with self._lock:
+            conn = self._get_conn()
         cursor = conn.execute(
             "SELECT * FROM jobs ORDER BY created_at DESC LIMIT ?",
             (limit,),

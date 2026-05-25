@@ -257,6 +257,12 @@ def load_policy(
     If name is given, returns the named policy.
     If path is given, loads from the file.
     """
+    # Path traversal protection
+    if path is not None:
+        path = Path(path).resolve()
+    if name is not None and ("/" in name or "\\" in name or ".." in name):
+        raise ValueError(f"Invalid policy name: {name!r}")
+
     # Named policy takes precedence
     if name is not None and name in NAMED_POLICIES:
         logger.info("Loading named policy: %s", name)

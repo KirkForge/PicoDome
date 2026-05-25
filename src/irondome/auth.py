@@ -177,6 +177,10 @@ class TokenAuth:
 
     def _add_token(self, token: str) -> None:
         """Add a single token, validating enterprise constraints."""
+        # Reject obviously invalid tokens regardless of mode (empty or < 4 chars)
+        if not token or len(token) < 4:
+            logger.warning("Token too short: %s", "***" if token else "(empty)")
+            return
         if self._is_enterprise and len(token) < MIN_TOKEN_LENGTH:
             logger.error(
                 "Enterprise mode: token '%s…' is too short (minimum %d characters). Token rejected.",

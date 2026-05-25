@@ -58,7 +58,7 @@ API_VERSION = "v1"
 
 # ─── CORS Configuration ──────────────────────────────────────────────────────
 
-CORS_ALLOW_ORIGINS = os.environ.get("IRONDOME_CORS_ORIGINS", "*")
+CORS_ALLOW_ORIGINS = os.environ.get("IRONDOME_CORS_ORIGINS", "*").replace("\r", "").replace("\n", "")
 CORS_ALLOW_METHODS = "GET, POST, OPTIONS"
 CORS_ALLOW_HEADERS = "Content-Type, Authorization, X-Tenant, X-Request-ID"
 CORS_MAX_AGE = "86400"  # 24 hours
@@ -416,9 +416,14 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     def _handle_get(self) -> None:
         # Request size limit
         content_length = self.headers.get("Content-Length")
-        if content_length and int(content_length) > self.MAX_REQUEST_SIZE:
-            self._send_error(ErrorCodes.REQUEST_TOO_LARGE)
-            return
+        if content_length:
+            try:
+                if int(content_length) > self.MAX_REQUEST_SIZE:
+                    self._send_error(ErrorCodes.REQUEST_TOO_LARGE)
+                    return
+            except (ValueError, OverflowError):
+                self._send_error(400, "Invalid Content-Length")
+                return
 
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
@@ -491,9 +496,14 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     def _handle_post(self) -> None:
         # Request size limit
         content_length = self.headers.get("Content-Length")
-        if content_length and int(content_length) > self.MAX_REQUEST_SIZE:
-            self._send_error(ErrorCodes.REQUEST_TOO_LARGE)
-            return
+        if content_length:
+            try:
+                if int(content_length) > self.MAX_REQUEST_SIZE:
+                    self._send_error(ErrorCodes.REQUEST_TOO_LARGE)
+                    return
+            except (ValueError, OverflowError):
+                self._send_error(400, "Invalid Content-Length")
+                return
 
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
