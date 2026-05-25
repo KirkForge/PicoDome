@@ -94,6 +94,7 @@ class AuditEvent:
             "event_type": self.event_type.value,
             "metadata": self.metadata,
             "prev_hash": self.prev_hash,
+            "schema_version": AUDIT_SCHEMA_VERSION,
             "target": self.target,
             "timestamp": self.timestamp,
         }
@@ -110,6 +111,9 @@ class AuditEvent:
 _DEFAULT_LOG_DIR = Path.home() / ".irondome" / "audit"
 _DEFAULT_MAX_BYTES = 50 * 1024 * 1024  # 50 MiB before rotation
 _DEFAULT_ROTATE_COUNT = 10  # keep 10 rotated files
+
+AUDIT_SCHEMA_VERSION = 2  # v2: adds schema_version field to every event
+AUDIT_SCHEMA_COMPAT = {1, 2}  # Versions we can read
 
 
 class AuditLogger:
@@ -326,6 +330,14 @@ class AuditLogger:
                     if until and data.get("timestamp", "") > until:
                         continue
 
+                    # Schema version check — warn but don't reject old versions
+                    schema_ver = data.get("schema_version", 1)
+                    if schema_ver not in AUDIT_SCHEMA_COMPAT:
+                        logger.warning(
+                            "Audit event with unknown schema_version=%s",
+                            schema_ver,
+                        )
+
                     evt = AuditEvent(
                         event_type=AuditEventType(data["event_type"]),
                         actor=data.get("actor", ""),
@@ -364,15 +376,16 @@ class AuditLogger:
             pass
 
         return {
-            "exists": True,
-            "path": str(self._log_path),
+            "chain_intact": len(self.verify_chain()) == 0,
             "events": events,
-            "size_bytes": stat.st_size,
+            "exists": True,
             "last_modified": time.strftime(
                 "%Y-%m-%dT%H:%M:%SZ",
                 time.gmtime(stat.st_mtime),
             ),
-            "chain_intact": len(self.verify_chain()) == 0,
+            "path": str(self._log_path),
+            "schema_version": AUDIT_SCHEMA_VERSION,
+            "size_bytes": stat.st_size,
         }
 
     @property

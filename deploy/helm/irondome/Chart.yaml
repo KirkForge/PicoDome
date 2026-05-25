@@ -2,8 +2,8 @@ apiVersion: v2
 name: irondome
 description: Iron Dome — deterministic runtime sandbox and behavioral analysis for supply-chain security
 type: application
-version: 0.4.0
-appVersion: "0.4.0"
+version: 0.5.0
+appVersion: "0.5.0"
 home: https://github.com/KirkForge/IronDome
 sources:
   - https://github.com/KirkForge/IronDome

@@ -18,6 +18,9 @@ from typing import Any
 
 logger = logging.getLogger("irondome.daemon.store")
 
+# Schema version for job store files
+JOB_STORE_SCHEMA_VERSION = 2  # v2: adds schema_version field to every job
+
 # Default storage directory
 DEFAULT_STORE_DIR = Path.home() / ".irondome"
 
@@ -185,6 +188,7 @@ class PersistentScanJobStore:
             "completed_at": None,
             "result": None,
             "error": None,
+            "schema_version": JOB_STORE_SCHEMA_VERSION,
         }
         with self._lock:
             self._jobs[job_id] = job

@@ -126,3 +126,13 @@ healthProbe:
   readiness:
     initialDelaySeconds: 3
     periodSeconds: 10
+# Horizontal Pod Autoscaler — scale based on CPU/memory utilization.
+# Requires metrics-server in the cluster.
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+  scaleDownStabilizationSeconds: 300
+  scaleUpStabilizationSeconds: 60
