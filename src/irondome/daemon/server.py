@@ -465,6 +465,10 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             token = self._require_permission("audit:read")
             if token:
                 self._handle_list_tenants()
+        elif path == f"/api/{API_VERSION}/tls/config":
+            token = self._require_permission("scan:read")
+            if token:
+                self._handle_tls_config()
         elif path == f"/api/{API_VERSION}/stats":
             token = self._require_permission("scan:read")
             if token:
@@ -868,6 +872,13 @@ class IronDomeHandler(BaseHTTPRequestHandler):
                 "count": len(tenants),
             }
         )
+
+    def _handle_tls_config(self) -> None:
+        """Return current TLS/mTLS configuration (no secrets exposed)."""
+        from irondome.mtls import get_tls_config_info
+
+        config_info = get_tls_config_info()
+        self._send_json(config_info)
 
     def _handle_stats(self) -> None:
         rm = get_retention_manager()

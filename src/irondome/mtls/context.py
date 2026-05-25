@@ -24,6 +24,7 @@ import shutil
 import ssl
 import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger("irondome.mtls")
@@ -146,6 +147,79 @@ def create_ssl_context(config: MTLSConfig | None = None) -> ssl.SSLContext | Non
     )
 
     return ctx
+
+
+def reload_ssl_context(config: MTLSConfig | None = None) -> ssl.SSLContext | None:
+    """Reload the SSL context from disk.
+
+    Call this when certificates have been rotated (e.g., via certbot
+    renewal or a Kubernetes secret update). Creates a fresh SSLContext
+    by re-reading the cert/key/CA files.
+
+    In a running daemon, this can be called from a signal handler or
+    a file watcher to pick up new certificates without restarting.
+
+    Args:
+        config: mTLS configuration. None = load from environment.
+
+    Returns:
+        New SSLContext, or None if mTLS is not configured.
+    """
+    return create_ssl_context(config)
+
+
+def get_tls_config_info(config: MTLSConfig | None = None) -> dict[str, Any]:
+    """Get TLS configuration info for the /api/v1/tls/config endpoint.
+
+    Returns a dict describing the current TLS state without exposing
+    secrets (key contents are never included).
+
+    Args:
+        config: mTLS configuration. None = load from environment.
+
+    Returns:
+        Dict with TLS state, cert paths, and connection details.
+    """
+    if config is None:
+        config = MTLSConfig.from_env()
+
+    info: dict[str, Any] = {
+        "mtls_enabled": config.is_configured,
+        "dev_mode": config.dev_mode,
+        "min_tls_version": config.min_tls_version,
+        "verify_client": config.verify_client,
+        "cert_path": config.cert_path,
+        "key_path": config.key_path,
+        "ca_path": config.ca_path,
+    }
+
+    # Check if cert files exist and are readable
+    if config.is_configured and not config.dev_mode:
+        cert_path = Path(config.cert_path) if config.cert_path else None
+        key_path = Path(config.key_path) if config.key_path else None
+        ca_path = Path(config.ca_path) if config.ca_path else None
+
+        info["cert_exists"] = cert_path.is_file() if cert_path else False
+        info["key_exists"] = key_path.is_file() if key_path else False
+        info["ca_exists"] = ca_path.is_file() if ca_path else False
+
+        # Read cert metadata (not the key!)
+        if cert_path and cert_path.is_file():
+            try:
+                import subprocess
+
+                result = subprocess.run(
+                    ["openssl", "x509", "-in", str(cert_path), "-noout", "-subject", "-dates", "-issuer"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if result.returncode == 0:
+                    info["cert_details"] = result.stdout.strip()
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
+    return info
 
 
 def _create_dev_ssl_context() -> ssl.SSLContext:
