@@ -1,6 +1,6 @@
 # IronDome — SOC 2 Type I Readiness Assessment
 
-> **Version:** 0.4.0 · **Date:** 2026-05-22 · **Status:** Assessment Draft
+> **Version:** 0.5.0 · **Date:** 2026-05-22 · **Status:** Assessment Draft
 > **Scope:** IronDome L3/L4 runtime sandbox and behavioral analysis platform
 > **Trust Services Categories:** Security, Availability, Confidentiality, Processing Integrity
 
@@ -513,7 +513,7 @@ IronDome is a deterministic runtime sandbox and behavioral analysis tool that pr
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                    IronDome v0.4.0 Architecture               │
+│                    IronDome v0.5.0 Architecture               │
 │                                                              │
 │  ┌──────────┐                                                │
 │  │   CLI    │── Direct usage (single scan)                   │

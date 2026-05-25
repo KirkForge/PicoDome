@@ -1,6 +1,6 @@
 # Iron Dome Enterprise Roadmap — Complete
 
-> **Version:** 0.4.0 · **Date:** 2026-05-22 · **Status:** Active
+> **Version:** 0.5.0 · **Date:** 2026-05-22 · **Status:** Active
 
 ## Completed PRs
 
@@ -29,20 +29,20 @@
 | PR-14 | `deploy/kubernetes/` | K8s Deployment, Service, PVC, RBAC, ServiceAccount, health probes, Prometheus annotations | — |
 | PR-15 | `deploy/helm/irondome/` | Helm chart with values (replicas, mTLS, rate limiting, webhooks, retention, SLOs, monitoring) | — |
 
-### Phase 3 — Hardening & Scale (v0.5.0 → v1.0.0) — Remaining
+### Phase 3 — Hardening & Scale (v0.5.0 → v1.0.0) — ✅ Complete
 
 | PR | Description | Priority |
 |----|-------------|----------|
-| PR-16 | External audit notary integration (Rekor/Sigstore transparency log) | High |
-| PR-17 | Reproducible builds (SOURCE_DATE_EPOCH, pinned dep hashes, hermetic pip) | High |
-| PR-18 | Formal threat model with attack trees per surface | High |
-| PR-19 | SOC 2 Type I readiness assessment documentation | Medium |
-| PR-20 | Daemon cluster mode (multi-node, shared state) | Medium |
-| PR-21 | gRPC transport option (in addition to HTTP) | Low |
+| PR-16 | ✅ | External audit notary integration (Rekor/Sigstore transparency log) | High |
+| PR-17 | ✅ | Reproducible builds (SOURCE_DATE_EPOCH, pinned dep hashes, hermetic pip) | High |
+| PR-18 | ✅ | Formal threat model with attack trees per surface | High |
+| PR-19 | ✅ | SOC 2 Type I readiness assessment documentation | Medium |
+| PR-20 | ✅ | Daemon cluster mode (multi-node, shared state) | Medium |
+| PR-21 | ✅ | gRPC transport option (in addition to HTTP) | Low |
 
 ## Enterprise Gate Status
 
-| Gate | v0.3.0 | v0.4.0 (Current) |
+| Gate | v0.3.0 | v0.5.0 (Current) |
 |------|--------|-------------------|
 | Shared-service access control | ❌ | ✅ Token auth + RBAC |
 | Data governance | ⚠️ Local only | ✅ Retention + secure deletion + export |
@@ -50,7 +50,7 @@
 | Auditability | ⚠️ Partial | ✅ Hash-chained audit log + query API |
 | Operational readiness | ❌ | ✅ Health/readiness + SLOs + metrics + runbooks |
 
-## Architecture (v0.4.0)
+## Architecture (v0.5.0)
 
 ```
 CLI (cli.py)
@@ -104,9 +104,9 @@ Infrastructure
 
 ## Remaining Work (v1.0.0)
 
-1. **External audit notary** — Integrate Rekor transparency log for audit trail entries
-2. **Reproducible builds** — SOURCE_DATE_EPOCH, dependency pinning, hermetic builds
-3. **Formal threat model** — Attack trees per surface (seccomp, seatbelt, subprocess, L4 rules)
-4. **SOC 2 Type I** — Trust services criteria mapping, evidence collection
-5. **Cluster mode** — Multi-node daemon with shared state (Redis/SQLite)
-6. **gRPC transport** — Binary protocol option for high-throughput environments
+1. **External audit notary** — ✅ Rekor transparency log integration (`notary/rekor.py`)
+2. **Reproducible builds** — ✅ SOURCE_DATE_EPOCH, pinned dep hashes, hermetic build config (`reproducible.py`)
+3. **Formal threat model** — ✅ Attack trees per surface (`docs/security/threat-model.md`)
+4. **SOC 2 Type I** — ✅ Trust services criteria mapping, evidence matrix (`docs/compliance/`)
+5. **Cluster mode** — ✅ Multi-node daemon with shared state (Redis/SQLite) (`cluster/manager.py`)
+6. **gRPC transport** — ✅ Binary protocol option for high-throughput environments (`grpc_transport/`)

@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import signal
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -53,6 +54,13 @@ logger = logging.getLogger("irondome.daemon")
 # ─── API version ────────────────────────────────────────────────────────────
 
 API_VERSION = "v1"
+
+# ─── CORS Configuration ──────────────────────────────────────────────────────
+
+CORS_ALLOW_ORIGINS = os.environ.get("IRONDOME_CORS_ORIGINS", "*")
+CORS_ALLOW_METHODS = "GET, POST, OPTIONS"
+CORS_ALLOW_HEADERS = "Content-Type, Authorization, X-Tenant, X-Request-ID"
+CORS_MAX_AGE = "86400"  # 24 hours
 
 # ─── Scan job tracker ───────────────────────────────────────────────────────
 
@@ -193,11 +201,38 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         logger.debug("HTTP %s", format % args)
 
+    def _generate_request_id(self) -> str:
+        """Generate or retrieve a request ID for traceability.
+
+        Uses X-Request-ID header if provided by the client,
+        otherwise generates a unique ID (irondome-<uuid>).
+        """
+        existing_id = self.headers.get("X-Request-ID", "")
+        if existing_id and len(existing_id) <= 128:
+            return existing_id
+        return f"irondome-{uuid.uuid4().hex[:16]}"
+
+    def _add_common_headers(self, request_id: str) -> None:
+        """Add common response headers: request ID, CORS, server info."""
+        self.send_header("X-Request-ID", request_id)
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Cache-Control", "no-store")
+        # CORS headers
+        self.send_header("Access-Control-Allow-Origin", CORS_ALLOW_ORIGINS)
+        self.send_header("Access-Control-Allow-Methods", CORS_ALLOW_METHODS)
+        self.send_header("Access-Control-Allow-Headers", CORS_ALLOW_HEADERS)
+        self.send_header("Access-Control-Max-Age", CORS_MAX_AGE)
+        self.send_header("Access-Control-Expose-Headers", "X-Request-ID")
+
     def _send_json(self, data: Any, status: int = 200) -> None:
         body = json.dumps(data, sort_keys=True, default=str).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        request_id = getattr(self, "_request_id", "")
+        if request_id:
+            self.send_header("X-Request-ID", request_id)
         self.end_headers()
         self.wfile.write(body)
 
@@ -366,7 +401,14 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
     # ── GET ──────────────────────────────────────────────────────────────
 
+    def do_OPTIONS(self) -> None:
+        """Handle CORS preflight requests."""
+        self.send_response(204)
+        self._add_common_headers(self._generate_request_id())
+        self.end_headers()
+
     def do_GET(self) -> None:
+        self._request_id = self._generate_request_id()
         # Request size limit
         content_length = self.headers.get("Content-Length")
         if content_length and int(content_length) > self.MAX_REQUEST_SIZE:
@@ -433,6 +475,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     # ── POST ─────────────────────────────────────────────────────────────
 
     def do_POST(self) -> None:
+        self._request_id = self._generate_request_id()
         # Request size limit
         content_length = self.headers.get("Content-Length")
         if content_length and int(content_length) > self.MAX_REQUEST_SIZE:
@@ -1034,7 +1077,11 @@ class IronDomeDaemon:
                 self.stop()
 
     def stop(self) -> None:
-        """Stop the daemon."""
+        """Stop the daemon gracefully.
+
+        Shuts down HTTP servers, stops audit sinks, and records a
+        DAEMON_STOP audit event. Safe to call multiple times.
+        """
         if self._server:
             self._server.shutdown()
 
@@ -1059,6 +1106,37 @@ class IronDomeDaemon:
             pass
 
         logger.info("Iron Dome daemon stopped")
+
+    def install_signal_handlers(self) -> None:
+        """Install SIGTERM and SIGINT handlers for graceful shutdown.
+
+        Call before start() when running in the foreground to ensure
+        the daemon shuts down cleanly on termination signals.
+
+        Usage::
+
+            daemon = IronDomeDaemon()
+            daemon.install_signal_handlers()
+            daemon.start()  # blocks; SIGTERM triggers graceful shutdown
+        """
+
+        def _handle_shutdown(signum: int, frame: Any) -> None:
+            sig_name = signal.Signals(signum).name
+            logger.info("Received %s, shutting down gracefully...", sig_name)
+            self.stop()
+
+        signal.signal(signal.SIGTERM, _handle_shutdown)
+        signal.signal(signal.SIGINT, _handle_shutdown)
+
+        # SIGHUP for config reload (graceful — future use)
+        if hasattr(signal, "SIGHUP"):
+
+            def _handle_hup(signum: int, frame: Any) -> None:
+                logger.info("Received SIGHUP — config reload not yet implemented")
+
+            signal.signal(signal.SIGHUP, _handle_hup)
+
+        logger.info("Signal handlers installed (SIGTERM, SIGINT%s)", ", SIGHUP" if hasattr(signal, "SIGHUP") else "")
 
 
 def create_app() -> IronDomeDaemon:

@@ -1,6 +1,6 @@
 # IronDome — SOC 2 Type I Evidence Matrix
 
-> **Version:** 0.4.0 · **Date:** 2026-05-22 · **Scope:** All Trust Services Criteria
+> **Version:** 0.5.0 · **Date:** 2026-05-22 · **Scope:** All Trust Services Criteria
 > **Purpose:** Detailed mapping of SOC 2 controls to IronDome source code, tests, and documentation.
 
 ---

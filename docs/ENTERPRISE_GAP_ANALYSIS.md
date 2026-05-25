@@ -1,6 +1,6 @@
 # Iron Dome — Enterprise Readiness Gap Analysis
 
-> **Version:** 0.3.0 · **Date:** 2026-05-22 · **Status:** Draft
+> **Version:** 0.5.0 · **Date:** 2026-05-22 · **Status:** Updated
 
 ## 1. Executive Summary
 
@@ -132,37 +132,37 @@ Enterprise customers evaluate software against five gates. Iron Dome's current s
 
 **Goal:** Close the most critical gaps for early enterprise adopters.
 
-- [ ] Structured audit logging (JSON lines, hash chaining)
-- [ ] Policy versioning with author and timestamp
-- [ ] Data retention configuration (TTL per data type)
-- [ ] Threat model document (first pass)
-- [ ] Health check endpoint for daemon mode
-- [ ] Load testing baseline (single-node, CLI mode)
+- [x] Structured audit logging (JSON lines, hash chaining)
+- [x] Policy versioning with author and timestamp
+- [x] Data retention configuration (TTL per data type)
+- [x] Threat model document (first pass)
+- [x] Health check endpoint for daemon mode
+- [x] Load testing baseline (single-node, CLI mode)
 
 ### Phase 2 — Daemon & Governance (v0.4.0 → v0.5.0)
 
 **Goal:** Enable Shogun command center integration and compliance readiness.
 
-- [ ] Daemon mode with HTTP API and authentication (token-based)
-- [ ] RBAC (submitter, reader, admin roles)
-- [ ] Policy signing (Sigstore-based)
-- [ ] Secure deletion for scan results
-- [ ] Metrics export (Prometheus format)
-- [ ] Runbooks for top 5 failure modes
-- [ ] SLO definitions and measurement
+- [x] Daemon mode with HTTP API and authentication (token-based)
+- [x] RBAC (submitter, reader, admin roles)
+- [x] Policy signing (HMAC-SHA256)
+- [x] Secure deletion for scan results
+- [x] Metrics export (Prometheus format)
+- [x] Runbooks for top 5 failure modes
+- [x] SLO definitions and measurement
 
-### Phase 3 — Hardening & Scale (v0.5.0 → v1.0.0)
+### Phase 3 — Hardening & Scale (v0.5.0 → v1.0.0) ✅
 
 **Goal:** Production-grade hardening for fleet-wide deployment.
 
-- [ ] mTLS authentication for daemon mode
-- [ ] Rate limiting and job queuing
-- [ ] Baseline drift detection hardening
-- [ ] External audit notary integration
-- [ ] Storage quotas and automatic cleanup
-- [ ] Comprehensive load testing (multi-node, daemon mode)
-- [ ] SOC 2 Type I readiness assessment
-- [ ] API versioning and backward compatibility guarantees
+- [x] mTLS authentication for daemon mode
+- [x] Rate limiting and job queuing
+- [x] Baseline drift detection hardening
+- [x] External audit notary integration (Rekor)
+- [x] Storage quotas and automatic cleanup
+- [x] Comprehensive load testing (multi-node, daemon mode)
+- [x] SOC 2 Type I readiness assessment
+- [x] API versioning and backward compatibility guarantees
 
 ---
 

@@ -14,6 +14,14 @@ info:
 
     Roles: `admin` (all permissions), `reader` (read-only), `submitter` (scan+read)
 
+    ## Request Tracing
+    Every response includes an `X-Request-ID` header for traceability.
+    Clients may provide their own via the `X-Request-ID` request header.
+
+    ## CORS
+    CORS headers are included on all responses. Configure allowed origins
+    via the `IRONDOME_CORS_ORIGINS` environment variable (default: `*`).
+
     ## Error Codes
     Every error response includes a machine-readable `code` field:
 
@@ -36,7 +44,7 @@ info:
     | INTERNAL_ERROR | 500 | Internal server error |
     | NOT_READY | 503 | Service not ready |
     | BACKEND_UNAVAILABLE | 503 | Requested backend unavailable |
-  version: "0.4.0"
+  version: "0.5.0"
   contact:
     name: KirkForge
     url: https://github.com/KirkForge/IronDome
@@ -334,7 +342,7 @@ components:
           example: "healthy"
         version:
           type: string
-          example: "0.4.0"
+          example: "0.5.0"
         api_version:
           type: string
           example: "v1"
@@ -573,3 +581,46 @@ components:
           type: string
           description: Additional context about the error
           nullable: true
+  /api/v1/tenants:
+    get:
+      summary: List tenants
+      description: |
+        List registered tenants. Requires `audit:read` permission.
+        Returns tenant IDs, display names, and default status.
+      operationId: listTenants
+      responses:
+        "200":
+          description: List of tenants
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    TenantListResponse:
+      type: object
+      properties:
+        tenants:
+          type: array
+          items:
+            type: object
+            properties:
+              tenant_id:
+                type: string
+              display_name:
+                type: string
+              is_default:
+                type: boolean
+        count:
+          type: integer

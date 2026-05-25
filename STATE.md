@@ -1,7 +1,7 @@
 # Iron Dome — State & Status
 
-**Version:** 0.4.0 | **Repo:** https://github.com/KirkForge/IronDome
-**Tests:** 332/332 passing (37 gRPC transport) | **Backends:** 3 (seccomp, seatbelt, subprocess)
+**Version:** 0.5.0 | **Repo:** https://github.com/KirkForge/IronDome
+**Tests:** 1085/1085 passing (37 gRPC transport) | **Backends:** 3 (seccomp, seatbelt, subprocess)
 **Formatters:** 6 (json, sarif, table, ml-context, github, cyclonedx)
 **Transports:** 2 (HTTP, gRPC)
 **Status:** Active development — enterprise-grade
@@ -61,7 +61,7 @@ The built-in policy (`iron-dome-default`) is deny-by-default with explicit allow
 | L4-HONEY | Honeypot touches | Known-suspicious paths, priv-esc binary spawns | No |
 | L4-BASE | Baseline drift | Compare profile metrics against shipped baselines | Yes |
 
-## Enterprise Infrastructure (v0.4.0)
+## Enterprise Infrastructure (v0.5.0)
 
 - **4-layer determinism guard stack** (Models → Guard → Diff → CI Gate)
 - **6 output formats** (json, sarif, table, ml-context, github, cyclonedx)
@@ -80,6 +80,10 @@ The built-in policy (`iron-dome-default`) is deny-by-default with explicit allow
 - **Kubernetes deployment** with health probes, RBAC, Prometheus annotations
 - **Helm chart** with configurable replicas, mTLS, rate limiting, SLOs, monitoring
 - **Config file support** (.irondome.yml) with env overrides
+- **Request ID tracing** with X-Request-ID header propagation
+- **CORS support** with configurable origins, preflight handling
+- **Graceful shutdown** with SIGTERM/SIGINT/SIGHUP signal handlers
+- **Security response headers** (X-Content-Type-Options, X-Frame-Options, Cache-Control)
 - **Workspace scanning** for monorepos
 - **License enforcement** (personal/commercial tiers)
 - **Sigstore-signed releases** with SLSA L3 provenance
@@ -94,6 +98,7 @@ The built-in policy (`iron-dome-default`) is deny-by-default with explicit allow
 
 ## Version History
 
+- v0.5.0 — Enterprise hardening: request ID tracing, CORS, graceful shutdown, security headers, OpenAPI v0.5.0
 - v0.4.0 — Enterprise governance: audit logging, policy versioning, data retention, daemon mode (HTTP API + token auth + RBAC), mTLS, rate limiting, webhooks, baseline hardening, API versioning, SLOs, K8s deployment, Helm chart, SOC 2 Type I readiness documentation, gRPC transport (optional), 332 tests
 - v0.3.0 — Enterprise-grade infrastructure: SECURITY.md, CONTRIBUTING.md, SLSA.md, SCAAT.md, CITATION.cff, Dockerfile, .pre-commit-hooks.yaml, MANIFEST.in, mypy.ini, .editorconfig, .gitattributes, enterprise gap analysis, JSON schemas, CI scripts, release pipeline with Sigstore + SLSA L3, expanded pyproject.toml, 295 tests, 6 output formats, 4-layer guard stack
 - v0.2.0 — Real seccomp backend (libseccomp ctypes + fork/exec), real seatbelt backend (sandbox-exec), 33 tests

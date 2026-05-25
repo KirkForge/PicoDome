@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "irondome"
-version = "0.3.0"
+version = "0.5.0"
 description = "Iron Dome — deterministic runtime sandbox and behavioral analysis for supply-chain security"
 readme = "README.md"
 license = {text = "KirkForge Personal Use License"}
