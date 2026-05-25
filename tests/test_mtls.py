@@ -66,7 +66,7 @@ class TestTLSConfigInfo:
         assert info["min_tls_version"] == "TLSv1_2"
 
     def test_config_info_dev_mode(self):
-        from irondome.mtls import get_tls_config_info, MTLSConfig
+        from irondome.mtls import MTLSConfig, get_tls_config_info
 
         config = MTLSConfig(dev_mode=True)
         info = get_tls_config_info(config)
@@ -74,7 +74,7 @@ class TestTLSConfigInfo:
         assert info["dev_mode"] is True
 
     def test_config_info_production(self):
-        from irondome.mtls import get_tls_config_info, MTLSConfig
+        from irondome.mtls import MTLSConfig, get_tls_config_info
 
         config = MTLSConfig(
             cert_path="/tmp/nonexistent/cert.pem",
@@ -93,14 +93,14 @@ class TestReloadSSLContext:
     """Test reload_ssl_context function."""
 
     def test_reload_no_mtls(self):
-        from irondome.mtls import reload_ssl_context, MTLSConfig
+        from irondome.mtls import MTLSConfig, reload_ssl_context
 
         config = MTLSConfig()
         result = reload_ssl_context(config)
         assert result is None
 
     def test_reload_dev_mode(self):
-        from irondome.mtls import reload_ssl_context, MTLSConfig
+        from irondome.mtls import MTLSConfig, reload_ssl_context
 
         config = MTLSConfig(dev_mode=True)
         # Dev mode creates a self-signed cert
