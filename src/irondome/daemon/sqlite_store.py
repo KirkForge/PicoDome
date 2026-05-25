@@ -33,7 +33,7 @@ logger = logging.getLogger("irondome.daemon.sqlite_store")
 
 _DEFAULT_DB_PATH = Path.home() / ".irondome" / "jobs.db"
 
-_SCHEMA_V2 = """
+_SCHEMA_V2 = f"""
 CREATE TABLE IF NOT EXISTS jobs (
     job_id TEXT PRIMARY KEY,
     command TEXT NOT NULL,
@@ -44,14 +44,14 @@ CREATE TABLE IF NOT EXISTS jobs (
     result TEXT,
     error TEXT,
     tenant_id TEXT,
-    schema_version INTEGER NOT NULL DEFAULT {version}
+    schema_version INTEGER NOT NULL DEFAULT {JOB_STORE_SCHEMA_VERSION}
 );
 
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_jobs_actor ON jobs(actor);
 CREATE INDEX IF NOT EXISTS idx_jobs_tenant ON jobs(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at);
-""".format(version=JOB_STORE_SCHEMA_VERSION)
+"""
 
 
 class SQLiteScanJobStore:

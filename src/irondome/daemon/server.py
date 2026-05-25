@@ -48,6 +48,7 @@ from irondome.l4.engine import create_default_engine
 from irondome.l4.profiler import profile_from_sandbox_result
 from irondome.ratelimit import TokenBucketLimiter
 from irondome.retention import get_retention_manager
+from irondome.tracing import trace_daemon_request
 
 logger = logging.getLogger("irondome.daemon")
 
@@ -409,6 +410,10 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         self._request_id = self._generate_request_id()
+        with trace_daemon_request(method="GET", path=self.path, request_id=self._request_id):
+            self._handle_get()
+
+    def _handle_get(self) -> None:
         # Request size limit
         content_length = self.headers.get("Content-Length")
         if content_length and int(content_length) > self.MAX_REQUEST_SIZE:
@@ -480,6 +485,10 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         self._request_id = self._generate_request_id()
+        with trace_daemon_request(method="POST", path=self.path, request_id=self._request_id):
+            self._handle_post()
+
+    def _handle_post(self) -> None:
         # Request size limit
         content_length = self.headers.get("Content-Length")
         if content_length and int(content_length) > self.MAX_REQUEST_SIZE:
@@ -927,6 +936,9 @@ class IronDomeDaemon:
         - ``IRONDOME_FILE_SINK_DIR`` — Directory for file sink output
         - ``IRONDOME_GLOBAL_RPS`` — global requests per second across all actors (default: 25.0)
         - ``IRONDOME_RATE_PER_SECOND`` — per-actor requests per second (default: 2.0)
+        - ``IRONDOME_STORE_BACKEND`` — job store backend: jsonl (default) or sqlite
+        - ``IRONDOME_SQLITE_PATH`` — path to SQLite database (default: ~/.irondome/jobs.db)
+        - ``IRONDOME_CORS_ORIGINS`` — allowed CORS origins (default: *)
     """
 
     def __init__(
@@ -935,6 +947,7 @@ class IronDomeDaemon:
         port: int | None = None,
         metrics_port: int | None = None,
         job_store_dir: str | None = None,
+        store_backend: str | None = None,
     ) -> None:
         self._host = host or os.environ.get("IRONDOME_DAEMON_HOST", "127.0.0.1")
         self._port = port or int(os.environ.get("IRONDOME_DAEMON_PORT", "8443"))
@@ -944,14 +957,26 @@ class IronDomeDaemon:
         self._server: HTTPServer | None = None
         self._metrics_server: HTTPServer | None = None
         self._job_store_dir = job_store_dir or os.environ.get("IRONDOME_JOB_STORE_DIR")
+        self._store_backend = store_backend or os.environ.get("IRONDOME_STORE_BACKEND", "jsonl")
 
-        # Set up persistent job store
+        # Set up job store backend (jsonl or sqlite)
         from pathlib import Path as _Path
 
-        from irondome.daemon.store import PersistentScanJobStore
+        backend = self._store_backend.lower()
+        if backend == "sqlite":
+            from irondome.daemon.sqlite_store import SQLiteScanJobStore
 
-        store_dir = _Path(self._job_store_dir) if self._job_store_dir else None
-        IronDomeHandler.job_store = PersistentScanJobStore(store_dir=store_dir)
+            db_path = os.environ.get("IRONDOME_SQLITE_PATH")
+            IronDomeHandler.job_store = SQLiteScanJobStore(
+                db_path=_Path(db_path) if db_path else None,
+            )
+            logger.info("Using SQLite job store backend")
+        else:
+            from irondome.daemon.store import PersistentScanJobStore
+
+            store_dir = _Path(self._job_store_dir) if self._job_store_dir else None
+            IronDomeHandler.job_store = PersistentScanJobStore(store_dir=store_dir)
+            logger.info("Using JSONL job store backend")
 
         # Set up rate limiter from environment
         from irondome.ratelimit import RateLimitConfig

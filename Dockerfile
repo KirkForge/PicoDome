@@ -39,17 +39,19 @@ FROM python:3.12-slim AS runtime
 
 LABEL org.opencontainers.image.source="https://github.com/KirkForge/IronDome"
 LABEL org.opencontainers.image.title="Iron Dome"
-LABEL org.opencontainers.image.version="0.4.0"
+LABEL org.opencontainers.image.version="0.5.0"
 LABEL org.opencontainers.image.description="Deterministic runtime sandbox and behavioral analysis engine for supply-chain security"
 
-# Install runtime dependency for seccomp-bpf backend
+# Install runtime dependencies (seccomp + tini for signal handling)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libseccomp2 && \
+    apt-get install -y --no-install-recommends libseccomp2 tini && \
     rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
+# Create non-root user and data directory
 RUN groupadd --system irondome && \
-    useradd --system --gid irondome --create-home --home-dir /home/irondome irondome
+    useradd --system --gid irondome --create-home --home-dir /home/irondome irondome && \
+    mkdir -p /home/irondome/.irondome && \
+    chown irondome:irondome /home/irondome/.irondome
 
 WORKDIR /home/irondome
 
@@ -60,12 +62,19 @@ RUN pip install --no-cache-dir /tmp/*.whl && rm -f /tmp/*.whl
 # Daemon ports (HTTP and gRPC)
 EXPOSE 8443 50051
 
+# Persistent data volume
+VOLUME /home/irondome/.irondome
+
 # Health check — verify CLI is functional
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD irondome --version || exit 1
+
+# Graceful shutdown: SIGTERM triggers IronDomeDaemon.stop()
+STOPSIGNAL SIGTERM
 
 # Switch to non-root user
 USER irondome
 
 # Default: CLI mode. Override for daemon: irondome daemon --host 0.0.0.0
-ENTRYPOINT ["irondome"]
+# Use tini as PID 1 for proper signal forwarding
+ENTRYPOINT ["tini", "--", "irondome"]
