@@ -39,6 +39,12 @@ auth:
   # Set to true to auto-generate a secret with a random admin token
   createSecret: true
 
+store:
+  # Backend: jsonl (default) or sqlite (production-grade, indexed, WAL mode)
+  backend: jsonl
+  # Path for SQLite database (only used when backend=sqlite)
+  sqlitePath: ""
+
 mtls:
   enabled: false
   # Reference to a TLS secret with tls.crt, tls.key, ca.crt
@@ -63,6 +69,10 @@ persistence:
   enabled: true
   size: 5Gi
   storageClass: ""
+
+cors:
+  # Allowed origins for CORS headers (default: * for all)
+  origins: "*"
 
 ratelimit:
   enabled: true

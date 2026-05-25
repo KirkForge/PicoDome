@@ -599,6 +599,11 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             if content_length > self.MAX_REQUEST_SIZE:
                 self._send_error(ErrorCodes.REQUEST_TOO_LARGE)
                 return
+            # Validate Content-Type for POST endpoints
+            content_type = self.headers.get("Content-Type", "")
+            if content_type and "application/json" not in content_type:
+                self._send_error(ErrorCodes.INVALID_JSON, detail=f"Expected application/json, got {content_type}")
+                return
             body = self.rfile.read(content_length).decode("utf-8")
             data = json.loads(body)
         except (json.JSONDecodeError, ValueError) as e:
@@ -805,6 +810,10 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         """Create or update a policy."""
         try:
             content_length = int(self.headers.get("Content-Length", 0))
+            content_type = self.headers.get("Content-Type", "")
+            if content_type and "application/json" not in content_type:
+                self._send_error(ErrorCodes.INVALID_JSON, detail=f"Expected application/json, got {content_type}")
+                return
             body = self.rfile.read(content_length).decode("utf-8")
             data = json.loads(body)
         except (json.JSONDecodeError, ValueError) as e:

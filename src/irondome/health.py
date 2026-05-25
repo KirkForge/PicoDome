@@ -125,6 +125,43 @@ def check_health() -> list[HealthStatus]:
             )
         )
 
+    # 5. Store backend check (SQLite or JSONL)
+    try:
+        import os
+
+        store_backend = os.environ.get("IRONDOME_STORE_BACKEND", "jsonl")
+        if store_backend.lower() == "sqlite":
+            from irondome.daemon.sqlite_store import SQLiteScanJobStore
+
+            store = SQLiteScanJobStore.from_env()
+            count = store.count()
+            checks.append(
+                HealthStatus(
+                    healthy=True,
+                    component="store_backend",
+                    detail=f"backend=sqlite jobs={count}",
+                    timestamp=now,
+                )
+            )
+        else:
+            checks.append(
+                HealthStatus(
+                    healthy=True,
+                    component="store_backend",
+                    detail="backend=jsonl",
+                    timestamp=now,
+                )
+            )
+    except Exception as e:
+        checks.append(
+            HealthStatus(
+                healthy=False,
+                component="store_backend",
+                detail=f"error: {e}",
+                timestamp=now,
+            )
+        )
+
     return checks
 
 

@@ -96,6 +96,16 @@ spec:
             - name: IRONDOME_POLICY_KEY_ID
               value: {{ .Values.policySigning.keyId | quote }}
             {{- end }}
+            {{- if ne .Values.store.backend "jsonl" }}
+            - name: IRONDOME_STORE_BACKEND
+              value: {{ .Values.store.backend | quote }}
+            {{- end }}
+            {{- if .Values.store.sqlitePath }}
+            - name: IRONDOME_SQLITE_PATH
+              value: {{ .Values.store.sqlitePath | quote }}
+            {{- end }}
+            - name: IRONDOME_CORS_ORIGINS
+              value: {{ .Values.cors.origins | quote }}
           volumeMounts:
             {{- if .Values.mtls.enabled }}
             - name: tls

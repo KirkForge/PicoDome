@@ -140,6 +140,18 @@ def main(argv: list[str] | None = None) -> int:
     daemon_parser.add_argument(
         "--grpc-port", type=int, default=50051, help="gRPC port (default: 50051, only used with --transport grpc)"
     )
+    daemon_parser.add_argument(
+        "--store-backend",
+        choices=["jsonl", "sqlite"],
+        default=None,
+        help="Job store backend: jsonl (default) or sqlite",
+    )
+    daemon_parser.add_argument(
+        "--metrics-port",
+        type=int,
+        default=None,
+        help="Separate port for /metrics endpoint (default: same as API port)",
+    )
 
     # ── scan-grpc ─────────────────────────────────────────────────────
     scan_grpc_parser = sub.add_parser("scan-grpc", help="Scan via gRPC client")
@@ -670,7 +682,20 @@ def _cmd_daemon(args) -> int:
         # HTTP daemon (default)
         from irondome.daemon import IronDomeDaemon
 
-        daemon = IronDomeDaemon(host=args.host, port=args.port)
+        store_backend = getattr(args, "store_backend", None) or "jsonl"
+        metrics_port = getattr(args, "metrics_port", None)
+
+        daemon = IronDomeDaemon(
+            host=args.host,
+            port=args.port,
+            metrics_port=metrics_port,
+            store_backend=store_backend,
+        )
+
+        # Install signal handlers for graceful shutdown (foreground only)
+        if not args.background:
+            daemon.install_signal_handlers()
+
         try:
             daemon.start(background=args.background)
             if args.background:

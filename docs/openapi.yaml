@@ -624,3 +624,59 @@ components:
                 type: boolean
         count:
           type: integer
+
+  /api/v1/tls/config:
+    get:
+      summary: TLS/mTLS configuration
+      description: |
+        Returns the current TLS configuration without exposing secrets.
+        Shows certificate paths, existence checks, minimum TLS version,
+        and client verification status. Requires `scan:read` permission.
+      operationId: getTlsConfig
+      responses:
+        "200":
+          description: TLS configuration info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TlsConfigResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    TlsConfigResponse:
+      type: object
+      properties:
+        mtls_enabled:
+          type: boolean
+          example: true
+        dev_mode:
+          type: boolean
+          example: false
+        min_tls_version:
+          type: string
+          example: "TLSv1_2"
+        verify_client:
+          type: boolean
+          example: true
+        cert_path:
+          type: string
+          example: "/etc/irondome/tls/server.crt"
+        key_path:
+          type: string
+          example: "/etc/irondome/tls/server.key"
+        ca_path:
+          type: string
+          example: "/etc/irondome/tls/ca.crt"
+        cert_exists:
+          type: boolean
+        key_exists:
+          type: boolean
+        ca_exists:
+          type: boolean
+        cert_details:
+          type: string
+          description: OpenSSL certificate subject, dates, and issuer (if available)

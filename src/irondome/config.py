@@ -38,6 +38,9 @@ KNOWN_KEYS = frozenset(
         "rules",
         "log_format",
         "deterministic_output",
+        "store_backend",
+        "sqlite_path",
+        "cors_origins",
     }
 )
 
