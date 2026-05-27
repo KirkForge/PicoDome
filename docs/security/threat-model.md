@@ -104,3 +104,18 @@ Iron Dome **is**:
 - A behavioral profiler for post-execution analysis
 - A companion to PicoSentry (static scan → runtime sandbox)
 - A CI/CD gate for automated security verification
+
+## Per-Backend Compatibility & Coverage
+
+| Backend | Platform | Kernel enforcement | Network filtering | File filtering | Recommended posture |
+|---------|----------|-------------------|-------------------|---------------|-------------------|
+| seccomp-bpf | Linux | ✅ BPF filter, SIGSYS on violation | ✅ connect/accept/socket | ✅ open/openat/write | Production default |
+| seatbelt | macOS | ✅ sandbox-exec, kernel-enforced | ✅ network deny | ✅ file-read/file-write | Production default |
+| subprocess | Any | ❌ Pattern analysis only | ⚠️ Observed via strace | ⚠️ Observed via strace | Last resort / CI detection-only |
+
+**Recommended safe-by-default posture:**
+
+1. Use seccomp (Linux) or seatbelt (macOS) as the primary backend.
+2. Treat subprocess fallback as **detection-only** — it cannot prevent violations, only observe them.
+3. In enterprise mode, the daemon rejects `observational_only` backends by default.
+4. Deny-by-default policy with explicit allows is the only supported policy mode in enterprise.

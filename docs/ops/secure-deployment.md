@@ -81,4 +81,22 @@ Document the actual backend used in outputs and logs.
 - [ ] Outputs archived (JSON/SARIF)
 - [ ] Audit logs enabled for shared use
 
+## F) Audit log forwarding
+
+Iron Dome ships three audit sink types:
+
+| Sink | Use case |
+|------|----------|
+| `FileSink` | Local append-only JSONL with hash-chain integrity and rotation |
+| `SyslogSink` | RFC 5424 UDP forwarding to syslog / SIEM collectors |
+| `WebhookSink` | HTTP POST to external systems (Slack, PagerDuty, custom) |
+
+To forward audit events to a central log system:
+
+1. **Syslog/CEF**: Point `SyslogSink` at your log aggregator (rsyslog, syslog-ng, Splunk).
+2. **HTTP webhooks**: Configure `WebhookSink` with your endpoint URL and secret.
+3. **File + shipper**: Use `FileSink` and tail the JSONL with Filebeat/Fluentd/Fluent Bit.
+
+Set `IRONDOME_AUDIT_SINK` to `file`, `syslog`, `webhook`, or a comma-separated combination.
+
 This is a starter guide intended to evolve into a hardened reference deployment.

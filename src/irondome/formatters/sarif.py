@@ -60,11 +60,14 @@ def _l3_sarif(result: SandboxResult) -> str:
         "runs": [
             {
                 "properties": {
+                    "backend": result.backend_name,
                     "command": result.command,
                     "duration_ms": result.duration_ms,
                     "exit_code": result.exit_code,
                     "overall_verdict": result.overall_verdict.value,
                     "policy": result.policy_name,
+                    "policy_hash": result.policy_hash,
+                    "policy_version": result.policy_version,
                 },
                 "results": results,
                 "tool": {
