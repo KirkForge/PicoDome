@@ -1,0 +1,52 @@
+version: 1
+name: deny-by-default
+mode: deny
+description: "Default enterprise posture: deny everything not explicitly allowed"
+
+backends:
+  linux_seccomp: true
+  macos_seatbelt: true
+  subprocess: true
+
+exec:
+  allowlist:
+    - python3
+    - python
+    - node
+    - npm
+  denylist:
+    - curl
+    - wget
+    - nc
+    - telnet
+
+fs:
+  read_allowlist:
+    - ./
+    - /usr/
+    - /lib/
+  write_allowlist:
+    - ./
+    - /tmp/
+
+network:
+  mode: deny
+  allowlist: []
+
+env:
+  pass_through:
+    - PATH
+    - HOME
+  denylist:
+    - AWS_.*
+    - GITHUB_TOKEN
+    - GOOGLE_APPLICATION_CREDENTIALS
+
+limits:
+  cpu_seconds: 30
+  wall_seconds: 60
+  memory_mb: 512
+
+evidence:
+  include_policy_hash: true
+  include_backend: true

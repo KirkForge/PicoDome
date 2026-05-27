@@ -1,0 +1,52 @@
+version: 1
+name: python-pip-install
+mode: deny
+description: "Policy for running pip install in a sandboxed workspace"
+
+backends:
+  linux_seccomp: true
+  macos_seatbelt: true
+  subprocess: true
+
+exec:
+  allowlist:
+    - python3
+    - python
+    - pip
+  denylist:
+    - curl
+    - wget
+    - ssh
+
+fs:
+  read_allowlist:
+    - ./
+    - /usr/
+    - /lib/
+  write_allowlist:
+    - ./
+    - /tmp/
+
+network:
+  mode: allow
+  allowlist:
+    - pypi.org
+    - files.pythonhosted.org
+
+env:
+  pass_through:
+    - PATH
+    - HOME
+    - PIP_CACHE_DIR
+  denylist:
+    - AWS_.*
+    - GITHUB_TOKEN
+
+limits:
+  cpu_seconds: 120
+  wall_seconds: 300
+  memory_mb: 1024
+
+evidence:
+  include_policy_hash: true
+  include_backend: true
