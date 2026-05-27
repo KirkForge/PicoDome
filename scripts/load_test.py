@@ -72,8 +72,12 @@ def benchmark_scan(
     if durations:
         result["latency"] = {
             "p50": round(statistics.median(durations), 1),
-            "p95": round(sorted(durations)[int(len(durations) * 0.95)], 1) if len(durations) >= 2 else round(durations[0], 1),
-            "p99": round(sorted(durations)[int(len(durations) * 0.99)], 1) if len(durations) >= 2 else round(durations[0], 1),
+            "p95": round(sorted(durations)[int(len(durations) * 0.95)], 1)
+            if len(durations) >= 2
+            else round(durations[0], 1),
+            "p99": round(sorted(durations)[int(len(durations) * 0.99)], 1)
+            if len(durations) >= 2
+            else round(durations[0], 1),
             "mean": round(statistics.mean(durations), 1),
             "min": round(min(durations), 1),
             "max": round(max(durations), 1),
@@ -125,7 +129,9 @@ def main() -> None:
 
         if result["latency"]:
             lat = result["latency"]
-            print(f"    p50={lat['p50']:.1f}ms  p95={lat['p95']:.1f}ms  p99={lat['p99']:.1f}ms  mean={lat['mean']:.1f}ms")
+            print(
+                f"    p50={lat['p50']:.1f}ms  p95={lat['p95']:.1f}ms  p99={lat['p99']:.1f}ms  mean={lat['mean']:.1f}ms"
+            )
         else:
             print(f"    FAILED ({result['errors']} errors)")
 

@@ -246,6 +246,9 @@ def apply_env_overrides(config: IronDomeConfig) -> IronDomeConfig:
     Precedence: env vars override config file values.
     CLI flags (applied after this) override env vars.
     """
+    # Attributes that accept string values
+    _STRING_ATTRS = {"format", "fail_on", "baseline", "policy", "log_format"}
+
     for env_name, attr_name in _ENV_TO_ATTR.items():
         env_val = os.environ.get(env_name)
         if env_val is None or env_val == "":
@@ -256,6 +259,8 @@ def apply_env_overrides(config: IronDomeConfig) -> IronDomeConfig:
             setattr(config, attr_name, True)
         elif lower in ("false", "0", "no"):
             setattr(config, attr_name, False)
+        elif attr_name in _STRING_ATTRS:
+            setattr(config, attr_name, env_val)
         else:
             try:
                 val = float(env_val)

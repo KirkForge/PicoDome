@@ -140,7 +140,7 @@ exclude_lines = [
     "pass",
     "@abstract",
 ]
-fail_under = 42
+fail_under = 70
 
 # Future: switch to setuptools_scm for git tag versioning
 # [tool.setuptools_scm]

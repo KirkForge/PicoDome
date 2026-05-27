@@ -173,10 +173,7 @@ def generate_sbom(output: str | None = None, pretty: bool = True) -> str:
         "dependencies": [
             {
                 "ref": f"pkg:pypi/irondome@{IRONDOME_VERSION}",
-                "dependsOn": [
-                    f"pkg:pypi/{dep}@{pkg_versions.get(dep.lower(), 'unknown')}"
-                    for dep in irondome_deps
-                ],
+                "dependsOn": [f"pkg:pypi/{dep}@{pkg_versions.get(dep.lower(), 'unknown')}" for dep in irondome_deps],
             }
         ],
     }
@@ -198,7 +195,8 @@ def main() -> int:
         description="Generate CycloneDX SBOM for IronDome",
     )
     parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         help="Output file path (default: stdout)",
         default=None,
     )

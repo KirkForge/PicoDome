@@ -114,6 +114,7 @@ Specific unsupported claims:
 | P-4 | fork() deprecation warning in seccomp backend | Low | Future: switch to posix_spawn |
 | P-5 | Redis fallback data not replicated | Medium | Monitor Redis health; plan capacity |
 | P-6 | No automated capacity planning | Medium | Benchmark results planned for GA |
+| P-7 | Line coverage at 71%, not 75% | Low | cli.py, seatbelt_backend (macOS), workspace need tests — GA target |
 
 ## 8. Operational Requirements
 

@@ -47,6 +47,7 @@ def _load_yaml_file(path: Path) -> dict | list | None:
     """Load a YAML file, falling back to basic parsing if PyYAML unavailable."""
     try:
         import yaml
+
         with open(path) as f:
             return yaml.safe_load(f)
     except ImportError:
@@ -105,69 +106,107 @@ def check_k8s_deployment(findings: list[Finding]) -> None:
         # DEV_MODE enabled (matches IRONDOME_DEV_MODE with "1" on same or next line)
         if "IRONDOME_DEV_MODE" in line:
             # Check if "1" is on the same line
-            if re.search(r"IRONDOME_DEV_MODE.*1", line) or i < len(lines) and re.search(r'value:\s*["\']?1["\']?', lines[i]):
-                findings.append(Finding(
-                    "CRITICAL", "dev-mode-k8s",
-                    "IRONDOME_DEV_MODE=1 found in K8s deployment — disables authentication",
-                    str(deploy_path), i,
-                ))
+            if (
+                re.search(r"IRONDOME_DEV_MODE.*1", line)
+                or i < len(lines)
+                and re.search(r'value:\s*["\']?1["\']?', lines[i])
+            ):
+                findings.append(
+                    Finding(
+                        "CRITICAL",
+                        "dev-mode-k8s",
+                        "IRONDOME_DEV_MODE=1 found in K8s deployment — disables authentication",
+                        str(deploy_path),
+                        i,
+                    )
+                )
 
         # TLS dev mode
         if "IRONDOME_TLS_DEV" in line:
-            if re.search(r"IRONDOME_TLS_DEV.*1", line) or i < len(lines) and re.search(r'value:\s*["\']?1["\']?', lines[i]):
-                findings.append(Finding(
-                    "HIGH", "tls-dev-k8s",
-                    "IRONDOME_TLS_DEV=1 found in K8s deployment — uses self-signed certs",
-                    str(deploy_path), i,
-                ))
+            if (
+                re.search(r"IRONDOME_TLS_DEV.*1", line)
+                or i < len(lines)
+                and re.search(r'value:\s*["\']?1["\']?', lines[i])
+            ):
+                findings.append(
+                    Finding(
+                        "HIGH",
+                        "tls-dev-k8s",
+                        "IRONDOME_TLS_DEV=1 found in K8s deployment — uses self-signed certs",
+                        str(deploy_path),
+                        i,
+                    )
+                )
 
         # Placeholder secrets
         if "REPLACE_WITH_STRONG_TOKEN" in line or "REPLACE_ME" in line or "changeme" in line:
-            findings.append(Finding(
-                "CRITICAL", "placeholder-secret-k8s",
-                f"Placeholder secret found: {line.strip()}",
-                str(deploy_path), i,
-            ))
+            findings.append(
+                Finding(
+                    "CRITICAL",
+                    "placeholder-secret-k8s",
+                    f"Placeholder secret found: {line.strip()}",
+                    str(deploy_path),
+                    i,
+                )
+            )
 
         # runAsUser: 0 (root)
         if re.search(r"runAsUser:\s*0", line):
-            findings.append(Finding(
-                "HIGH", "root-user-k8s",
-                "Container runs as root (runAsUser: 0)",
-                str(deploy_path), i,
-            ))
+            findings.append(
+                Finding(
+                    "HIGH",
+                    "root-user-k8s",
+                    "Container runs as root (runAsUser: 0)",
+                    str(deploy_path),
+                    i,
+                )
+            )
 
         # Insecure container settings
         if "allowPrivilegeEscalation: true" in line:
-            findings.append(Finding(
-                "HIGH", "privilege-escalation-k8s",
-                "allowPrivilegeEscalation: true found — should be false",
-                str(deploy_path), i,
-            ))
+            findings.append(
+                Finding(
+                    "HIGH",
+                    "privilege-escalation-k8s",
+                    "allowPrivilegeEscalation: true found — should be false",
+                    str(deploy_path),
+                    i,
+                )
+            )
 
         if "readOnlyRootFilesystem: false" in line:
-            findings.append(Finding(
-                "MEDIUM", "writable-filesystem-k8s",
-                "readOnlyRootFilesystem: false — should be true in production",
-                str(deploy_path), i,
-            ))
+            findings.append(
+                Finding(
+                    "MEDIUM",
+                    "writable-filesystem-k8s",
+                    "readOnlyRootFilesystem: false — should be true in production",
+                    str(deploy_path),
+                    i,
+                )
+            )
 
     # Check for enterprise mode
     content = "\n".join(lines)
     if "IRONDOME_ENTERPRISE_MODE" not in content:
-        findings.append(Finding(
-            "MEDIUM", "enterprise-mode-missing-k8s",
-            "IRONDOME_ENTERPRISE_MODE not set in K8s deployment — enterprise enforcement disabled",
-            str(deploy_path),
-        ))
+        findings.append(
+            Finding(
+                "MEDIUM",
+                "enterprise-mode-missing-k8s",
+                "IRONDOME_ENTERPRISE_MODE not set in K8s deployment — enterprise enforcement disabled",
+                str(deploy_path),
+            )
+        )
 
     # Check for security context
     if "securityContext" not in content:
-        findings.append(Finding(
-            "HIGH", "no-security-context-k8s",
-            "No securityContext defined in K8s deployment",
-            str(deploy_path),
-        ))
+        findings.append(
+            Finding(
+                "HIGH",
+                "no-security-context-k8s",
+                "No securityContext defined in K8s deployment",
+                str(deploy_path),
+            )
+        )
 
 
 def check_helm_values(findings: list[Finding]) -> None:
@@ -183,56 +222,80 @@ def check_helm_values(findings: list[Finding]) -> None:
     for i, line in enumerate(lines, 1):
         # Dev mode in values
         if re.search(r"devMode:\s*true", line):
-            findings.append(Finding(
-                "HIGH", "dev-mode-helm",
-                "devMode: true in Helm values — self-signed TLS certs",
-                str(values_path), i,
-            ))
+            findings.append(
+                Finding(
+                    "HIGH",
+                    "dev-mode-helm",
+                    "devMode: true in Helm values — self-signed TLS certs",
+                    str(values_path),
+                    i,
+                )
+            )
 
         # Enterprise mode disabled
         if re.search(r"enabled:\s*false", line) and i > 0:
             # Check if this is under enterprise key
-            context = "\n".join(lines[max(0, i - 5):i + 1])
+            context = "\n".join(lines[max(0, i - 5) : i + 1])
             if "enterprise" in context.lower():
-                findings.append(Finding(
-                    "MEDIUM", "enterprise-disabled-helm",
-                    "enterprise.enabled: false in Helm values — enterprise enforcement disabled",
-                    str(values_path), i,
-                ))
+                findings.append(
+                    Finding(
+                        "MEDIUM",
+                        "enterprise-disabled-helm",
+                        "enterprise.enabled: false in Helm values — enterprise enforcement disabled",
+                        str(values_path),
+                        i,
+                    )
+                )
 
         # Plaintext tokens (inline instead of secretRef)
         if re.search(r'^\s*tokens:\s*["\'][^"\']+["\']', line):
-            findings.append(Finding(
-                "CRITICAL", "plaintext-tokens-helm",
-                f"Plaintext API token in Helm values: {line.strip()}",
-                str(values_path), i,
-            ))
+            findings.append(
+                Finding(
+                    "CRITICAL",
+                    "plaintext-tokens-helm",
+                    f"Plaintext API token in Helm values: {line.strip()}",
+                    str(values_path),
+                    i,
+                )
+            )
 
         # mTLS disabled
         if re.search(r"^\s+enabled:\s*false", line):
-            context = "\n".join(lines[max(0, i - 5):i + 1])
+            context = "\n".join(lines[max(0, i - 5) : i + 1])
             if "mtls" in context.lower() or "mTLS" in context:
-                findings.append(Finding(
-                    "MEDIUM", "mtls-disabled-helm",
-                    "mTLS disabled in Helm values — no transport encryption",
-                    str(values_path), i,
-                ))
+                findings.append(
+                    Finding(
+                        "MEDIUM",
+                        "mtls-disabled-helm",
+                        "mTLS disabled in Helm values — no transport encryption",
+                        str(values_path),
+                        i,
+                    )
+                )
 
         # Metrics on main port
         if re.search(r"separatePort:\s*false", line):
-            findings.append(Finding(
-                "LOW", "metrics-main-port-helm",
-                "Metrics on main port — consider separatePort: true for auth separation",
-                str(values_path), i,
-            ))
+            findings.append(
+                Finding(
+                    "LOW",
+                    "metrics-main-port-helm",
+                    "Metrics on main port — consider separatePort: true for auth separation",
+                    str(values_path),
+                    i,
+                )
+            )
 
         # runAsUser: 0
         if re.search(r"runAsUser:\s*0", line):
-            findings.append(Finding(
-                "HIGH", "root-user-helm",
-                "runAsUser: 0 in Helm values — container runs as root",
-                str(values_path), i,
-            ))
+            findings.append(
+                Finding(
+                    "HIGH",
+                    "root-user-helm",
+                    "runAsUser: 0 in Helm values — container runs as root",
+                    str(values_path),
+                    i,
+                )
+            )
 
     # Check data structure if YAML parsed (dedup with line-level checks)
     if data and isinstance(data, dict):
@@ -240,11 +303,14 @@ def check_helm_values(findings: list[Finding]) -> None:
         if isinstance(enterprise, dict) and not enterprise.get("enabled", False):
             # Only add if not already found by line-level check
             if not any(f.check == "enterprise-disabled-helm" for f in findings):
-                findings.append(Finding(
-                    "MEDIUM", "enterprise-disabled-helm",
-                    "enterprise.enabled is false — production deployments should enable enterprise mode",
-                    str(values_path),
-                ))
+                findings.append(
+                    Finding(
+                        "MEDIUM",
+                        "enterprise-disabled-helm",
+                        "enterprise.enabled is false — production deployments should enable enterprise mode",
+                        str(values_path),
+                    )
+                )
 
         auth = data.get("auth", {})
         if isinstance(auth, dict):
@@ -253,20 +319,26 @@ def check_helm_values(findings: list[Finding]) -> None:
                 # Non-empty inline token — check if it's not a placeholder
                 if tokens not in ("REPLACE_WITH_STRONG_TOKEN", "CHANGE_ME"):
                     if not any(f.check == "inline-tokens-helm" for f in findings):
-                        findings.append(Finding(
-                            "HIGH", "inline-tokens-helm",
-                            "auth.tokens is set inline in values.yaml — use existingSecret instead",
-                            str(values_path),
-                        ))
+                        findings.append(
+                            Finding(
+                                "HIGH",
+                                "inline-tokens-helm",
+                                "auth.tokens is set inline in values.yaml — use existingSecret instead",
+                                str(values_path),
+                            )
+                        )
 
         mtls = data.get("mtls", {})
         if isinstance(mtls, dict) and not mtls.get("enabled", False):
             if not any(f.check == "mtls-disabled-helm" for f in findings):
-                findings.append(Finding(
-                    "MEDIUM", "mtls-disabled-helm",
-                    "mtls.enabled is false — no mutual TLS in production",
-                    str(values_path),
-                ))
+                findings.append(
+                    Finding(
+                        "MEDIUM",
+                        "mtls-disabled-helm",
+                        "mtls.enabled is false — no mutual TLS in production",
+                        str(values_path),
+                    )
+                )
 
 
 def check_helm_templates(findings: list[Finding]) -> None:
@@ -281,37 +353,61 @@ def check_helm_templates(findings: list[Finding]) -> None:
         for i, line in enumerate(lines, 1):
             # Dev mode in templates (name and value may be on separate lines)
             if "IRONDOME_DEV_MODE" in line and "comment" not in line.lower():
-                if re.search(r"IRONDOME_DEV_MODE.*1", line) or i < len(lines) and re.search(r'value:\s*["\']?1["\']?', lines[i]):
-                    findings.append(Finding(
-                        "CRITICAL", "dev-mode-template",
-                        f"IRONDOME_DEV_MODE=1 in template: {line.strip()}",
-                        str(tpl_path), i,
-                    ))
+                if (
+                    re.search(r"IRONDOME_DEV_MODE.*1", line)
+                    or i < len(lines)
+                    and re.search(r'value:\s*["\']?1["\']?', lines[i])
+                ):
+                    findings.append(
+                        Finding(
+                            "CRITICAL",
+                            "dev-mode-template",
+                            f"IRONDOME_DEV_MODE=1 in template: {line.strip()}",
+                            str(tpl_path),
+                            i,
+                        )
+                    )
 
             # TLS dev mode in templates
             if "IRONDOME_TLS_DEV" in line and "comment" not in line.lower():
-                if re.search(r"IRONDOME_TLS_DEV.*1", line) or i < len(lines) and re.search(r'value:\s*["\']?1["\']?', lines[i]):
-                    findings.append(Finding(
-                        "HIGH", "tls-dev-template",
-                        f"IRONDOME_TLS_DEV=1 in template: {line.strip()}",
-                        str(tpl_path), i,
-                    ))
+                if (
+                    re.search(r"IRONDOME_TLS_DEV.*1", line)
+                    or i < len(lines)
+                    and re.search(r'value:\s*["\']?1["\']?', lines[i])
+                ):
+                    findings.append(
+                        Finding(
+                            "HIGH",
+                            "tls-dev-template",
+                            f"IRONDOME_TLS_DEV=1 in template: {line.strip()}",
+                            str(tpl_path),
+                            i,
+                        )
+                    )
 
             # Plaintext env vars for tokens (Kubernetes value: with long string)
             if re.search(r'value:\s*["\'][^"\']{20,}["\']', line) and "token" in line.lower():
-                findings.append(Finding(
-                    "CRITICAL", "hardcoded-token-template",
-                    f"Possible hardcoded token in template: {line.strip()}",
-                    str(tpl_path), i,
-                ))
+                findings.append(
+                    Finding(
+                        "CRITICAL",
+                        "hardcoded-token-template",
+                        f"Possible hardcoded token in template: {line.strip()}",
+                        str(tpl_path),
+                        i,
+                    )
+                )
 
             # allowPrivilegeEscalation: true
             if "allowPrivilegeEscalation: true" in line:
-                findings.append(Finding(
-                    "HIGH", "privilege-escalation-template",
-                    "allowPrivilegeEscalation: true in template",
-                    str(tpl_path), i,
-                ))
+                findings.append(
+                    Finding(
+                        "HIGH",
+                        "privilege-escalation-template",
+                        "allowPrivilegeEscalation: true in template",
+                        str(tpl_path),
+                        i,
+                    )
+                )
 
 
 def check_dockerfile(findings: list[Finding]) -> None:
@@ -325,11 +421,15 @@ def check_dockerfile(findings: list[Finding]) -> None:
     for i, line in enumerate(lines, 1):
         # Running as root
         if re.match(r"^\s*USER\s+root", line):
-            findings.append(Finding(
-                "HIGH", "docker-root-user",
-                "Dockerfile explicitly sets USER root",
-                str(dockerfile), i,
-            ))
+            findings.append(
+                Finding(
+                    "HIGH",
+                    "docker-root-user",
+                    "Dockerfile explicitly sets USER root",
+                    str(dockerfile),
+                    i,
+                )
+            )
 
         # No USER directive at all
         if "USER irondome" not in "".join(lines) and "USER nobody" not in "".join(lines):
@@ -339,11 +439,14 @@ def check_dockerfile(findings: list[Finding]) -> None:
     # Check that Dockerfile has a non-root USER
     content = "\n".join(lines)
     if not re.search(r"^USER\s+\S+", content, re.MULTILINE):
-        findings.append(Finding(
-            "HIGH", "docker-no-user",
-            "Dockerfile has no USER directive — will run as root",
-            str(dockerfile),
-        ))
+        findings.append(
+            Finding(
+                "HIGH",
+                "docker-no-user",
+                "Dockerfile has no USER directive — will run as root",
+                str(dockerfile),
+            )
+        )
 
     # Check for COPY as root before USER
     user_lines = [(i, ln) for i, ln in enumerate(lines) if re.match(r"^USER\s+", ln)]
@@ -358,11 +461,14 @@ def check_dockerfile(findings: list[Finding]) -> None:
 
     # Check for --no-cache-dir in pip install
     if "pip install" in content and "--no-cache-dir" not in content:
-        findings.append(Finding(
-            "LOW", "docker-pip-cache",
-            "pip install without --no-cache-dir — larger image size",
-            str(dockerfile),
-        ))
+        findings.append(
+            Finding(
+                "LOW",
+                "docker-pip-cache",
+                "pip install without --no-cache-dir — larger image size",
+                str(dockerfile),
+            )
+        )
 
 
 def check_source_hardcoded_secrets(findings: list[Finding], src_dir: Path | None = None) -> None:
@@ -385,26 +491,42 @@ def check_source_hardcoded_secrets(findings: list[Finding], src_dir: Path | None
             # Hardcoded tokens/passwords (but not in docstrings, comments, or config params)
             if re.search(r'(?:password|secret|token|api_key)\s*=\s*["\'][^"\']{8,}["\']', line, re.IGNORECASE):
                 # Exclude known safe patterns
-                if any(s in line for s in [
-                    "os.environ", "environ.get", "os.getenv",
-                    "getenv", "from_env", "placeholder", "example",
-                    "REPLACE", "changeme", "test_", "_test",
-                    "secret_key", "signing_secret",  # config params, not actual secrets
-                    "my-signing-secret",  # docstring example
-                    "my_signing_secret",  # docstring example
-                ]):
+                if any(
+                    s in line
+                    for s in [
+                        "os.environ",
+                        "environ.get",
+                        "os.getenv",
+                        "getenv",
+                        "from_env",
+                        "placeholder",
+                        "example",
+                        "REPLACE",
+                        "changeme",
+                        "test_",
+                        "_test",
+                        "secret_key",
+                        "signing_secret",  # config params, not actual secrets
+                        "my-signing-secret",  # docstring example
+                        "my_signing_secret",  # docstring example
+                    ]
+                ):
                     continue
                 # Exclude lines inside docstrings (triple-quoted)
                 # Check if this line is between """ markers
-                above = lines[max(0, i - 3):i]
+                above = lines[max(0, i - 3) : i]
                 in_docstring = any('"""' in ln or "'''" in ln for ln in above)
                 if in_docstring:
                     continue
-                findings.append(Finding(
-                    "CRITICAL", "hardcoded-secret-source",
-                    f"Possible hardcoded secret: {stripped[:80]}",
-                    str(rel_path), i,
-                ))
+                findings.append(
+                    Finding(
+                        "CRITICAL",
+                        "hardcoded-secret-source",
+                        f"Possible hardcoded secret: {stripped[:80]}",
+                        str(rel_path),
+                        i,
+                    )
+                )
 
 
 def check_env_defaults(findings: list[Finding]) -> None:
@@ -417,11 +539,14 @@ def check_env_defaults(findings: list[Finding]) -> None:
 
         # Verify dev mode is opt-in, not default
         if 'os.environ.get("IRONDOME_DEV_MODE", "").lower() in ("1", "true", "yes")' not in content:
-            findings.append(Finding(
-                "MEDIUM", "dev-mode-default",
-                "IRONDOME_DEV_MODE default may not be opt-in",
-                str(auth_path),
-            ))
+            findings.append(
+                Finding(
+                    "MEDIUM",
+                    "dev-mode-default",
+                    "IRONDOME_DEV_MODE default may not be opt-in",
+                    str(auth_path),
+                )
+            )
 
     # Check daemon server for observational_only backend rejection in enterprise
     server_path = SRC_DIR / "irondome" / "daemon" / "server.py"
@@ -431,22 +556,28 @@ def check_env_defaults(findings: list[Finding]) -> None:
 
         # Verify enterprise mode rejects observational_only
         if "observational_only" not in content or "enterprise" not in content:
-            findings.append(Finding(
-                "MEDIUM", "no-observational-guard",
-                "Daemon server may not reject observational_only backends in enterprise mode",
-                str(server_path),
-            ))
+            findings.append(
+                Finding(
+                    "MEDIUM",
+                    "no-observational-guard",
+                    "Daemon server may not reject observational_only backends in enterprise mode",
+                    str(server_path),
+                )
+            )
 
 
 def check_gitignore_secrets(findings: list[Finding]) -> None:
     """Check that .gitignore covers common secret patterns."""
     gitignore_path = REPO_ROOT / ".gitignore"
     if not gitignore_path.exists():
-        findings.append(Finding(
-            "MEDIUM", "no-gitignore",
-            "No .gitignore file found",
-            str(gitignore_path),
-        ))
+        findings.append(
+            Finding(
+                "MEDIUM",
+                "no-gitignore",
+                "No .gitignore file found",
+                str(gitignore_path),
+            )
+        )
         return
 
     content = gitignore_path.read_text(encoding="utf-8")
@@ -462,18 +593,24 @@ def check_gitignore_secrets(findings: list[Finding]) -> None:
         if pattern.startswith("*."):
             base = pattern[1:]  # e.g., ".pem"
             if base not in content and pattern not in content:
-                findings.append(Finding(
-                    "LOW", "gitignore-missing",
-                    f".gitignore missing '{pattern}' — {reason}",
-                    str(gitignore_path),
-                ))
+                findings.append(
+                    Finding(
+                        "LOW",
+                        "gitignore-missing",
+                        f".gitignore missing '{pattern}' — {reason}",
+                        str(gitignore_path),
+                    )
+                )
         else:
             if pattern not in content:
-                findings.append(Finding(
-                    "LOW", "gitignore-missing",
-                    f".gitignore missing '{pattern}' — {reason}",
-                    str(gitignore_path),
-                ))
+                findings.append(
+                    Finding(
+                        "LOW",
+                        "gitignore-missing",
+                        f".gitignore missing '{pattern}' — {reason}",
+                        str(gitignore_path),
+                    )
+                )
 
 
 # ── Main ───────────────────────────────────────────────────────────────
@@ -515,7 +652,9 @@ def main(args: list[str] | None = None) -> int:
     for f in findings:
         counts[f.severity] = counts.get(f.severity, 0) + 1
 
-    summary = "  ".join(f"{sev}: {count}" for sev, count in sorted(counts.items(), key=lambda x: severity_order.get(x[0], 99)))
+    summary = "  ".join(
+        f"{sev}: {count}" for sev, count in sorted(counts.items(), key=lambda x: severity_order.get(x[0], 99))
+    )
     print(f"\n  {summary}\n")
 
     for f in findings:
