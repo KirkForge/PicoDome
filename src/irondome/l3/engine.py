@@ -27,11 +27,13 @@ from __future__ import annotations
 import logging
 import os
 import platform
+import threading
 
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.backends.subprocess_backend import SubprocessBackend
 from irondome.l3.models import Policy, SandboxResult
 from irondome.l3.policy import default_policy
+from irondome.l3.policy_hash import policy_hash
 from irondome.models import _generate_run_id, _generate_timestamp
 
 logger = logging.getLogger("irondome.l3.engine")
@@ -194,21 +196,25 @@ def _detect_backend(
 
 
 _default_backend: SandboxBackend | None = None
+_backend_lock = threading.Lock()
 
 
 def get_backend() -> SandboxBackend:
-    """Get the default sandbox backend (lazy init).
+    """Get the default sandbox backend (lazy init, thread-safe).
 
     Uses ``IRONDOME_SANDBOX_BACKEND`` env var for explicit backend
     selection and ``IRONDOME_ALLOW_DEGRADED`` for fallback opt-in.
+    Thread-safe: uses a lock to prevent double initialization.
     """
     global _default_backend
     if _default_backend is None:
-        backend_name = os.environ.get("IRONDOME_SANDBOX_BACKEND", None)
-        _default_backend = _detect_backend(
-            requested=backend_name,
-            allow_degraded=None,  # reads from env inside
-        )
+        with _backend_lock:
+            if _default_backend is None:
+                backend_name = os.environ.get("IRONDOME_SANDBOX_BACKEND", None)
+                _default_backend = _detect_backend(
+                    requested=backend_name,
+                    allow_degraded=None,  # reads from env inside
+                )
     return _default_backend
 
 
@@ -275,6 +281,10 @@ def sandbox_run(
 
     result = be.run(command, policy, timeout=timeout, cwd=cwd, env=env)
 
+    # Compute evidence metadata
+    p_hash = policy_hash(policy) if policy else ""
+    p_version = policy.version if policy else ""
+
     # If deterministic, strip non-deterministic fields by rebuilding
     if deterministic:
         result = SandboxResult(
@@ -289,6 +299,9 @@ def sandbox_run(
             degraded=result.degraded,
             stdout=result.stdout,
             stderr=result.stderr,
+            backend=be.name,
+            policy_hash=p_hash,
+            policy_version=p_version,
         )
     else:
         # Fill in non-deterministic fields
@@ -307,6 +320,9 @@ def sandbox_run(
             degraded=result.degraded,
             stdout=result.stdout,
             stderr=result.stderr,
+            backend=be.name,
+            policy_hash=p_hash,
+            policy_version=p_version,
         )
 
     logger.info(

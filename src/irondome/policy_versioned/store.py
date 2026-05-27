@@ -24,6 +24,7 @@ import json
 import logging
 import os
 import tempfile
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -286,6 +287,7 @@ class VersionedPolicyStore:
 # ─── Module-level singleton ────────────────────────────────────────────────
 
 
+_policy_store_lock = threading.Lock()
 _policy_store: VersionedPolicyStore | None = None
 
 
@@ -293,5 +295,7 @@ def get_policy_store() -> VersionedPolicyStore:
     """Get the global policy store (lazy init)."""
     global _policy_store
     if _policy_store is None:
-        _policy_store = VersionedPolicyStore()
+        with _policy_store_lock:
+            if _policy_store is None:
+                _policy_store = VersionedPolicyStore()
     return _policy_store

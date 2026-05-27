@@ -29,6 +29,23 @@ from typing import Any
 
 from irondome.daemon.store import JOB_STORE_SCHEMA_VERSION
 
+# Whitelist of allowed columns in the jobs table.
+# Prevents SQL injection via f-string column interpolation in update().
+ALLOWED_COLUMNS = frozenset(
+    {
+        "job_id",
+        "command",
+        "actor",
+        "status",
+        "created_at",
+        "completed_at",
+        "result",
+        "error",
+        "tenant_id",
+        "schema_version",
+    }
+)
+
 logger = logging.getLogger("irondome.daemon.sqlite_store")
 
 _DEFAULT_DB_PATH = Path.home() / ".irondome" / "jobs.db"
@@ -164,11 +181,19 @@ class SQLiteScanJobStore:
 
         Args:
             job_id: Job identifier.
-            **kwargs: Fields to update.
+            **kwargs: Fields to update (must be in ALLOWED_COLUMNS).
 
         Returns:
             Updated job dict, or None if not found.
+
+        Raises:
+            ValueError: If any key is not in ALLOWED_COLUMNS.
         """
+        # Validate all column names against whitelist to prevent SQL injection
+        invalid_keys = set(kwargs.keys()) - ALLOWED_COLUMNS
+        if invalid_keys:
+            raise ValueError(f"Invalid column(s) for update: {invalid_keys}. Allowed: {sorted(ALLOWED_COLUMNS)}")
+
         self._ensure_schema()
         with self._lock:
             conn = self._get_conn()

@@ -24,6 +24,21 @@ _DEFAULT_REDIS_URL = "redis://localhost:6379/0"
 _JOB_KEY_PREFIX = "irondome:job:"
 _JOB_LIST_KEY = "irondome:jobs:recent"
 
+# Allowed columns for update() — prevents arbitrary field injection
+ALLOWED_COLUMNS = frozenset(
+    {
+        "job_id",
+        "command",
+        "actor",
+        "status",
+        "created_at",
+        "completed_at",
+        "result",
+        "error",
+        "tenant_id",
+    }
+)
+
 
 class RedisScanJobStore:
     """Redis-backed scan job store for horizontal scaling.
@@ -169,9 +184,12 @@ class RedisScanJobStore:
         if not existing:
             return None
 
-        # Update fields
+        # Update fields — only allowed columns
         updates = {}
         for k, v in kwargs.items():
+            if k not in ALLOWED_COLUMNS:
+                logger.warning("Ignoring disallowed column in Redis update: %s", k)
+                continue
             if k == "command" and isinstance(v, list):
                 updates[k] = json.dumps(v)
             elif v is None:

@@ -144,13 +144,17 @@ class TokenAuth:
       token length is enforced.
     """
 
+    # Brute-force protection thresholds
+    MAX_FAILED_ATTEMPTS = 5
+    BACKOFF_BASE_SECONDS = 1.0
+    BACKOFF_MAX_SECONDS = 16.0
+
     def __init__(self, rbac: RBAC | None = None) -> None:
         self._rbac = rbac or RBAC()
-        # Store token hashes, not plaintext
+        # Store ONLY SHA-256 hashes of tokens — never plaintext
         self._token_hashes: set[str] = set()
-        # Store plaintext tokens only for constant-time comparison
-        # (needed because we compare against the bearer token directly)
-        self._plaintext_tokens: list[str] = []
+        # Brute-force tracking: token_hash → (attempt_count, last_attempt_time)
+        self._failed_attempts: dict[str, tuple[int, float]] = {}
         self._is_enterprise = _is_enterprise_mode()
         self._load_tokens()
         # F1: Block DEV_MODE in enterprise mode at startup
@@ -184,7 +188,7 @@ class TokenAuth:
             except OSError:
                 pass
 
-        logger.info("Loaded %d API token(s)", len(self._plaintext_tokens))
+        logger.info("Loaded %d API token(s)", len(self._token_hashes))
 
     def _add_token(self, token: str) -> None:
         """Add a single token, validating enterprise constraints."""
@@ -205,7 +209,7 @@ class TokenAuth:
             return  # already registered
 
         self._token_hashes.add(token_hash)
-        self._plaintext_tokens.append(token)
+        # Plaintext discarded after RBAC registration
 
         # Extract role from token format: irondome-<role>-<secret>
         if token.startswith("irondome-"):
@@ -217,40 +221,108 @@ class TokenAuth:
             # Token doesn't follow naming convention — default to reader
             self._rbac.register_token(token, Role.READER)
 
+    def _check_brute_force(self, token_hash: str) -> float | None:
+        """Check brute-force backoff. Returns required wait time in seconds, or None if OK."""
+        import time as _time
+
+        entry = self._failed_attempts.get(token_hash)
+        if entry is None:
+            return None
+        attempts, last_time = entry
+        if attempts < self.MAX_FAILED_ATTEMPTS:
+            return None
+        backoff = min(
+            self.BACKOFF_BASE_SECONDS * (2 ** (attempts - self.MAX_FAILED_ATTEMPTS)),
+            self.BACKOFF_MAX_SECONDS,
+        )
+        elapsed = _time.monotonic() - last_time
+        if elapsed < backoff:
+            return backoff - elapsed
+        return None
+
+    def _record_failure(self, token_hash: str) -> None:
+        """Record a failed authentication attempt."""
+        import time as _time
+
+        entry = self._failed_attempts.get(token_hash)
+        if entry is None:
+            self._failed_attempts[token_hash] = (1, _time.monotonic())
+        else:
+            attempts, _ = entry
+            self._failed_attempts[token_hash] = (attempts + 1, _time.monotonic())
+
+    def _clear_failures(self, token_hash: str) -> None:
+        """Clear brute-force tracking on successful auth."""
+        self._failed_attempts.pop(token_hash, None)
+        if len(self._failed_attempts) > 1000:
+            self._cleanup_stale_failures()
+
+    def _cleanup_stale_failures(self) -> None:
+        """Remove expired brute-force entries to prevent unbounded growth."""
+        import time as _time
+
+        now = _time.monotonic()
+        stale_keys = [k for k, (attempts, last_time) in self._failed_attempts.items() if now - last_time > 3600]
+        for k in stale_keys:
+            del self._failed_attempts[k]
+
     def validate(self, token: str) -> bool:
-        """Validate a token using constant-time comparison.
+        """Validate a token using constant-time hash comparison.
+
+        No plaintext tokens are stored in memory. The provided token is
+        hashed and compared against stored hashes using hmac.compare_digest.
 
         In enterprise mode:
         - Empty token store always rejects (no dev bypass).
         - Minimum token length is enforced on validation.
-        - DEV_MODE is blocked entirely.
+        - Brute-force protection with exponential backoff.
 
         In dev mode (no tokens configured):
         - All requests are authenticated (warning logged).
-        - DEV_MODE is only allowed when not in enterprise mode.
         """
+        token_hash = _hash_token(token)
+
+        # Brute-force check
+        wait_time = self._check_brute_force(token_hash)
+        if wait_time is not None:
+            logger.warning("Rate limited: token hash %s… must wait %.1fs", token_hash[:8], wait_time)
+            return False
+
         # Enterprise mode: no bypass, strict validation
         if self._is_enterprise:
-            if not self._plaintext_tokens:
+            if not self._token_hashes:
                 logger.error(
                     "Enterprise mode: no API tokens configured — all requests rejected. Set IRONDOME_API_TOKENS."
                 )
+                self._record_failure(token_hash)
                 return False
             if len(token) < MIN_TOKEN_LENGTH:
+                self._record_failure(token_hash)
                 return False
-            return any(_constant_time_equal(token, known) for known in self._plaintext_tokens)
+            for stored_hash in self._token_hashes:
+                if hmac.compare_digest(token_hash.encode("utf-8"), stored_hash.encode("utf-8")):
+                    self._clear_failures(token_hash)
+                    return True
+            self._record_failure(token_hash)
+            return False
 
         # Non-enterprise: allow dev mode bypass if no tokens configured
-        if not self._plaintext_tokens:
+        if not self._token_hashes:
             if os.environ.get("IRONDOME_DEV_MODE", "").lower() in ("1", "true", "yes"):
                 logger.warning("DEV MODE: No API tokens configured — all requests authenticated")
                 return True
             logger.warning(
                 "No API tokens configured — rejecting all requests. Set IRONDOME_API_TOKENS or IRONDOME_DEV_MODE=1"
             )
+            self._record_failure(token_hash)
             return False
 
-        return any(_constant_time_equal(token, known) for known in self._plaintext_tokens)
+        for stored_hash in self._token_hashes:
+            if hmac.compare_digest(token_hash.encode("utf-8"), stored_hash.encode("utf-8")):
+                self._clear_failures(token_hash)
+                return True
+        self._record_failure(token_hash)
+        return False
 
     def get_role(self, token: str) -> str:
         """Get the role for a validated token."""
@@ -267,10 +339,10 @@ class TokenAuth:
         In enterprise mode, dev mode is never considered configured.
         """
         if self._is_enterprise:
-            return len(self._plaintext_tokens) > 0
+            return len(self._token_hashes) > 0
         if os.environ.get("IRONDOME_DEV_MODE", "").lower() in ("1", "true", "yes"):
             return True
-        return len(self._plaintext_tokens) > 0
+        return len(self._token_hashes) > 0
 
     @property
     def is_enterprise(self) -> bool:

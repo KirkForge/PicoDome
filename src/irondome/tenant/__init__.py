@@ -188,6 +188,7 @@ class TenantRegistry:
 # ─── Module-level singleton ─────────────────────────────────────────────────
 
 
+_registry_lock = threading.Lock()
 _registry: TenantRegistry | None = None
 
 
@@ -195,7 +196,9 @@ def get_tenant_registry() -> TenantRegistry:
     """Get the global tenant registry (lazy init)."""
     global _registry
     if _registry is None:
-        _registry = TenantRegistry()
+        with _registry_lock:
+            if _registry is None:
+                _registry = TenantRegistry()
     return _registry
 
 

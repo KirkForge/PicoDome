@@ -59,7 +59,7 @@ API_VERSION = "v1"
 
 # ─── CORS Configuration ──────────────────────────────────────────────────────
 
-CORS_ALLOW_ORIGINS = os.environ.get("IRONDOME_CORS_ORIGINS", "*").replace("\r", "").replace("\n", "")
+CORS_ALLOW_ORIGINS = os.environ.get("IRONDOME_CORS_ORIGINS", "").replace("\r", "").replace("\n", "")
 CORS_ALLOW_METHODS = "GET, POST, OPTIONS"
 CORS_ALLOW_HEADERS = "Content-Type, Authorization, X-Tenant, X-Request-ID"
 CORS_MAX_AGE = "86400"  # 24 hours
@@ -269,16 +269,24 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Cache-Control", "no-store")
         # CORS headers
-        # F2: In enterprise mode with wildcard, reflect request origin instead of *
+        # F2: When no explicit origins configured or wildcard in enterprise,
+        # reflect the request origin instead of sending wildcard.
         request_origin = self.headers.get("Origin", "")
-        if _ENTERPRISE_MODE and CORS_ALLOW_ORIGINS == "*":
+        if not _CORS_ALLOW_ORIGINS_LIST or CORS_ALLOW_ORIGINS == "*":
+            # No origins configured or wildcard — reflect request origin
             if request_origin:
                 self.send_header("Access-Control-Allow-Origin", request_origin)
                 self.send_header("Vary", "Origin")
             else:
+                # No Origin header — send self-referencing origin
                 self.send_header("Access-Control-Allow-Origin", "null")
+        elif request_origin in _CORS_ALLOW_ORIGINS_LIST:
+            # Specific origins configured — only allow known origins
+            self.send_header("Access-Control-Allow-Origin", request_origin)
+            self.send_header("Vary", "Origin")
         else:
-            self.send_header("Access-Control-Allow-Origin", CORS_ALLOW_ORIGINS)
+            # Request origin not in allow list — deny CORS
+            self.send_header("Access-Control-Allow-Origin", "null")
         self.send_header("Access-Control-Allow-Methods", CORS_ALLOW_METHODS)
         self.send_header("Access-Control-Allow-Headers", CORS_ALLOW_HEADERS)
         self.send_header("Access-Control-Max-Age", CORS_MAX_AGE)
@@ -733,7 +741,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         timeout = data.get("timeout", 30.0)
         data.get("policy")
 
-        job_id = str(uuid.uuid4())[:8]
+        job_id = uuid.uuid4().hex
         actor = hashlib.sha256(token.encode("utf-8")).hexdigest()[:16] if token else "unknown"
 
         # Resolve tenant

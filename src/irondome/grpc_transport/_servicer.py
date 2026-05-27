@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+import uuid
 from typing import Any
 
 from irondome import __version__
@@ -75,7 +76,7 @@ class IronDomeServicer:
 
             # Build response
             result = {
-                "job_id": f"grpc-{int(time.time())}",
+                "job_id": f"grpc-{uuid.uuid4().hex}",
                 "sandbox": sandbox_result.to_dict(deterministic=False),
                 "analysis": analysis_result.to_dict(deterministic=False),
                 "l3_verdict": sandbox_result.overall_verdict.value,

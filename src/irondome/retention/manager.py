@@ -24,6 +24,7 @@ import hashlib
 import json
 import logging
 import os
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -365,6 +366,7 @@ class RetentionManager:
 # ─── Module-level singleton ────────────────────────────────────────────────
 
 
+_retention_manager_lock = threading.Lock()
 _retention_manager: RetentionManager | None = None
 
 
@@ -372,5 +374,7 @@ def get_retention_manager() -> RetentionManager:
     """Get the global retention manager (lazy init)."""
     global _retention_manager
     if _retention_manager is None:
-        _retention_manager = RetentionManager()
+        with _retention_manager_lock:
+            if _retention_manager is None:
+                _retention_manager = RetentionManager()
     return _retention_manager

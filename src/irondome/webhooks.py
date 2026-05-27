@@ -125,6 +125,7 @@ class WebhookDispatcher:
 
     def __init__(self) -> None:
         self._webhooks: list[WebhookConfig] = []
+        self._active_threads: list[threading.Thread] = []
 
     def add_webhook(self, config: WebhookConfig) -> None:
         """Register a webhook endpoint."""

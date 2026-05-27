@@ -131,6 +131,12 @@ class SandboxResult:
 
     run_id: str = ""
     timestamp: str = ""
+
+    # Evidence metadata (deterministic)
+    backend: str = ""
+    policy_hash: str = ""
+    policy_version: str = ""
+
     command: list[str] = field(default_factory=list)
     overall_verdict: Verdict = Verdict.ALLOW
     exit_code: int = 0
@@ -159,6 +165,8 @@ class SandboxResult:
             "isolation_level": self.isolation_level,
             "overall_verdict": self.overall_verdict.value,
             "policy_name": self.policy_name,
+            "policy_version": self.policy_version,
+            "policy_hash": self.policy_hash,
         }
         if not deterministic:
             d["duration_ms"] = self.duration_ms

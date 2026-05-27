@@ -140,6 +140,9 @@ class SLOTracker:
 
     Collects latency samples, error counts, and health check results
     to compute SLO compliance in a rolling window.
+
+    Call reset() to clear all counters (useful for rolling SLO
+    windows or test teardown).
     """
 
     def __init__(self) -> None:
@@ -151,6 +154,21 @@ class SLOTracker:
         self._determinism_checks: int = 0
         self._determinism_ok: int = 0
         self._start_time: float = time.monotonic()
+
+    def reset(self) -> None:
+        """Reset all SLO counters and latency samples.
+
+        Useful for rolling SLO windows or test teardown.
+        Clears all accumulated data and resets the start time.
+        """
+        self._latency_samples.clear()
+        self._total_scans = 0
+        self._failed_scans = 0
+        self._health_checks = 0
+        self._health_ok = 0
+        self._determinism_checks = 0
+        self._determinism_ok = 0
+        self._start_time = time.monotonic()
 
     def record_scan(self, duration_ms: float, success: bool) -> None:
         """Record a scan result."""

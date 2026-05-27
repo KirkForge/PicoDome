@@ -29,13 +29,34 @@ DEFAULT_RULES: list = [
         "paths": ["/usr/lib/python3*/**", "**/site-packages/**"],
         "description": "Read Python packages",
     },
-    # Allow reading the project directory
+    # Allow reading project directory (working directory)
     {
         "rule_id": "L3-FILE-R-003",
         "target": "file_read",
         "action": "allow",
-        "paths": ["**"],
-        "description": "Read project files",
+        "paths": ["./**", "/tmp/**"],
+        "description": "Read project and temp files only",
+    },
+    # Allow reading project config files
+    {
+        "rule_id": "L3-FILE-R-004",
+        "target": "file_read",
+        "action": "allow",
+        "paths": [
+            "**/package.json",
+            "**/package-lock.json",
+            "**/requirements.txt",
+            "**/pyproject.toml",
+            "**/setup.cfg",
+            "**/setup.py",
+            "**/Cargo.toml",
+            "**/go.mod",
+            "**/go.sum",
+            "**/.npmrc",
+            "**/Makefile",
+            "**/CMakeLists.txt",
+        ],
+        "description": "Read project configuration files",
     },
     # Deny writing outside /tmp and project dir
     {

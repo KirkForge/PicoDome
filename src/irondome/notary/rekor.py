@@ -20,6 +20,7 @@ import json
 import logging
 import os as _os
 import secrets as _secrets
+import threading
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -514,6 +515,7 @@ class RekorNotary(AuditNotary):
 # ─── Module-level default notary ─────────────────────────────────────────────
 
 
+_default_notary_lock = threading.Lock()
 _default_notary: AuditNotary | None = None
 
 
@@ -526,7 +528,9 @@ def get_default_notary() -> AuditNotary:
     """
     global _default_notary
     if _default_notary is None:
-        _default_notary = NullNotary()
+        with _default_notary_lock:
+            if _default_notary is None:
+                _default_notary = NullNotary()
     return _default_notary
 
 

@@ -460,8 +460,7 @@ class AuditLogger:
             return ""
 
         try:
-            data = json.loads(last_line)
-            data.get("prev_hash", "")
+            json.loads(last_line)  # validate it's valid JSON
             # The hash we need is the SHA-256 of this line itself
             return hashlib.sha256(last_line.encode("utf-8")).hexdigest()
         except (json.JSONDecodeError, KeyError):
@@ -471,6 +470,7 @@ class AuditLogger:
 # ─── Module-level singleton ────────────────────────────────────────────────
 
 
+_audit_logger_lock = threading.Lock()
 _audit_logger: AuditLogger | None = None
 
 
@@ -478,7 +478,9 @@ def get_audit_logger() -> AuditLogger:
     """Get the global audit logger (lazy init)."""
     global _audit_logger
     if _audit_logger is None:
-        _audit_logger = AuditLogger()
+        with _audit_logger_lock:
+            if _audit_logger is None:
+                _audit_logger = AuditLogger()
     return _audit_logger
 
 

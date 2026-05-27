@@ -58,6 +58,7 @@ class ImageScanner:
         min_severity: str = _DEFAULT_MIN_SEVERITY,
         daemon_url: str | None = None,
         timeout: float = 30.0,
+        fail_closed: bool | None = None,
     ) -> None:
         if enabled is None:
             enabled = os.environ.get("IRONDOME_ADMISSION_SCAN_ENABLED", "").lower() in ("true", "1", "yes")
@@ -66,6 +67,14 @@ class ImageScanner:
         self.daemon_url = daemon_url or os.environ.get("IRONDOME_ADMISSION_DAEMON_URL", _DEFAULT_DAEMON_URL)
         self.timeout = timeout
         self._min_level = SEVERITY_LEVELS.get(min_severity, 3)
+        # Fail-closed: when daemon is unreachable, deny the pod instead of allowing.
+        # In enterprise mode, defaults to True. Set IRONDOME_ADMISSION_FAIL_CLOSED=0 to override.
+        if fail_closed is None:
+            self._fail_closed = os.environ.get("IRONDOME_ADMISSION_FAIL_CLOSED", "").lower() in ("1", "true", "yes")
+            if os.environ.get("IRONDOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes"):
+                self._fail_closed = True
+        else:
+            self._fail_closed = fail_closed
 
     def scan_pod(self, req: AdmissionRequest) -> tuple[bool, str]:
         """Scan all container images in a pod.
@@ -156,17 +165,28 @@ class ImageScanner:
             return True, ""
 
         except URLError as exc:
-            # If daemon is unreachable, log warning and allow (fail-open for availability)
-            logger.warning(
-                "Cannot reach IronDome daemon for image scan '%s': %s — allowing (fail-open)",
-                image,
-                exc,
-            )
-            return True, ""
+            if self._fail_closed:
+                logger.error(
+                    "Cannot reach IronDome daemon for image scan '%s': %s — denying (fail-closed)",
+                    image,
+                    exc,
+                )
+                return False, f"daemon unreachable: image '{image}' scan could not be performed"
+            else:
+                logger.warning(
+                    "Cannot reach IronDome daemon for image scan '%s': %s — allowing (fail-open)",
+                    image,
+                    exc,
+                )
+                return True, ""
 
         except Exception as exc:
-            logger.warning("Image scan failed for '%s': %s — allowing", image, exc)
-            return True, ""
+            if self._fail_closed:
+                logger.error("Image scan failed for '%s': %s — denying (fail-closed)", image, exc)
+                return False, f"scan failed: image '{image}' scan error: {exc}"
+            else:
+                logger.warning("Image scan failed for '%s': %s — allowing", image, exc)
+                return True, ""
 
     @property
     def min_severity_level(self) -> int:

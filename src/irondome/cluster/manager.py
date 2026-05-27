@@ -754,6 +754,11 @@ class ClusterManager:
             node.status = NodeStatus.OFFLINE
             self._state.update_node(node)
 
+        # Wait for background threads to finish (with timeout)
+        for thread in (self._heartbeat_thread, self._health_check_thread):
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=5.0)
+
         # Remove self from cluster
         self._state.remove_node(self._node_id)
 
@@ -1006,13 +1011,16 @@ def _parse_iso_timestamp(ts: str) -> float | None:
 
 
 _cluster_manager: ClusterManager | None = None
+_cluster_lock = threading.Lock()
 
 
 def get_cluster_manager() -> ClusterManager:
-    """Get the global cluster manager (lazy init)."""
+    """Get the global cluster manager (lazy init, thread-safe)."""
     global _cluster_manager
     if _cluster_manager is None:
-        _cluster_manager = ClusterManager()
+        with _cluster_lock:
+            if _cluster_manager is None:
+                _cluster_manager = ClusterManager()
     return _cluster_manager
 
 
