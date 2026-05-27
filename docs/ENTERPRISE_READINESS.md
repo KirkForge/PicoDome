@@ -1,3 +1,46 @@
+# Iron Dome — Enterprise Readiness (historical gap analysis)
+
+> **Status:** Superseded · **Current document:** [`ENTERPRISE_GAP_ANALYSIS.md`](ENTERPRISE_GAP_ANALYSIS.md)  
+> **Last updated:** 2026-05-27
+
+This document was the original enterprise gap analysis created early in the
+project lifecycle. It identified blockers for enterprise deployment and
+proposed a phased roadmap. **Most gaps identified here have since been
+remediated** as part of the v0.4.0 and v0.5.0 enterprise hardening releases.
+
+For the current, maintained gap assessment with remediation status and
+enterprise readiness scoring, see **[`ENTERPRISE_GAP_ANALYSIS.md`](ENTERPRISE_GAP_ANALYSIS.md)**.
+
+---
+
+## Historical gaps — remediation summary
+
+| Original Gap | Status | Remediating Release | Evidence |
+|---|---|---|---|
+| Threat model + non-goals | ✅ Addressed | v0.3.0 | `docs/security/threat-model.md` |
+| Policy model and governance | ✅ Addressed | v0.4.0–v0.5.0 | `docs/POLICY_GOVERNANCE.md`, deny-by-default policy, policy signing, approval workflow |
+| Audit log / evidence retention | ✅ Addressed | v0.4.0 | Hash-chained audit log, JSONL sink, retention, SIEM export |
+| Secure deployment guide | ✅ Addressed | v0.3.0–v0.5.0 | `docs/security/SANDBOX_HARDENING.md`, `deploy/` manifests, Dockerfile, Helm charts |
+| Cross-platform parity and compatibility | ✅ Addressed | v0.5.0 | `docs/deploy/KUBERNETES_COMPATIBILITY.md`, 3 backends, compatibility tests |
+| Release integrity and reproducible artifacts | ✅ Addressed | v0.3.0 | Sigstore signing, SLSA L3 provenance, SBOM, evidence bundle |
+
+## Remaining external-validation gaps
+
+These gaps cannot be resolved by development alone — they require external
+engagement and are tracked in the current gap analysis:
+
+- **Third-party security validation** — pentest/red-team by independent reviewer (see `docs/security/THIRD_PARTY_REVIEW.md`)
+- **Published scale benchmarks** — performance evidence at 100+ concurrent scans
+- **SOC 2 Type II** — requires 6-month operating period after Type I readiness
+
+---
+
+## Original document (preserved for reference)
+
+The content below is the original gap analysis as written before remediation.
+
+---
+
 # Iron Dome — Enterprise readiness (gap analysis)
 
 Iron Dome is a deterministic runtime sandbox + behavioral analyzer (companion to PicoSentry). It is already pointed at enterprise use cases, but it’s earlier-stage and needs a clearer posture around **governance, auditability, and safe deployment**.

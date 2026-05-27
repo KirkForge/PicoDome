@@ -571,3 +571,189 @@ class TestProtoFile:
         assert "message PolicyGetResponse" in content
         assert "message AuditQueryRequest" in content
         assert "message AuditQueryResponse" in content
+
+
+# ─── Tests: Client retry and connection logic ───────────────────────────────
+
+
+class TestGRPCClientRetry:
+    """Test gRPC client retry and connection logic (all mocked, no grpcio needed)."""
+
+    def test_client_scan_retry_exhausted(self):
+        """scan() should raise ConnectionError after max retries."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        client = IronDomeGRPCClient(max_retries=2, retry_delay=0.01)
+
+        with patch.object(client, "_ensure_channel"):
+            with patch.object(client, "_do_scan", side_effect=ConnectionError("refused")):
+                with pytest.raises(ConnectionError, match="Failed to scan after 2 attempts"):
+                    client.scan(command=["echo", "hello"])
+
+    def test_client_scan_retry_succeeds_on_second(self):
+        """scan() should return result if second attempt succeeds."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient, ScanResult
+
+        client = IronDomeGRPCClient(max_retries=3, retry_delay=0.01)
+        good_result = ScanResult(verdict="ALLOW", exit_code=0)
+
+        with patch.object(client, "_ensure_channel"):
+            with patch.object(client, "_do_scan", side_effect=[ConnectionError("fail"), good_result]):
+                result = client.scan(command=["echo", "hello"])
+                assert result.verdict == "ALLOW"
+
+    def test_client_ensure_channel_called_lazily(self):
+        """Channel should not be created until first RPC call."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        client = IronDomeGRPCClient()
+        assert client._channel is None
+        assert client._stub is None
+
+    def test_client_ensure_channel_with_grpc_unavailable(self):
+        """_ensure_channel should raise ImportError when grpcio not installed."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        client = IronDomeGRPCClient()
+        with patch("irondome.grpc_transport.client.is_grpc_available", return_value=False):
+            with pytest.raises(ImportError, match="grpcio"):
+                client._ensure_channel()
+
+    def test_client_ensure_channel_insecure(self):
+        """_ensure_channel should create insecure channel when no mTLS."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        client = IronDomeGRPCClient(mtls_config=None)
+        mock_channel = MagicMock()
+        mock_stub = MagicMock()
+        mock_grpc = MagicMock()
+        mock_grpc.insecure_channel.return_value = mock_channel
+
+        with patch("irondome.grpc_transport.client.is_grpc_available", return_value=True):
+            with patch.dict("sys.modules", {"grpc": mock_grpc}):
+                with patch.dict(
+                    "sys.modules",
+                    {
+                        "irondome.grpc_transport.proto.irondome_pb2_grpc": MagicMock(IronDomeServiceStub=mock_stub),
+                    },
+                ):
+                    client._ensure_channel()
+                    mock_grpc.insecure_channel.assert_called_once_with("localhost:50051")
+
+    def test_client_ensure_channel_secure(self):
+        """_ensure_channel should create secure channel with mTLS config."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        client = IronDomeGRPCClient(mtls_config=MagicMock())
+        mock_channel = MagicMock()
+        mock_creds = MagicMock()
+        mock_stub = MagicMock()
+        mock_grpc = MagicMock()
+        mock_grpc.secure_channel.return_value = mock_channel
+
+        with patch.object(client, "_create_client_credentials", return_value=mock_creds):
+            with patch("irondome.grpc_transport.client.is_grpc_available", return_value=True):
+                with patch.dict("sys.modules", {"grpc": mock_grpc}):
+                    with patch.dict(
+                        "sys.modules",
+                        {
+                            "irondome.grpc_transport.proto.irondome_pb2_grpc": MagicMock(IronDomeServiceStub=mock_stub),
+                        },
+                    ):
+                        client._ensure_channel()
+                        mock_grpc.secure_channel.assert_called_once()
+
+    def test_client_create_credentials_dev_mode(self):
+        """_create_client_credentials should return None in dev mode."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.mtls.context import MTLSConfig
+
+        # Create a real MTLSConfig in dev mode
+        config = MTLSConfig(dev_mode=True)
+        client = IronDomeGRPCClient(mtls_config=config)
+        result = client._create_client_credentials(config)
+        assert result is None
+
+    def test_client_create_credentials_no_mtls(self):
+        """_create_client_credentials should return None when mtls_config is None."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        client = IronDomeGRPCClient(mtls_config=None)
+        result = client._create_client_credentials(None)
+        assert result is None
+
+    def test_client_create_credentials_not_mtls_config_instance(self):
+        """_create_client_credentials should warn on non-MTLSConfig."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        client = IronDomeGRPCClient()
+        result = client._create_client_credentials("not_a_config")
+        assert result is None
+
+    def test_client_create_credentials_missing_paths(self):
+        """_create_client_credentials should return None when cert/key paths missing."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.mtls.context import MTLSConfig
+
+        # MTLSConfig with dev_mode=False but no cert/key
+        config = MTLSConfig(dev_mode=False, cert_path="", key_path="")
+        client = IronDomeGRPCClient()
+        result = client._create_client_credentials(config)
+        assert result is None
+
+    def test_client_close_idempotent(self):
+        """Close should be safe to call multiple times."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        client = IronDomeGRPCClient()
+        client.close()
+        client.close()  # Should not raise
+
+    def test_client_context_manager_closes(self):
+        """Context manager should close channel on exit."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        with IronDomeGRPCClient() as client:
+            pass
+        assert client._channel is None
+
+    def test_client_health_without_grpc(self):
+        """health() should raise when grpcio not installed."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        client = IronDomeGRPCClient()
+        with patch("irondome.grpc_transport.client.is_grpc_available", return_value=False):
+            with pytest.raises(ImportError):
+                client.health()
+
+    def test_client_get_policy_without_grpc(self):
+        """get_policy() should raise when grpcio not installed."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        client = IronDomeGRPCClient()
+        with patch("irondome.grpc_transport.client.is_grpc_available", return_value=False):
+            with pytest.raises(ImportError):
+                client.get_policy("test-policy")
+
+    def test_client_query_audit_without_grpc(self):
+        """query_audit() should raise when grpcio not installed."""
+        from irondome.grpc_transport.client import IronDomeGRPCClient
+
+        client = IronDomeGRPCClient()
+        with patch("irondome.grpc_transport.client.is_grpc_available", return_value=False):
+            with pytest.raises(ImportError):
+                client.query_audit()
+
+    def test_client_scan_async_delegates_to_sync(self):
+        """scan_async should delegate to synchronous scan."""
+        import asyncio
+
+        from irondome.grpc_transport.client import IronDomeGRPCClient, ScanResult
+
+        client = IronDomeGRPCClient()
+        good_result = ScanResult(verdict="ALLOW")
+
+        with patch.object(client, "scan", return_value=good_result):
+            result = asyncio.get_event_loop().run_until_complete(client.scan_async(command=["echo", "hello"]))
+            assert result.verdict == "ALLOW"
+            client.scan.assert_called_once()

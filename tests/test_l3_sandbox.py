@@ -1,5 +1,9 @@
 """Tests for L3 sandbox execution."""
 
+from unittest.mock import patch
+
+import pytest
+
 from irondome.l3.backends.subprocess_backend import SubprocessBackend
 from irondome.l3.engine import SandboxEngine, sandbox_run
 from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction, Verdict
@@ -157,3 +161,123 @@ class TestSandboxEngine:
         # The seccomp backend handles this at kernel level; subprocess backend catches it post-hoc.
         # Either way, events should exist if anything suspicious was found.
         pass  # Accept any verdict for this policy+command combination
+
+
+# ── Backend detection and engine tests ─────────────────────────────────
+
+
+class TestBackendDetection:
+    def test_detect_subprocess_backend(self):
+        from irondome.l3.engine import _detect_backend
+
+        backend = _detect_backend(requested="subprocess")
+        assert backend.name == "subprocess"
+
+    def test_detect_unknown_backend_raises(self):
+        from irondome.l3.engine import BackendUnavailableError, _detect_backend
+
+        with pytest.raises(BackendUnavailableError):
+            _detect_backend(requested="nonexistent")
+
+    def test_detect_seccomp_when_available(self):
+        """On Linux with libseccomp, seccomp should be auto-detected."""
+        from irondome.l3.engine import _detect_backend
+
+        backend = _detect_backend(requested="seccomp-bpf")
+        assert backend.name in ("seccomp-bpf", "subprocess")
+
+    def test_detect_seccomp_degrades_to_subprocess(self):
+        """With allow_degraded=True, seccomp-bpf request degrades gracefully when unavailable."""
+        from irondome.l3.engine import _detect_backend
+
+        # Mock seccomp as unavailable to test degradation path
+        with patch("irondome.l3.engine.platform.system", return_value="FreeBSD"):
+            backend = _detect_backend(requested="seccomp-bpf", allow_degraded=True)
+            assert backend.name == "subprocess"
+
+    def test_detect_seatbelt_degrades_to_subprocess(self):
+        """With allow_degraded=True, seatbelt request degrades gracefully when unavailable."""
+        from irondome.l3.engine import _detect_backend
+
+        # On Linux, seatbelt is not available
+        backend = _detect_backend(requested="seatbelt", allow_degraded=True)
+        assert backend.name == "subprocess"
+
+    def test_detect_seatbelt_raises_on_linux(self):
+        """On Linux without allow_degraded, seatbelt should raise."""
+        from irondome.l3.engine import BackendUnavailableError, _detect_backend
+
+        with pytest.raises(BackendUnavailableError):
+            _detect_backend(requested="seatbelt", allow_degraded=False)
+
+    def test_detect_auto_uses_seccomp_on_linux(self):
+        """On Linux with libseccomp, auto-detect should return seccomp."""
+        from irondome.l3.engine import _detect_backend
+
+        backend = _detect_backend(allow_degraded=True)
+        assert backend.name in ("seccomp-bpf", "subprocess")
+
+    def test_detect_auto_degrades_on_other_platforms(self):
+        """On non-Linux/macOS, auto-detect degrades gracefully."""
+        from irondome.l3.engine import _detect_backend
+
+        with patch("irondome.l3.engine.platform.system", return_value="FreeBSD"):
+            backend = _detect_backend(allow_degraded=True)
+            assert backend.name == "subprocess"
+
+    def test_detect_auto_raises_without_degraded_on_other_platforms(self):
+        """On non-Linux/macOS without degraded, auto-detect should raise."""
+        from irondome.l3.engine import BackendUnavailableError, _detect_backend
+
+        with patch("irondome.l3.engine.platform.system", return_value="FreeBSD"):
+            with pytest.raises(BackendUnavailableError, match="No enforcement backend"):
+                _detect_backend(allow_degraded=False)
+
+    def test_allow_degraded_env_var(self):
+        import os
+
+        from irondome.l3.engine import _detect_backend
+
+        os.environ["IRONDOME_ALLOW_DEGRADED"] = "1"
+        try:
+            backend = _detect_backend()
+            assert backend is not None
+        finally:
+            del os.environ["IRONDOME_ALLOW_DEGRADED"]
+
+
+class TestSandboxEngineExtra:
+    def test_engine_with_explicit_backend(self):
+        from irondome.l3.backends.subprocess_backend import SubprocessBackend
+        from irondome.l3.engine import SandboxEngine
+
+        backend = SubprocessBackend()
+        engine = SandboxEngine(backend=backend)
+        assert engine.backend is backend
+
+    def test_engine_run_delegates(self):
+        from irondome.l3.backends.subprocess_backend import SubprocessBackend
+        from irondome.l3.engine import SandboxEngine
+
+        engine = SandboxEngine(backend=SubprocessBackend())
+        result = engine.run(["echo", "hello"], deterministic=True)
+        assert result.exit_code == 0
+
+
+class TestGetSetBackend:
+    def test_set_and_reset_backend(self):
+        from irondome.l3.backends.subprocess_backend import SubprocessBackend
+        from irondome.l3.engine import get_backend, reset_backend, set_backend
+
+        backend = SubprocessBackend()
+        set_backend(backend, name="test-subprocess")
+        assert get_backend() is backend
+        reset_backend()
+
+    def test_backend_unavailable_error(self):
+        from irondome.l3.engine import BackendUnavailableError
+
+        err = BackendUnavailableError("test", "reason", available_backends=["subprocess"])
+        assert "test" in str(err)
+        assert "reason" in str(err)
+        assert err.backend_name == "test"

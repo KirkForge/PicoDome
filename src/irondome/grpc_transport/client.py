@@ -135,8 +135,6 @@ class IronDomeGRPCClient:
         if mtls_config is None:
             return None
 
-        import grpc
-
         from irondome.mtls.context import MTLSConfig
 
         if not isinstance(mtls_config, MTLSConfig):
@@ -150,6 +148,8 @@ class IronDomeGRPCClient:
         if not mtls_config.cert_path or not mtls_config.key_path:
             logger.warning("mTLS configured but cert/key paths missing")
             return None
+
+        import grpc
 
         try:
             with open(mtls_config.cert_path, "rb") as f:

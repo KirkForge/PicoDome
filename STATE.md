@@ -1,7 +1,7 @@
 # Iron Dome — State & Status
 
 **Version:** 0.5.0 | **Repo:** https://github.com/KirkForge/IronDome
-**Tests:** 1158/1170 passing, 12 skipped (sandbox-dependent) | **Backends:** 3 (seccomp, seatbelt, subprocess)
+**Tests:** 1406/1418 passing, 12 skipped (sandbox-dependent) | **Backends:** 3 (seccomp, seatbelt, subprocess)
 **Formatters:** 6 (json, sarif, table, ml-context, github, cyclonedx)
 **Transports:** 2 (HTTP, gRPC)
 **Status:** Enterprise Beta — controlled pilot ready

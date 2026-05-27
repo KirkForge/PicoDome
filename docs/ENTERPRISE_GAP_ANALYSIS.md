@@ -159,7 +159,7 @@ This document tracks the gaps between IronDome's capabilities and enterprise dep
 - Added `pytest-timeout` (120s per test, thread method) to both CI and release workflows
 - Added `generate_test_summary.py` script producing JSON evidence (total, passed, failed, skipped, duration, coverage, slow tests)
 - CI now uploads `test-summary-py{version}.json` as artifact (30-day retention)
-- Test suite: 1158 passed, 12 skipped (sandbox-dependent), 0 failed, ~55s wall-clock
+- Test suite: 1406 passed, 12 skipped (sandbox-dependent), 0 failed, ~103s wall-clock
 
 ### 5e. Release artifact packaging hygiene ✅ (remediated)
 

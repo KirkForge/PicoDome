@@ -1,13 +1,19 @@
-# IronDome — Security Review Plan
+# IronDome — Security Review Plan (readiness placeholder)
 
-> **Status:** Planned · **Target:** v1.0.0 GA  
+> **Status:** Planned — no review has been conducted yet · **Target:** v1.0.0 GA  
 > **Last updated:** 2026-05-27
+
+> **⚠️ Placeholder notice:** This document describes a *plan* for third-party
+> security review. No external pentest, red-team exercise, or code audit has been
+> performed. Results will be added when available. Enterprise evaluators should
+> treat this as a readiness statement, not as evidence of completed review.
 
 ## 1. Purpose
 
 Enterprise GA certification requires independent security validation beyond
 self-testing. This document defines the scope, methodology, and engagement
-plan for security review of IronDome.
+plan for security review of IronDome. **The review has not yet been conducted.**
+When completed, findings and remediation status will replace this plan document.
 
 ## 2. Reviewer
 

@@ -4,6 +4,8 @@ import json
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction
 from irondome.l3.policy import default_policy, load_policy
 
@@ -294,3 +296,147 @@ class TestCustomPolicyCreation:
         )
         assert policy.rules[0].paths == ["/usr/**", "/lib/**"]
         assert policy.rules[1].addresses == ["0.0.0.0/0"]
+
+
+# ── Strict, Node, Python preset policies ────────────────────────────────
+
+
+class TestPolicyBuiltins:
+    def test_strict_policy(self):
+        from irondome.l3.policy import strict_policy
+
+        policy = strict_policy()
+        assert policy.name == "iron-dome-strict"
+        assert policy.default_action == SyscallAction.DENY
+
+    def test_node_policy(self):
+        from irondome.l3.policy import node_policy
+
+        policy = node_policy()
+        assert policy.name == "iron-dome-node"
+        assert policy.default_action == SyscallAction.DENY
+
+    def test_python_policy_builtin(self):
+        from irondome.l3.policy import python_policy
+
+        policy = python_policy()
+        assert policy.name == "iron-dome-python"
+        assert policy.default_action == SyscallAction.DENY
+
+
+# ── Export / Import round-trip ─────────────────────────────────────────────
+
+
+class TestPolicyExportImport:
+    def test_export_and_import_roundtrip(self, tmp_path):
+        from irondome.l3.policy import default_policy, export_policy, import_policy
+
+        original = default_policy()
+        path = tmp_path / "exported-policy.json"
+        export_policy(original, path)
+        assert path.exists()
+
+        loaded = import_policy(path)
+        assert loaded.name == original.name
+        assert loaded.version == original.version
+        assert len(loaded.rules) == len(original.rules)
+
+    def test_import_nonexistent_file(self, tmp_path):
+        from irondome.l3.policy import import_policy
+
+        with pytest.raises((FileNotFoundError, ValueError)):
+            import_policy(tmp_path / "nonexistent.json")
+
+    def test_import_invalid_policy(self, tmp_path):
+        from irondome.l3.policy import import_policy
+
+        path = tmp_path / "bad-policy.json"
+        path.write_text('{"name": "bad", "version": "1", "default_action": "deny", "rules": []}')
+        with pytest.raises(ValueError):
+            import_policy(path)
+
+
+# ── Policy validation ────────────────────────────────────────────────────
+
+
+class TestPolicyValidationExtra:
+    def test_validate_empty_policy(self):
+        from irondome.l3.policy import validate_policy
+
+        empty = Policy(name="empty", version="1.0", default_action=SyscallAction.DENY, rules=[])
+        errors = validate_policy(empty)
+        assert len(errors) >= 1
+        assert any("no rules" in e.lower() for e in errors)
+
+    def test_validate_duplicate_rule_ids(self):
+        from irondome.l3.policy import validate_policy
+
+        dup = Policy(
+            name="dup",
+            version="1.0",
+            default_action=SyscallAction.DENY,
+            rules=[
+                PolicyRule(rule_id="DUP-001", target=RuleTarget.NETWORK_OUT, action=SyscallAction.DENY),
+                PolicyRule(rule_id="DUP-001", target=RuleTarget.FILE_READ, action=SyscallAction.ALLOW),
+            ],
+        )
+        errors = validate_policy(dup)
+        assert any("Duplicate rule ID" in e for e in errors)
+
+    def test_validate_good_policy(self):
+        from irondome.l3.policy import validate_policy
+
+        good = default_policy()
+        errors = validate_policy(good)
+        assert errors == []
+
+
+# ── load_policy from file ─────────────────────────────────────────────────
+
+
+class TestLoadPolicy:
+    def test_load_policy_from_json_file(self, tmp_path):
+        from irondome.l3.policy import load_policy
+
+        policy_data = {
+            "name": "test-loaded",
+            "version": "2.0",
+            "default_action": "deny",
+            "rules": [
+                {
+                    "rule_id": "FILE-001",
+                    "target": "file_read",
+                    "action": "allow",
+                    "paths": ["/tmp/**"],
+                    "description": "Allow reads from /tmp",
+                },
+            ],
+        }
+        path = tmp_path / "test-policy.json"
+        path.write_text(json.dumps(policy_data))
+        policy = load_policy(path)
+        assert policy.name == "test-loaded"
+
+    def test_load_policy_by_name(self):
+        from irondome.l3.policy import load_policy
+
+        policy = load_policy(name="default")
+        assert policy.name == "iron-dome-default"
+
+    def test_load_policy_by_name_strict(self):
+        from irondome.l3.policy import load_policy
+
+        policy = load_policy(name="strict")
+        assert policy.name == "iron-dome-strict"
+
+    def test_load_policy_invalid_name(self):
+        from irondome.l3.policy import load_policy
+
+        with pytest.raises(ValueError, match="Invalid policy name"):
+            load_policy(name="../etc/passwd")
+
+    def test_load_policy_no_args_returns_default(self):
+        from irondome.l3.policy import load_policy
+
+        policy = load_policy()
+        assert policy.name == "iron-dome-default"
