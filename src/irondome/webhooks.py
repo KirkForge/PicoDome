@@ -107,13 +107,46 @@ class WebhookDispatcher:
 
     SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
+    # F13: Blocked URL patterns for SSRF protection
+    BLOCKED_URL_PATTERNS = (
+        "169.254.",  # cloud metadata (AWS/GCP/Azure)
+        "100.64.",  # CGNAT / private
+        "10.",  # RFC1918
+        "192.168.",  # RFC1918
+        "172.16.",  # RFC1918
+        "127.",  # loopback
+        "0.",  # all-zeros
+        "localhost",  # localhost
+        "::1",  # IPv6 loopback
+        "fc00:",  # IPv6 unique-local
+        "fe80:",  # IPv6 link-local
+        "fd",  # IPv6 unique-local
+    )
+
     def __init__(self) -> None:
         self._webhooks: list[WebhookConfig] = []
 
     def add_webhook(self, config: WebhookConfig) -> None:
         """Register a webhook endpoint."""
+        # F13: Validate webhook URL against SSRF patterns
+        if self._is_blocked_url(config.url):
+            logger.error("Webhook URL blocked (SSRF protection): %s", config.url)
+            return
         self._webhooks.append(config)
         logger.info("Webhook registered: %s (events=%s)", config.url, config.events)
+
+    @classmethod
+    def _is_blocked_url(cls, url: str) -> bool:
+        """F13: Check if a URL matches blocked SSRF patterns."""
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        hostname = parsed.hostname or ""
+        hostname_lower = hostname.lower()
+        for pattern in cls.BLOCKED_URL_PATTERNS:
+            if hostname_lower.startswith(pattern.lower()) or hostname_lower == pattern.lower():
+                return True
+        return False
 
     def remove_webhook(self, url: str) -> None:
         """Remove a webhook by URL."""

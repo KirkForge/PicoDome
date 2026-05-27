@@ -1,0 +1,185 @@
+# IronDome Prometheus Alert Rules
+#
+# Install with:
+#   kubectl apply -f irondome-alerts.yaml
+#
+# Requires Prometheus Operator with PrometheusRule CRD,
+# or add rules directly to your Prometheus config.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: irondome-alerts
+  namespace: irondome
+  labels:
+    app: irondome
+    release: prometheus
+spec:
+  groups:
+    # ── SLO Burn Rate Alerts ──────────────────────────────────────
+    - name: irondome.slo
+      rules:
+        # Availability SLO: 99.9% (error budget: 43.8 min/month)
+        - alert: IronDomeHighErrorRate
+          expr: |
+            (
+              rate(irondome_scan_errors_total[1h]) /
+              rate(irondome_scan_total[1h])
+            ) > 0.01
+          for: 5m
+          labels:
+            severity: critical
+            slo: availability
+          annotations:
+            summary: "IronDome error rate exceeds 1%"
+            runbook_url: "https://github.com/KirkForge/IronDome/blob/main/docs/runbooks/ci-failures.md"
+
+        # Latency SLO: p95 < 2s
+        - alert: IronDomeHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              rate(irondome_scan_duration_seconds_bucket[5m])
+            ) > 2.0
+          for: 10m
+          labels:
+            severity: warning
+            slo: latency
+          annotations:
+            summary: "IronDome scan p95 latency exceeds 2s SLO"
+            runbook_url: "https://github.com/KirkForge/IronDome/blob/main/docs/runbooks/ci-failures.md"
+
+        # Throughput SLO: >= 10 scans/min
+        - alert: IronDomeLowThroughput
+          expr: |
+            rate(irondome_scan_total[5m]) * 60 < 10
+          for: 15m
+          labels:
+            severity: warning
+            slo: throughput
+          annotations:
+            summary: "IronDome throughput below 10 scans/min SLO"
+
+    # ── Admission Controller Alerts ──────────────────────────────
+    - name: irondome.admission
+      rules:
+        - alert: IronDomeAdmissionWebhookDown
+          expr: irondome_up == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "IronDome admission controller is down"
+            description: "The IronDome admission webhook is not responding. Pod creation may be blocked depending on failurePolicy."
+            runbook_url: "https://github.com/KirkForge/IronDome/blob/main/docs/runbooks/webhook-outage.md"
+
+        - alert: IronDomeAdmissionHighDenialRate
+          expr: |
+            (
+              rate(irondome_admission_requests_total{allowed="false"}[5m]) /
+              rate(irondome_admission_requests_total[5m])
+            ) > 0.1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "IronDome denying >10% of admission requests"
+            description: "High denial rate may indicate a policy misconfiguration or an active attack."
+
+        - alert: IronDomeAdmissionLatencySpike
+          expr: |
+            histogram_quantile(0.99,
+              rate(irondome_admission_duration_seconds_bucket[5m])
+            ) > 1.0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "IronDome admission p99 latency exceeds 1s"
+            runbook_url: "https://github.com/KirkForge/IronDome/blob/main/docs/runbooks/webhook-outage.md"
+
+    # ── Certificate Alerts ───────────────────────────────────────
+    - name: irondome.certificates
+      rules:
+        - alert: IronDomeCertExpiringSoon
+          expr: |
+            cert_manager_certificate_expiration_timestamp_seconds{certificate=~"irondome.*"} - time() < 86400 * 30
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "IronDome TLS certificate expires in less than 30 days"
+            runbook_url: "https://github.com/KirkForge/IronDome/blob/main/docs/runbooks/cert-rotation.md"
+
+        - alert: IronDomeCertExpiringCritical
+          expr: |
+            cert_manager_certificate_expiration_timestamp_seconds{certificate=~"irondome.*"} - time() < 86400 * 7
+          for: 30m
+          labels:
+            severity: critical
+          annotations:
+            summary: "IronDome TLS certificate expires in less than 7 days"
+            runbook_url: "https://github.com/KirkForge/IronDome/blob/main/docs/runbooks/cert-rotation.md"
+
+    # ── Security Alerts ─────────────────────────────────────────
+    - name: irondome.security
+      rules:
+        - alert: IronDomeAuditChainBroken
+          expr: irondome_audit_chain_integrity == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "IronDome audit log hash chain is broken"
+            description: "The audit log integrity check failed. Possible tampering or data corruption."
+
+        - alert: IronDomePolicyVerificationFailure
+          expr: |
+            increase(irondome_policy_verification_failures_total[5m]) > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "IronDome policy signature verification failed"
+            description: "A policy was loaded with an invalid or missing signature. Possible tampering."
+
+        - alert: IronDomeRateLimitExhausted
+          expr: |
+            rate(irondome_rate_limit_requests_total{result="rejected"}[5m]) > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "IronDome rate limit rejections detected"
+            description: "Requests are being rate-limited. May indicate abuse or need for capacity increase."
+
+    # ── Infrastructure Alerts ────────────────────────────────────
+    - name: irondome.infrastructure
+      rules:
+        - alert: IronDomePodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total{pod=~"irondome.*"}[15m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "IronDome pod is crash looping"
+
+        - alert: IronDomeStorageQuotaNearLimit
+          expr: |
+            irondome_storage_bytes > 450 * 1024 * 1024
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "IronDome storage approaching quota limit (450MB/500MB)"
+
+        - alert: IronDomeWebhookDeliveryFailures
+          expr: |
+            rate(irondome_webhook_deliveries_total{status="failed"}[5m]) > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "IronDome webhook deliveries are failing"
+          annotations:
+            description: "External webhook notifications are failing. Check endpoint availability."

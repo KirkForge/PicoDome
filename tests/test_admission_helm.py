@@ -8,6 +8,9 @@ Covers:
 - ValidatingWebhookConfiguration targets /validate
 - Certificate template for cert-manager
 - Secret template for TLS
+- PodDisruptionBudget template
+- NetworkPolicy template
+- HPA and cert rotation configuration
 """
 
 from __future__ import annotations
@@ -62,6 +65,21 @@ class TestValuesYaml:
     def test_replica_count(self):
         content = (CHART_DIR / "values.yaml").read_text()
         assert "replicaCount" in content
+
+    def test_pod_disruption_budget_config(self):
+        content = (CHART_DIR / "values.yaml").read_text()
+        assert "podDisruptionBudget" in content
+        assert "minAvailable" in content
+
+    def test_autoscaling_config(self):
+        content = (CHART_DIR / "values.yaml").read_text()
+        assert "autoscaling" in content
+        assert "minReplicas" in content
+
+    def test_cert_rotation_config(self):
+        content = (CHART_DIR / "values.yaml").read_text()
+        assert "certRotation" in content
+        assert "rollingUpdateOnRenew" in content
 
 
 class TestDeploymentTemplate:
@@ -124,6 +142,11 @@ class TestCertificateTemplate:
         content = (CHART_DIR / "templates" / "certificate.yaml").read_text()
         assert "cert-manager" in content
 
+    def test_renewal_window(self):
+        content = (CHART_DIR / "templates" / "certificate.yaml").read_text()
+        assert "renewBefore" in content
+        assert "duration" in content
+
 
 class TestSecretTemplate:
     def test_secret_exists(self):
@@ -150,3 +173,37 @@ class TestHelpersTemplate:
     def test_labels_template(self):
         content = (CHART_DIR / "templates" / "_helpers.tpl").read_text()
         assert "irondome-admission.labels" in content
+
+
+class TestPDBTemplate:
+    def test_pdb_exists(self):
+        assert (CHART_DIR / "templates" / "pdb.yaml").is_file()
+
+    def test_pdb_kind(self):
+        content = (CHART_DIR / "templates" / "pdb.yaml").read_text()
+        assert "PodDisruptionBudget" in content
+
+    def test_pdb_selector(self):
+        content = (CHART_DIR / "templates" / "pdb.yaml").read_text()
+        assert "selectorLabels" in content
+
+    def test_pdb_min_available(self):
+        content = (CHART_DIR / "templates" / "pdb.yaml").read_text()
+        assert "minAvailable" in content
+
+
+class TestNetworkPolicyTemplate:
+    def test_networkpolicy_exists(self):
+        assert (CHART_DIR / "templates" / "networkpolicy.yaml").is_file()
+
+    def test_networkpolicy_ingress(self):
+        content = (CHART_DIR / "templates" / "networkpolicy.yaml").read_text()
+        assert "Ingress" in content
+
+    def test_networkpolicy_egress(self):
+        content = (CHART_DIR / "templates" / "networkpolicy.yaml").read_text()
+        assert "Egress" in content
+
+    def test_networkpolicy_dns(self):
+        content = (CHART_DIR / "templates" / "networkpolicy.yaml").read_text()
+        assert "53" in content

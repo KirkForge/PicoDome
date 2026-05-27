@@ -227,7 +227,13 @@ def _create_dev_ssl_context() -> ssl.SSLContext:
 
     WARNING: Only use in development. Self-signed certs provide
     encryption but no identity verification.
+
+    F9: Blocked in enterprise mode.
     """
+    # F9: Block dev TLS mode in enterprise mode
+    if os.environ.get("IRONDOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes"):
+        raise RuntimeError("IRONDOME_TLS_DEV=1 is not allowed in enterprise mode. Provide proper certificates.")
+
     import subprocess
 
     logger.warning("Creating DEV self-signed TLS certificate — DO NOT USE IN PRODUCTION")

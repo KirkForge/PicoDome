@@ -38,8 +38,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Run tests
-        run: python -m pytest -v
+      - name: Run tests (time-bounded)
+        run: python -m pytest -v --timeout=120 --timeout-method=thread -m "not network" --junitxml=test-results.xml
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          pip install pytest-cov
+          python scripts/generate_test_summary.py --junitxml=test-results.xml --python-version="${{ matrix.python-version }}"
 
   mypy:
     name: Type Check
@@ -183,10 +189,55 @@ jobs:
           path: dist/checksums-sha256.txt
           retention-days: 30
 
+
+  # ── Evidence Bundle ───────────────────────────────────────────────
+  evidence:
+    name: Generate Evidence Bundle
+    needs: [build, sign, provenance, evidence]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Generate evidence bundle
+        run: |
+          python scripts/generate_evidence_bundle.py \
+            --version ${{ needs.build.outputs.version }} \
+            --skip-tests \
+            --output evidence/
+
+      - name: Package evidence bundle
+        run: |
+          tar czf irondome-evidence-bundle.tar.gz -C . evidence/
+
+      - name: Upload evidence bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-bundle
+          path: |
+            evidence/
+            irondome-evidence-bundle.tar.gz
+          retention-days: 90
+
   # ── GitHub Release ────────────────────────────────────────────────
   release:
     name: Create GitHub Release
-    needs: [build, sign, provenance]
+    needs: [build, sign, provenance, evidence]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -206,6 +257,7 @@ jobs:
           cp artifacts/dist/*.whl.sigstore release-assets/ 2>/dev/null || true
           cp artifacts/dist/*.tar.gz.sigstore release-assets/ 2>/dev/null || true
           cp artifacts/checksums/checksums-sha256.txt release-assets/ 2>/dev/null || true
+          cp artifacts/evidence-bundle/irondome-evidence-bundle.tar.gz release-assets/ 2>/dev/null || true
           ls -la release-assets/
 
       - name: Create GitHub Release
@@ -217,6 +269,7 @@ jobs:
             release-assets/*.tar.gz
             release-assets/*.sigstore
             release-assets/checksums-sha256.txt
+            release-assets/irondome-evidence-bundle.tar.gz
           body: |
             ## IronDome ${{ needs.build.outputs.version }}
 
@@ -224,6 +277,7 @@ jobs:
             - **Sigstore signatures**: `.whl.sigstore` and `.tar.gz.sigstore` files
             - **SHA-256 checksums**: `checksums-sha256.txt`
             - **SLSA provenance**: Generated during build
+            - **Evidence bundle**: `irondome-evidence-bundle.tar.gz` (SBOM, checksums, sigstore signatures, metadata)
 
             ### Install
             ```bash

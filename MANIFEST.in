@@ -1,3 +1,5 @@
+global-exclude __pycache__
+global-exclude *.pyc
 recursive-include src/irondome/docs *.md
 include LICENSE
 include README.md

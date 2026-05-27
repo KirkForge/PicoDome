@@ -75,6 +75,8 @@ def load_key() -> bytes | None:
            (K8s secret mounts: mount the secret as a file and set this var)
         3. None — no key configured, policies load without verification
 
+    F4: In enterprise mode, a key MUST be configured or an error is logged.
+
     For Kubernetes, create a Secret and mount it:
         kubectl create secret generic irondome-policy-key \\
             --from-literal=key=<hex-encoded-key>
@@ -106,6 +108,13 @@ def load_key() -> bytes | None:
         except (OSError, ValueError) as exc:
             logger.error("Failed to read policy key file '%s': %s", key_file, exc)
             return None
+
+    # F4: In enterprise mode, require policy signing key
+    if os.environ.get("IRONDOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes"):
+        logger.error(
+            "ENTERPRISE MODE: No policy signing key configured. Set IRONDOME_POLICY_KEY or IRONDOME_POLICY_KEY_FILE."
+        )
+        return None
 
     return None
 

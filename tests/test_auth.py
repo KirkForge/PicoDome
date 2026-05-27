@@ -5,8 +5,11 @@ import hmac
 import os
 from unittest.mock import patch
 
+import pytest
+
 from irondome.auth import (
     RBAC,
+    AuthError,
     Role,
     TokenAuth,
     _constant_time_equal,
@@ -217,9 +220,9 @@ class TestTokenAuth:
             },
             clear=False,
         ):
-            auth = TokenAuth()
-            # Enterprise mode should NOT allow dev bypass
-            assert auth.validate("any-token") is False
+            # F1: Enterprise + DEV_MODE now raises AuthError at init
+            with pytest.raises(AuthError, match="DEV_MODE"):
+                TokenAuth()
 
     def test_has_permission(self):
         with patch.dict(os.environ, {"IRONDOME_API_TOKENS": "irondome-admin-secret123"}, clear=False):

@@ -20,6 +20,11 @@ from pathlib import Path
 logger = logging.getLogger("irondome.auth")
 
 
+def _is_enterprise_mode() -> bool:
+    """Check if enterprise mode is active via environment variable."""
+    return os.environ.get("IRONDOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes")
+
+
 class AuthError(Exception):
     """Raised when authentication or authorization fails."""
 
@@ -146,8 +151,14 @@ class TokenAuth:
         # Store plaintext tokens only for constant-time comparison
         # (needed because we compare against the bearer token directly)
         self._plaintext_tokens: list[str] = []
-        self._is_enterprise = os.environ.get("IRONDOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes")
+        self._is_enterprise = _is_enterprise_mode()
         self._load_tokens()
+        # F1: Block DEV_MODE in enterprise mode at startup
+        if self._is_enterprise and os.environ.get("IRONDOME_DEV_MODE", "").lower() in ("1", "true", "yes"):
+            logger.error(
+                "ENTERPRISE MODE: IRONDOME_DEV_MODE is set — refusing to start. Remove DEV_MODE for production."
+            )
+            raise AuthError("IRONDOME_DEV_MODE must not be set in enterprise mode", status=403)
 
     @property
     def rbac(self) -> RBAC:
@@ -211,10 +222,12 @@ class TokenAuth:
 
         In enterprise mode:
         - Empty token store always rejects (no dev bypass).
-        - Minimum token length is enforced.
+        - Minimum token length is enforced on validation.
+        - DEV_MODE is blocked entirely.
 
         In dev mode (no tokens configured):
         - All requests are authenticated (warning logged).
+        - DEV_MODE is only allowed when not in enterprise mode.
         """
         # Enterprise mode: no bypass, strict validation
         if self._is_enterprise:
@@ -222,6 +235,8 @@ class TokenAuth:
                 logger.error(
                     "Enterprise mode: no API tokens configured — all requests rejected. Set IRONDOME_API_TOKENS."
                 )
+                return False
+            if len(token) < MIN_TOKEN_LENGTH:
                 return False
             return any(_constant_time_equal(token, known) for known in self._plaintext_tokens)
 
@@ -247,7 +262,10 @@ class TokenAuth:
 
     @property
     def is_configured(self) -> bool:
-        """Check if any tokens are configured (or dev mode is enabled)."""
+        """Check if any tokens are configured (or dev mode is enabled).
+
+        In enterprise mode, dev mode is never considered configured.
+        """
         if self._is_enterprise:
             return len(self._plaintext_tokens) > 0
         if os.environ.get("IRONDOME_DEV_MODE", "").lower() in ("1", "true", "yes"):

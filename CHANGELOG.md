@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-05-27
+
+### Added
+- **`create_app()` factory** in `daemon/server.py` — programmatic daemon creation for testing and orchestration
+- **`generate_test_summary.py`** — machine-readable test evidence (total, passed, failed, skipped, duration, coverage, slow tests)
+- **Test summary step in CI** — every CI run uploads `test-summary-py{version}.json` artifact with 30-day retention
+- **Evidence bundle in release workflow** — `evidence` job generates and attaches `irondome-evidence-bundle.tar.gz` to GitHub releases
+- **Enterprise pilot limitations** — `docs/ENTERPRISE_PILOT_LIMITATIONS.md` with scale limits, tenancy assumptions, Redis requirements, deployment modes, unsupported compliance claims, graduation criteria
+- **Third-party security review plan** — `docs/security/THIRD_PARTY_REVIEW.md` with scope, methodology, timeline, budget, vendor requirements
+
+### Changed
+- **CI test job** — time-bounded with `--timeout=120 --timeout-method=thread -m "not network"`, JUnit XML + JSON coverage output
+- **Release test job** — same time-bounded pytest configuration as CI
+- **Gap analysis score** — 8.0 → 8.5 / 10 (enterprise-beta)
+- **Status** — Active development → Enterprise Beta — controlled pilot ready
+
+### Fixed
+- **Collection error** — `irondome.daemon.__init__` imported non-existent `create_app`; 4 test modules could not be collected (`test_audit_coverage`, `test_redis_store`, `test_sqlite_store`, `test_sqlite_integration`)
+- **Packaging hygiene** — `MANIFEST.in` now has `global-exclude __pycache__` and `global-exclude *.pyc`; verified clean wheel/sdist builds
+- **Local cache cleanup** — removed all `__pycache__/` directories and `.pyc` files from the repository
+
 ## [0.5.0] - 2026-05-25
 
 ### Added

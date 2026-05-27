@@ -25,6 +25,7 @@ or a tokens file at ``~/.irondome/api-tokens``.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -62,6 +63,15 @@ CORS_ALLOW_ORIGINS = os.environ.get("IRONDOME_CORS_ORIGINS", "*").replace("\r", 
 CORS_ALLOW_METHODS = "GET, POST, OPTIONS"
 CORS_ALLOW_HEADERS = "Content-Type, Authorization, X-Tenant, X-Request-ID"
 CORS_MAX_AGE = "86400"  # 24 hours
+_CORS_ALLOW_ORIGINS_LIST = [o.strip() for o in CORS_ALLOW_ORIGINS.split(",") if o.strip()]
+_ENTERPRISE_MODE = os.environ.get("IRONDOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes")
+
+# F2: In enterprise mode, reject wildcard CORS origin
+if _ENTERPRISE_MODE and CORS_ALLOW_ORIGINS == "*":
+    logger.warning(
+        "ENTERPRISE MODE: CORS origin is wildcard ('*'). "
+        "Set IRONDOME_CORS_ORIGINS to specific trusted origins for production."
+    )
 
 # ─── Scan job tracker ───────────────────────────────────────────────────────
 
@@ -125,6 +135,38 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
     # Commands that are always rejected regardless of policy.
     # Prevents privilege escalation via the daemon API.
+    # F12: Enterprise allowlist — only these commands can be submitted
+    ALLOWED_COMMANDS: set[str] = {
+        "echo",
+        "printf",
+        "cat",
+        "head",
+        "tail",
+        "sort",
+        "wc",
+        "grep",
+        "jq",
+        "yq",
+        "npm",
+        "npx",
+        "yarn",
+        "pnpm",
+        "pip",
+        "pip3",
+        "cargo",
+        "go",
+        "mvn",
+        "gradle",
+        "make",
+        "cmake",
+        "dotnet",
+        "gem",
+        "bundle",
+        "php",
+        "composer",
+    }
+
+    # F12: Non-enterprise deny list (supplementary to allowlist)
     DENIED_COMMANDS: set[str] = {
         "rm",
         "rmdir",
@@ -154,19 +196,19 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         "nc",
         "ncat",
         "curl",
-        "wget",  # network exfil vectors
+        "wget",
         "bash",
         "sh",
         "zsh",
-        "fish",  # shell injection
+        "fish",
         "python",
         "python3",
         "perl",
         "ruby",
-        "node",  # script injection
+        "node",
         "sudo",
         "su",
-        "doas",  # privilege escalation
+        "doas",
         "chmod",
         "chown",
         "chgrp",
@@ -174,19 +216,26 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     }
 
     def _validate_command(self, command: list[str]) -> str | None:
-        """Validate a scan command against the deny list.
+        """Validate a scan command against allowlist/denylist.
+
+        F12: In enterprise mode, only ALLOWED_COMMANDS are permitted.
+        In non-enterprise mode, DENIED_COMMANDS are blocked.
 
         Returns an error message if the command is denied, None if allowed.
         """
         if not command:
             return "Empty command"
         base = command[0]
-        # Strip path prefix — /usr/bin/rm → rm
         import os as _os
 
         base_name = _os.path.basename(base)
-        if base_name in self.DENIED_COMMANDS:
-            return f"Command '{base_name}' is denied by server policy"
+
+        if _ENTERPRISE_MODE:
+            if base_name not in self.ALLOWED_COMMANDS:
+                return f"Command '{base_name}' is not in enterprise allowlist"
+        else:
+            if base_name in self.DENIED_COMMANDS:
+                return f"Command '{base_name}' is denied by server policy"
         return None
 
     # Set by the server at creation time
@@ -220,7 +269,16 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Cache-Control", "no-store")
         # CORS headers
-        self.send_header("Access-Control-Allow-Origin", CORS_ALLOW_ORIGINS)
+        # F2: In enterprise mode with wildcard, reflect request origin instead of *
+        request_origin = self.headers.get("Origin", "")
+        if _ENTERPRISE_MODE and CORS_ALLOW_ORIGINS == "*":
+            if request_origin:
+                self.send_header("Access-Control-Allow-Origin", request_origin)
+                self.send_header("Vary", "Origin")
+            else:
+                self.send_header("Access-Control-Allow-Origin", "null")
+        else:
+            self.send_header("Access-Control-Allow-Origin", CORS_ALLOW_ORIGINS)
         self.send_header("Access-Control-Allow-Methods", CORS_ALLOW_METHODS)
         self.send_header("Access-Control-Allow-Headers", CORS_ALLOW_HEADERS)
         self.send_header("Access-Control-Max-Age", CORS_MAX_AGE)
@@ -290,6 +348,9 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         Uses X-Tenant header and token-to-tenant mapping from the
         TenantRegistry. Falls back to DEFAULT_TENANT.
 
+        F6: X-Tenant header is only respected after successful auth.
+        Unauthenticated requests always resolve to DEFAULT_TENANT.
+
         Returns:
             TenantId for this request.
         """
@@ -298,11 +359,13 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         registry = get_tenant_registry()
         header_tenant = self.headers.get("X-Tenant")
 
+        # F6: Only resolve tenant from header if authenticated
+        if not token or token == "no-auth-dev-mode":
+            return registry.resolve_tenant("", header_tenant=None)
+
         # Resolve token hash for mapping
         token_hash = ""
         if token and token != "no-auth-dev-mode":
-            import hashlib
-
             token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
 
         return registry.resolve_tenant(token_hash, header_tenant=header_tenant)
@@ -316,6 +379,19 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         token = self._get_token()
 
         if not self.auth.is_configured:
+            # F1/F6: In enterprise mode, never allow dev-mode bypass
+            if _ENTERPRISE_MODE:
+                try:
+                    audit = get_audit_logger()
+                    audit.record(
+                        event_type=AuditEventType.AUTH_FAILURE,
+                        actor="anonymous",
+                        detail="No auth configured in enterprise mode — rejecting",
+                    )
+                except Exception:
+                    pass
+                self._send_error(ErrorCodes.UNAUTHORIZED)
+                return None
             return "no-auth-dev-mode"
 
         if not token:
@@ -334,7 +410,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
         if not self.auth.validate(token):
             # Token provided but invalid
-            actor = token[:16]
+            actor = hashlib.sha256(token.encode("utf-8")).hexdigest()[:16]
             try:
                 audit = get_audit_logger()
                 audit.record(
@@ -348,7 +424,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             return None
 
         # Rate limiting
-        actor = token[:16]
+        actor = hashlib.sha256(token.encode("utf-8")).hexdigest()[:16]
         if not self.rate_limiter.allow(actor=actor):
             try:
                 audit = get_audit_logger()
@@ -385,7 +461,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             return None
 
         if not self.rbac.has_permission(token, permission):
-            actor = token[:16]
+            actor = hashlib.sha256(token.encode("utf-8")).hexdigest()[:16]
             try:
                 audit = get_audit_logger()
                 audit.record(
@@ -431,9 +507,16 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 
         # Health / ready (unauthenticated)
         if path == "/health":
-            self._handle_health()
+            # F7: Rate limit unauthenticated health/ready endpoints
+            if not self.rate_limiter.allow(actor="__health__"):
+                self._send_error(ErrorCodes.RATE_LIMITED)
+            else:
+                self._handle_health()
         elif path == "/ready":
-            self._handle_ready()
+            if not self.rate_limiter.allow(actor="__ready__"):
+                self._send_error(ErrorCodes.RATE_LIMITED)
+            else:
+                self._handle_ready()
         elif path == "/metrics":
             # If metrics-only server, skip auth
             metrics_only = getattr(self, "_metrics_only", False)
@@ -533,15 +616,18 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         except Exception:
             redis_health = {"connected": False, "mode": "in-memory"}
 
-        self._send_json(
-            {
-                "status": "healthy",
-                "version": __version__,
-                "api_version": API_VERSION,
-                "uptime_seconds": uptime,
-                "redis": redis_health,
-            }
-        )
+        # F8: Reduce info disclosure on health endpoint
+        health_data: dict[str, Any] = {
+            "status": "healthy",
+        }
+        # Only include version and details if not in enterprise mode
+        if not _ENTERPRISE_MODE:
+            health_data["version"] = __version__
+            health_data["api_version"] = API_VERSION
+            health_data["uptime_seconds"] = uptime
+            health_data["redis"] = redis_health
+
+        self._send_json(health_data)
 
     def _handle_ready(self) -> None:
         # Check that sandbox backend works
@@ -629,7 +715,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         deny_error = self._validate_command(command)
         if deny_error:
             # Audit the command denial
-            actor = token[:16] if token else "unknown"
+            actor = hashlib.sha256(token.encode("utf-8")).hexdigest()[:16] if token else "unknown"
             try:
                 audit = get_audit_logger()
                 audit.record(
@@ -648,7 +734,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         data.get("policy")
 
         job_id = str(uuid.uuid4())[:8]
-        actor = token[:16] if token else "unknown"
+        actor = hashlib.sha256(token.encode("utf-8")).hexdigest()[:16] if token else "unknown"
 
         # Resolve tenant
         tenant_id = self._resolve_tenant(token)
@@ -683,6 +769,10 @@ class IronDomeHandler(BaseHTTPRequestHandler):
             # Resolve backend
             backend_name = data.get("backend", "auto")
             backend: SandboxBackend | None = None
+            # F14: Block subprocess backend in enterprise mode
+            if _ENTERPRISE_MODE and backend_name == "subprocess":
+                self._send_error(ErrorCodes.FORBIDDEN, detail="subprocess backend is not allowed in enterprise mode")
+                return
             if backend_name != "auto":
                 backend_map = {
                     "subprocess": "irondome.l3.backends.subprocess_backend:SubprocessBackend",
@@ -836,7 +926,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         try:
             policy = _policy_from_dict(data)
             store = get_policy_store()
-            author = data.get("author", token[:16] if token else "unknown")
+            author = data.get("author", hashlib.sha256(token.encode("utf-8")).hexdigest()[:16] if token else "unknown")
             description = data.get("change_description", "")
             pv = store.save(policy, author=author, change_description=description)
             self._send_json(pv.to_dict(), status=201)
@@ -914,17 +1004,19 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         audit = get_audit_logger()
         audit_stats = audit.get_stats()
 
-        self._send_json(
-            {
-                "version": __version__,
-                "uptime_seconds": int(time.time() - self._start_time),
-                "scans_total": self._scan_count,
-                "scans_avg_ms": self._scan_total_ms / max(self._scan_count, 1),
-                "alerts_total": self._alert_count,
-                "storage": storage,
-                "audit": audit_stats,
-            }
-        )
+        # F8: Reduce info disclosure on stats endpoint in enterprise mode
+        stats_data: dict[str, Any] = {
+            "scans_total": self._scan_count,
+            "scans_avg_ms": self._scan_total_ms / max(self._scan_count, 1),
+            "alerts_total": self._alert_count,
+        }
+        if not _ENTERPRISE_MODE:
+            stats_data["version"] = __version__
+            stats_data["uptime_seconds"] = int(time.time() - self._start_time)
+            stats_data["storage"] = storage
+            stats_data["audit"] = audit_stats
+
+        self._send_json(stats_data)
 
 
 # ─── Daemon class ────────────────────────────────────────────────────────────
@@ -1189,11 +1281,45 @@ class IronDomeDaemon:
             def _handle_hup(signum: int, frame: Any) -> None:
                 logger.info("Received SIGHUP — config reload not yet implemented")
 
-            signal.signal(signal.SIGHUP, _handle_hup)
 
-        logger.info("Signal handlers installed (SIGTERM, SIGINT%s)", ", SIGHUP" if hasattr(signal, "SIGHUP") else "")
+def create_app(
+    host: str | None = None,
+    port: int | None = None,
+    metrics_port: int | None = None,
+    job_store_dir: str | None = None,
+    store_backend: str | None = None,
+    tokens: str | None = None,
+    background: bool = False,
+) -> IronDomeDaemon:
+    """Factory function to create an IronDomeDaemon instance.
 
+    Convenience wrapper around ``IronDomeDaemon`` constructor for
+    programmatic use (testing, WSGI adapters, orchestration).
 
-def create_app() -> IronDomeDaemon:
-    """Factory for creating a configured daemon instance."""
-    return IronDomeDaemon()
+    Args:
+        host: Bind address (default: ``IRONDOME_DAEMON_HOST`` env or ``127.0.0.1``).
+        port: Bind port (default: ``IRONDOME_DAEMON_PORT`` env or ``8443``).
+        metrics_port: Separate metrics port (default: ``IRONDOME_METRICS_PORT`` env).
+        job_store_dir: Directory for persistent job storage.
+        store_backend: Store backend type (``jsonl`` or ``sqlite``).
+        tokens: Comma-separated API tokens (sets ``IRONDOME_API_TOKENS`` env).
+        background: If true, start the daemon in a background thread.
+
+    Returns:
+        Configured ``IronDomeDaemon`` instance (started if *background* is True).
+    """
+    if tokens:
+        os.environ["IRONDOME_API_TOKENS"] = tokens
+
+    daemon = IronDomeDaemon(
+        host=host,
+        port=port,
+        metrics_port=metrics_port,
+        job_store_dir=job_store_dir,
+        store_backend=store_backend,
+    )
+
+    if background:
+        daemon.start(background=True)
+
+    return daemon

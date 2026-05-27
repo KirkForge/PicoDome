@@ -408,13 +408,22 @@ class AuditLogger:
     # ── Internal ────────────────────────────────────────────────────────
 
     def _append_line(self, line: str) -> None:
-        """Append a line to the log file with rotation."""
+        """Append a line to the log file with rotation.
+
+        F10: Enforce restrictive file permissions on audit log files.
+        """
         # Rotate if needed
         if self._log_path.exists() and self._log_path.stat().st_size >= self._max_bytes:
             self._rotate()
 
         with open(self._log_path, "a", encoding="utf-8") as f:
             f.write(line + "\n")
+
+        # F10: Enforce file permissions (owner read/write only)
+        try:
+            self._log_path.chmod(0o600)
+        except OSError:
+            pass
 
     def _rotate(self) -> None:
         """Rotate the log file: compress and shift numbered backups."""
