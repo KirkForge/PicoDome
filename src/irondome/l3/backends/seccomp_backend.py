@@ -12,6 +12,7 @@ import os
 import shutil
 import signal
 import time
+import warnings
 
 from irondome.l3.backends.base import SandboxBackend
 from irondome.l3.models import (
@@ -282,7 +283,12 @@ class SeccompBackend(SandboxBackend):
             out_r, out_w = os.pipe()
             err_r, err_w = os.pipe()
 
-            pid = os.fork()
+            # fork+exec is required for seccomp: the child must apply the BPF filter before exec.
+            # Suppress the Python 3.12+ deprecation warning about fork in multi-threaded processes —
+            # the seccomp backend is always called from a single-threaded scan context.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                pid = os.fork()
 
             if pid == 0:
                 # ── Child process ──

@@ -13,7 +13,7 @@ daemon:
 
 # Enterprise mode: requires enforcement backend, no dev bypass
 enterprise:
-  enabled: false
+  enabled: true
 
 # Policy signing configuration
 # Sign policies with HMAC-SHA256 and verify on load.
@@ -46,14 +46,14 @@ store:
   sqlitePath: ""
 
 mtls:
-  enabled: false
+  enabled: true
   # Reference to a TLS secret with tls.crt, tls.key, ca.crt
   existingTLSSecret: ""
   devMode: false
 
 metrics:
   # If true, expose /metrics on a separate port without auth
-  separatePort: false
+  separatePort: true
   # Port for metrics (only used if separatePort is true)
   port: 9100
 

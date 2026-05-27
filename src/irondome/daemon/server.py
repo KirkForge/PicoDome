@@ -34,7 +34,10 @@ import time
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from importlib import import_module
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from irondome.daemon.sqlite_store import SQLiteScanJobStore
 from urllib.parse import parse_qs, urlparse
 
 from irondome import __version__
@@ -241,7 +244,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
     # Set by the server at creation time
     rbac: RBAC = RBAC()
     auth: TokenAuth = TokenAuth(rbac=rbac)
-    job_store: PersistentScanJobStore | ScanJobStore = PersistentScanJobStore()
+    job_store: PersistentScanJobStore | ScanJobStore | SQLiteScanJobStore = PersistentScanJobStore()
     rate_limiter: TokenBucketLimiter = TokenBucketLimiter()
     _start_time: float = time.time()
     _scan_count: int = 0

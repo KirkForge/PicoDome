@@ -112,7 +112,7 @@ class SQLiteScanJobStore:
             return
         with self._lock:
             if self._initialized:
-                return
+                return  # type: ignore[unreachable]
             conn = self._get_conn()
             conn.executescript(_SCHEMA_V2)
             conn.commit()

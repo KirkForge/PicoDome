@@ -448,8 +448,16 @@ class TestMainExitCode:
         assert exit_code == 0
 
     def test_strict_mode_exits_nonzero_on_any_finding(self) -> None:
-        """In strict mode, even MEDIUM findings should cause failure."""
-        exit_code = main(["--strict"])
+        """In strict mode, any finding should cause failure."""
+        # After fixing Helm defaults (enterprise, mTLS, separatePort), the real repo
+        # is clean. Inject a synthetic MEDIUM finding to verify strict mode behavior.
+        with patch("check_deploy_security.check_helm_values") as mock_check:
+
+            def inject_finding(findings):
+                findings.append(Finding("MEDIUM", "test-strict", "synthetic finding for test", "test.yaml"))
+
+            mock_check.side_effect = inject_finding
+            exit_code = main(["--strict"])
         assert exit_code == 1
 
 

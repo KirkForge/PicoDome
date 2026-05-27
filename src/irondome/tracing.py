@@ -37,15 +37,15 @@ logger = logging.getLogger("irondome.tracing")
 # ─── Tracing availability check ─────────────────────────────────────────────
 
 _TRACING_AVAILABLE = False
-_Tracer = Any
+_Tracer: Any = Any  # redefined below when OTel available
 
 try:
-    from opentelemetry import trace  # type: ignore[import-untyped]
+    from opentelemetry import trace
 
     _TRACING_AVAILABLE = True
     _Tracer = trace.Tracer
 except ImportError:
-    trace = None  # type: ignore[assignment]
+    trace = None
 
 
 # ─── No-op tracer ───────────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ def get_tracer() -> _Tracer | _NoopTracer:
     """
     global _tracer
     if isinstance(_tracer, _NoopTracer) and _tracing_enabled and _TRACING_AVAILABLE:
-        _tracer = trace.get_tracer("irondome", "0.5.0")  # type: ignore[union-attr]
+        _tracer = trace.get_tracer("irondome", "0.5.0")
         logger.info("OpenTelemetry tracing enabled with tracer: irondome")
     return _tracer
 
