@@ -63,3 +63,10 @@ coverage/
 coverage.json
 test-results.xml
 test-summary-*.json
+
+# KDE
+.directory
+
+# Internal docs (not for public release)
+STATE.md
+commit.sh

@@ -351,3 +351,23 @@ Examples:
 ## Security
 
 See [SECURITY.md](SECURITY.md) for vulnerability reporting policy.
+
+## AI-Assisted Development
+
+Iron Dome is developed with AI assistance. All AI-generated contributions are
+reviewed, tested, and approved by a human maintainer before merge.
+
+### Co-Authorship
+
+When AI tools produce substantive contributions (features, bug fixes, documentation),
+they receive co-author credit:
+
+```
+Co-authored-by: GLM-5.1 <glm@z.ai>
+Co-authored-by: PicoClaw <picoclaw@kirkforge.dev>
+```
+
+- **GLM-5.1** — Code generation, refactoring, test writing
+- **PicoClaw** — Review, analysis, documentation, security auditing
+
+AI co-authors are credited because they did real work. This is transparent and honest.

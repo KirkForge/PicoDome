@@ -10,6 +10,8 @@
 [![SLSA L3](https://img.shields.io/badge/SLSA-L3-blueviolet)](SLSA.md)
 [![License: Personal Use / Commercial](https://img.shields.io/badge/license-personal%20use%20%2F%20commercial-orange)](LICENSE)
 
+<img src="docs/banner.png" alt="IronDome" width="100%">
+
 Iron Dome is a two-layer defense system for npm/Python supply chains. Companion to [PicoSentry](https://github.com/KirkForge/PicoSentry) — static scan → runtime sandbox.
 
 - **L3 Execution Sandbox** — Run any command under kernel-level policy. Real seccomp-bpf (Linux), Seatbelt/sandbox-exec (macOS), or universal subprocess backend.
@@ -188,5 +190,5 @@ KirkForge Personal Use License — free for personal, non-commercial use. Commer
 
 ## Related
 
-- [PicoSentry](https://github.com/KirkForge/PicoSentry) — Deterministic npm/pnpm supply-chain scanner (L2, 21 rules, 543 tests)
+- [PicoSentry](https://github.com/KirkForge/PicoSentry) — Deterministic npm/pnpm supply-chain scanner (L2, 21 rules, 1390+ tests)
 - [55NDeep](https://github.com/KirkForge/55NDeep-plugin) — Codex verification and delegation plugin
