@@ -126,7 +126,7 @@ jobs:
           python -c "from irondome import __version__; print(f'irondome {__version__} imported successfully')"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -154,7 +154,7 @@ jobs:
             dist/*.tar.gz
 
       - name: Upload signatures
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: signatures
           path: |
@@ -183,7 +183,7 @@ jobs:
           cat checksums-sha256.txt
 
       - name: Upload checksums
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: checksums
           path: dist/checksums-sha256.txt
@@ -226,7 +226,7 @@ jobs:
           tar czf irondome-evidence-bundle.tar.gz -C . evidence/
 
       - name: Upload evidence bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: evidence-bundle
           path: |
