@@ -3,10 +3,12 @@
 **Deterministic runtime sandbox and behavioral analysis for supply-chain security.**
 
 [![CI](https://github.com/KirkForge/IronDome/actions/workflows/ci.yml/badge.svg)](https://github.com/KirkForge/IronDome/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/irondome)](https://pypi.org/project/irondome/)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
-[![Deterministic](https://img.shields.io/badge/deterministic-verified-brightgreen)](https://github.com/KirkForge/IronDome/blob/main/SCAAT.md)
-[![License: Personal Use / Commercial](https://img.shields.io/badge/license-personal%20use%20%2F%20commercial-orange)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-295%20passing-brightgreen)](https://github.com/KirkForge/IronDome)
+[![Deterministic](https://img.shields.io/badge/deterministic-sha256%20verified-brightgreen)](SCAAT.md)
 [![SLSA L3](https://img.shields.io/badge/SLSA-L3-blueviolet)](SLSA.md)
+[![License: Personal Use / Commercial](https://img.shields.io/badge/license-personal%20use%20%2F%20commercial-orange)](LICENSE)
 
 Iron Dome is a two-layer defense system for npm/Python supply chains. Companion to [PicoSentry](https://github.com/KirkForge/PicoSentry) — static scan → runtime sandbox.
 
@@ -56,8 +58,7 @@ Iron Dome auto-detects the best available backend:
 | **subprocess** | Universal | Process isolation with post-hoc pattern analysis | observational_only | best_effort |
 
 **Important**: The subprocess backend is **observational only** — it detects suspicious patterns in
-output but does not prevent syscalls. It is not a true sandbox. In enterprise mode
-(`IRONDOME_ENTERPRISE_MODE=1`), Iron Dome refuses to start if only the subprocess backend is available.
+output but does not prevent syscalls. It is not a true sandbox.
 
 Use `--backend seccomp-bpf` (or `IRONDOME_SANDBOX_BACKEND=seccomp-bpf`) to require a specific
 backend. If the requested backend is unavailable, Iron Dome **fails closed** by default. Use
@@ -126,12 +127,12 @@ Custom baselines can be loaded from JSON files.
 │  Layer 2: Guard (runtime)               │
 │  Validates invariants after each scan:  │
 │  - No uuid4/random in findings          │
-│  - No timestamps in findings           │
+│  - No timestamps in findings            │
 │  - Findings sorted by sort_key()        │
 │  - run_id is deterministic (empty)      │
 ├─────────────────────────────────────────┤
 │  Layer 1: Models (structural)           │
-│  Finding(frozen=True), sorted keys,    │
+│  Finding(frozen=True), sorted keys,     │
 │  no random IDs, no prose in output      │
 └─────────────────────────────────────────┘
 ```
