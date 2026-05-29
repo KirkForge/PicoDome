@@ -134,3 +134,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI: `irondome sandbox|analyze|pipeline|rules`
 - Formatters: JSON, SARIF 2.1.0, table
 - 28 tests, CI workflow with determinism gate
+## [0.5.2] - 2026-05-29
+
+### Security
+
+- **§1.2+1.3 Seccomp isolation honesty** — `isolation_level` changed from `kernel_enforced` to `syscall_policy`, `enforcement_guarantee` from `hard` to `moderate`. Seccomp-bpf is a real syscall filter, not a containment boundary. README now documents this distinction and recommends user namespaces/bubblewrap/gVisor for full containment
+- **§1.2 EPERM instead of SIGSYS** — added `SCMP_ACT_ERRNO_EPERM` constant for non-fatal denial actions (returns EPERM instead of killing the process). Default-deny policies still use KILL_PROCESS but the infrastructure for softer denials is in place
+- **§2.3 False strace claim** — `subprocess_backend.py` docstring corrected from "syscall tracing when available" to "post-hoc pattern analysis only". The `_LINUX_TRACE_PATTERNS` are dead code for actual tracing; they match process stdout/stderr patterns
+- **§3.1 Seatbelt path injection** — added `_escape_seatbelt_path()` to escape `\` and `"` in paths before interpolating into Seatbelt DSL clauses. Prevents clause breakout via malicious path strings
+- **§3.2 ABI fragility** — documented the variadic assumption in `seccomp_rule_add` ctypes binding: currently passes `arg_count=0` with no varargs, which works on x86-64 SysV but would silently break if argument filtering is ever added
+
+### Changed
+
+- README backend table updated to reflect honest `syscall_policy` / `moderate` labels
+- Added scoping note about seccomp limitations (no namespace/mount isolation, no NO_NEW_PRIVS, no rlimits)
+- Added `--allow-runtime` guidance for default-deny policies with package managers
