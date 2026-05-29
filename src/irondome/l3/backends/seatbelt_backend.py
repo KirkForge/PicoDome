@@ -27,6 +27,17 @@ from irondome.models import _now_ms
 logger = logging.getLogger("irondome.l3.seatbelt")
 
 
+def _escape_seatbelt_path(path: str) -> str:
+    """Escape a path for Seatbelt profile DSL to prevent injection.
+
+    The Seatbelt DSL uses double-quoted strings, so backslash and
+    double-quote must be escaped to prevent breaking out of a clause.
+    """
+    path = path.replace(chr(92), chr(92) + chr(92))  # backslash -> double-backslash
+    path = path.replace(chr(34), chr(92) + chr(34))  # double-quote -> escaped double-quote
+    return path
+
+
 class SeatbeltBackend(SandboxBackend):
     """Seatbelt backend using macOS sandbox-exec with generated profiles."""
 
@@ -213,7 +224,7 @@ class SeatbeltBackend(SandboxBackend):
         if rule.target in (RuleTarget.FILE_READ, RuleTarget.FILE_WRITE):
             if rule.paths:
                 for path in rule.paths:
-                    literal = self._normalize_path(path, cwd)
+                    literal = _escape_seatbelt_path(self._normalize_path(path, cwd))
                     if "*" in literal:
                         parts.append(f'(subpath "{literal.replace("*", "")}")')
                     else:
@@ -234,7 +245,7 @@ class SeatbeltBackend(SandboxBackend):
             parts.append("network-outbound")
             if rule.addresses:
                 for addr in rule.addresses:
-                    parts.append(f'(remote ip "{addr}")')
+                    parts.append(f'(remote ip "{_escape_seatbelt_path(addr)}")')
 
         elif rule.target == RuleTarget.NETWORK_IN:
             parts.append("network-inbound")
@@ -271,11 +282,11 @@ class SeatbeltBackend(SandboxBackend):
             parts.append("file-write*")
             if rule.paths:
                 for path in rule.paths:
-                    parts.append(f'(subpath "{path}")')
+                    parts.append(f'(subpath "{_escape_seatbelt_path(path)}")')
         elif rule.target == RuleTarget.FILE_READ:
             if rule.paths:
                 for path in rule.paths:
-                    parts.append(f'(literal "{path}")')
+                    parts.append(f'(literal "{_escape_seatbelt_path(path)}")')
             else:
                 parts.append("file-read*")
 

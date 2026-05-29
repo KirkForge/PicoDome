@@ -1,8 +1,9 @@
-"""Subprocess sandbox backend — policy enforcement via trace and post-hoc analysis.
+"""Subprocess sandbox backend — policy enforcement via post-hoc pattern analysis.
 
 Works on any platform without kernel-level sandboxing.
-Uses strace (Linux) or dtruss (macOS) for syscall tracing when available,
-falling back to post-hoc file/network pattern analysis.
+Analyzes process stdout/stderr for suspicious patterns (network URLs, file writes,
+dynamic code execution, etc.) after execution completes. This is observational only
+and cannot prevent syscalls — it detects policy violations after the fact.
 """
 
 from __future__ import annotations

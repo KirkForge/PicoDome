@@ -55,12 +55,19 @@ Iron Dome auto-detects the best available backend:
 
 | Backend | Platform | Mechanism | Isolation Level | Enforcement |
 |---------|----------|-----------|-----------------|-------------|
-| **seccomp-bpf** | Linux | Kernel syscall filtering via libseccomp (ctypes), fork+exec | kernel_enforced | hard |
+| **seccomp-bpf** | Linux | Kernel syscall filtering via libseccomp (ctypes), fork+exec | syscall_policy | moderate |
 | **seatbelt** | macOS | sandbox-exec with generated profile DSL | os_policy_enforced | hard |
 | **subprocess** | Universal | Process isolation with post-hoc pattern analysis | observational_only | best_effort |
 
 **Important**: The subprocess backend is **observational only** — it detects suspicious patterns in
 output but does not prevent syscalls. It is not a true sandbox.
+
+**Important**: The seccomp-bpf backend is a **syscall policy harness**, not a full containment boundary.
+It filters syscalls at the kernel level (real enforcement), but does not provide namespace/mount/filesystem
+isolation, `prctl(PR_SET_NO_NEW_PRIVS)`, privilege dropping, or `setrlimit`. For safe execution of
+untrusted packages, compose with user namespaces, `bubblewrap`, or `gVisor`. Default-deny policies will
+kill processes on missing syscalls (e.g. `clone3`, `wait4`) — use `--allow-runtime node` or the
+per-runtime profiles for common package managers, or use default-allow with explicit deny rules.
 
 Use `--backend seccomp-bpf` (or `IRONDOME_SANDBOX_BACKEND=seccomp-bpf`) to require a specific
 backend. If the requested backend is unavailable, Iron Dome **fails closed** by default. Use

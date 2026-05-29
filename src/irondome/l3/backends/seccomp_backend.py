@@ -34,6 +34,10 @@ SCMP_ACT_KILL_THREAD = 0x00000000
 SCMP_ACT_TRAP = 0x00030000
 SCMP_ACT_ALLOW = 0x7FFF0000
 
+# errno(EPERM) action for non-fatal denials — returns EPERM instead of SIGSYS,
+# so the calling process learns which syscall was denied instead of being killed silently.
+SCMP_ACT_ERRNO_EPERM = 0x00050001  # seccomp ACT_ERRNO with errno=EPERM (1)
+
 # ─── Syscall name → number mappings ─────────────────────────────────────────
 
 _NETWORK_SYSCALLS = {
@@ -233,11 +237,11 @@ class SeccompBackend(SandboxBackend):
 
     @property
     def isolation_level(self) -> str:
-        return "kernel_enforced"
+        return "syscall_policy"
 
     @property
     def enforcement_guarantee(self) -> str:
-        return "hard"
+        return "moderate"
 
     def is_available(self) -> bool:
         try:
@@ -413,7 +417,15 @@ class SeccompBackend(SandboxBackend):
         )
 
     def _setup_lib(self, lib: ctypes.CDLL):
-        """Set up libseccomp function signatures."""
+        """Set up libseccomp function signatures.
+
+        Note: seccomp_rule_add is variadic in C: seccomp_rule_add(ctx, action, syscall, arg_count, ...).
+        We always pass arg_count=0 (no argument filtering), so no varargs are read.
+        This works on x86-64 SysV ABI but will silently break if arg filtering is ever added
+        without switching to the proper variadic call interface (lib.seccomp_rule_add(ctx, ..., 0)
+        with arg structs passed as additional ctypes args). Do NOT add arg filtering without
+        refactoring this call to pass variadic arguments correctly.
+        """
         lib.seccomp_init.argtypes = [ctypes.c_uint32]
         lib.seccomp_init.restype = ctypes.c_void_p
         lib.seccomp_rule_add.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int, ctypes.c_uint]
