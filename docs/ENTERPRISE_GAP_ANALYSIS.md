@@ -1,7 +1,7 @@
 # Iron Dome — Enterprise Readiness Gap Analysis
 
-> **Version:** 0.5.0 · **Date:** 2026-05-27 · **Status:** Enterprise Beta — controlled pilot ready  
-> **Enterprise readiness score:** 6.5 → 8.0 → **8.5 / 10** (enterprise-beta)
+> **Version:** 0.5.2 · **Date:** 2026-05-29 · **Status:** Enterprise Beta — controlled pilot ready  
+> **Enterprise readiness score:** 6.5 → 8.0 → 8.5 / 10 (enterprise-beta)
 
 ## 1. Executive Summary
 
@@ -9,25 +9,27 @@ Iron Dome provides deterministic, offline-capable runtime sandboxing and behavio
 
 This document tracks the gaps between IronDome's capabilities and enterprise deployment requirements, with remediation status for each area.
 
+> **Important scope note (v0.5.2):** IronDome's seccomp-bpf backend is a **syscall policy harness**, not a full containment boundary. It filters syscalls at the kernel level (real enforcement), but does not provide namespace/mount/filesystem isolation, `PR_SET_NO_NEW_PRIVS`, privilege dropping, or `setrlimit`. For safe execution of truly untrusted packages, compose with user namespaces, `bubblewrap`, or `gVisor`.
+
 ---
 
-## 2. Gap Assessment (updated 2026-05-27)
+## 2. Gap Assessment (updated 2026-05-29)
 
 | Area | Previous Score | Current Score | Gap Severity |
 |---|---|---|---|
-| Kubernetes deployment | 5/10 | 9/10 | Low — Helm chart complete with PDB, HPA, cert-manager, network policies |
-| Admission controller lifecycle | 4/10 | 8/10 | Low — Failure policy docs, cert rotation, compatibility matrix added |
-| Policy governance | 5/10 | 8/10 | Low — Approval workflow, break-glass, bundle format, migration docs |
-| Runtime isolation / sandbox proof | 5/10 | 7/10 | Medium — seccomp/AppArmor profiles added; needs external validation |
-| Production observability | 6/10 | 9/10 | Low — Prometheus metrics contract, Grafana dashboard, alert rules |
-| Multi-tenancy / RBAC | 6/10 | 8/10 | Low — RBAC matrix, tenant model, IdP integration documented |
-| Compliance evidence | 5/10 | 8/10 | Low — Evidence bundle generator, patch SLA, access review |
+| Kubernetes deployment | 9/10 | 9/10 | Low — Helm chart complete with PDB, HPA, cert-manager, network policies |
+| Admission controller lifecycle | 8/10 | 8/10 | Low — Failure policy docs, cert rotation, compatibility matrix |
+| Policy governance | 8/10 | 8/10 | Low — Approval workflow, break-glass, bundle format, migration docs |
+| Runtime isolation / sandbox proof | 7/10 | 7/10 | Medium — seccomp/AppArmor profiles added; isolation level honestly scoped; external validation pending |
+| Production observability | 9/10 | 9/10 | Low — Prometheus metrics contract, Grafana dashboard, alert rules |
+| Multi-tenancy / RBAC | 8/10 | 8/10 | Low — RBAC matrix, tenant model, IdP integration documented |
+| Compliance evidence | 8/10 | 8/10 | Low — Evidence bundle generator, patch SLA, access review |
 
 ---
 
 ## 3. Enterprise Gates (updated status)
 
-| Gate | Description | v0.5.0 Status | Remediated |
+| Gate | Description | v0.5.2 Status | Remediated |
 |---|---|---|---|
 | **Shared-service access control** | Who can submit/read? | ✅ Token auth + RBAC + IdP integration | ✅ |
 | **Data governance** | Where do results go? Retention? | ✅ Retention + secure deletion + export | ✅ |
@@ -36,7 +38,7 @@ This document tracks the gaps between IronDome's capabilities and enterprise dep
 | **Operational readiness** | SLOs, runbooks, load testing? | ✅ SLOs + dashboards + alerts + runbooks | ✅ |
 | **Production K8s lifecycle** | Helm, cert rotation, PDB, HPA? | ✅ Helm with PDB/HPA/cert-manager/network policies | ✅ |
 | **Compliance evidence** | Release evidence, SBOM, SLA? | ✅ Evidence bundle + SBOM + patch SLA | ✅ |
-| **Sandbox hardening proof** | seccomp/AppArmor, external audit? | ⚠️ Profiles added; external validation pending | Partial |
+| **Sandbox hardening proof** | seccomp/AppArmor, external audit? | ⚠️ Profiles added; isolation level honestly scoped as `syscall_policy`/`moderate`; external validation pending | Partial |
 
 ---
 
@@ -78,6 +80,7 @@ This document tracks the gaps between IronDome's capabilities and enterprise dep
 - Added strict network policy with egress controls (`deploy/security/irondome-networkpolicy-strict.yaml`)
 - Added malicious workload test corpus (`tests/test_malicious_workloads.py`)
 - Added sandbox hardening guide (`docs/security/SANDBOX_HARDENING.md`)
+- **v0.5.2:** Relabeled `isolation_level` from `kernel_enforced` to `syscall_policy` and `enforcement_guarantee` from `hard` to `moderate`. Seccomp-bpf is a real syscall filter, but does not provide filesystem/namespace isolation, `PR_SET_NO_NEW_PRIVS`, or `setrlimit`. README and docs updated accordingly.
 
 **Remaining gap:** External pentest or red-team evidence. This requires engagement with an external security firm and cannot be fully automated.
 
@@ -88,16 +91,12 @@ This document tracks the gaps between IronDome's capabilities and enterprise dep
 **Remediation:**
 - Added Prometheus metrics contract (`docs/PROMETHEUS_METRICS.md`) with 25+ metrics
 - Added Grafana dashboard (`deploy/monitoring/irondome-grafana-dashboard.json`)
-- Added Prometheus alert rules (`deploy/monitoring/irondome-alerts.yaml`) covering:
-  - SLO burn rate alerts (availability, latency, throughput)
-  - Admission controller alerts (down, high denial, latency spike)
-  - Certificate expiry alerts (30-day warning, 7-day critical)
-  - Security alerts (audit chain broken, policy verification failure)
-  - Infrastructure alerts (crash looping, storage quota, webhook failures)
+- Added Prometheus alert rules (`deploy/monitoring/irondome-prometheus-alerts.yml`)
+- Added SLO runbook (`docs/runbooks/slos.md`)
 
 ### 4e. Multi-tenancy and RBAC ✅
 
-**Previous gap:** No RBAC matrix docs, no tenant model documentation, no IdP integration.
+**Previous gap:** No RBAC matrix, no IdP documentation, no tenant model documentation, no IdP integration.
 
 **Remediation:**
 - Added RBAC matrix document (`docs/RBAC_MATRIX.md`) with:
@@ -151,47 +150,31 @@ This document tracks the gaps between IronDome's capabilities and enterprise dep
 **Recommendation:**
 - Add JSON Schema for values to catch misconfiguration at install time
 
-### 5d. Test-suite reliability evidence ✅ (remediated)
+### 5d. Per-runtime seccomp profiles (Medium)
 
-**Previous gap:** Full test suite did not complete within CI timeout. No machine-readable test summary.
+**Status:** Default-deny policies omit `clone`, `clone3`, `fork`, `vfork`, `wait4`, and `socket` from the safe set. Package managers (`npm install`, `pip install`) need these syscalls. `SCMP_ACT_ERRNO_EPERM` constant defined but not wired to runtime-specific allow-lists.
 
-**Remediation:**
-- Added `pytest-timeout` (120s per test, thread method) to both CI and release workflows
-- Added `generate_test_summary.py` script producing JSON evidence (total, passed, failed, skipped, duration, coverage, slow tests)
-- CI now uploads `test-summary-py{version}.json` as artifact (30-day retention)
-- Test suite: 1406 passed, 12 skipped (sandbox-dependent), 0 failed, ~103s wall-clock
+**Recommendation:**
+- Ship per-runtime allow-profiles (node, python, npm, pip) that compose with deny policies
+- Wire `--allow-runtime` flag to add the appropriate syscall set
+- Consider `SCMP_ACT_ERRNO(EPERM)` for non-fatal denials instead of `KILL_PROCESS` for better diagnostics
 
-### 5e. Release artifact packaging hygiene ✅ (remediated)
+### 5e. Full containment composition (Medium)
 
-**Previous gap:** Release zips could include `__pycache__/` directories and `.pyc` files.
+**Status:** IronDome's seccomp-bpf backend is a syscall policy harness, not a containment boundary. Honest scoping (`isolation_level=syscall_policy`) is in place, but users need guidance on composing with `bubblewrap`, `gVisor`, or container runtimes for true containment.
 
-**Remediation:**
-- Added `global-exclude __pycache__` and `global-exclude *.pyc` to `MANIFEST.in`
-- Cleaned all local `__pycache__` directories from the repository
-- Verified: wheel and sdist builds contain zero `.pyc` or `__pycache__` entries
+**Recommendation:**
+- Document composition patterns (IronDome + bubblewrap, IronDome + gVisor)
+- Provide example configurations for common use cases
+- Consider a `--containerize` flag that wraps execution in bubblewrap automatically
 
-### 5f. Release evidence bundle per version ✅ (remediated)
+### 5f. License gate signing (Low)
 
-**Previous gap:** Evidence artifacts existed as scripts but were not wired into the release workflow.
+**Status:** Enterprise license gate accepts any well-formed key (`shogun-enterprise-*`). Currently a placeholder, not cryptographically verified.
 
-**Remediation:**
-- Added `evidence` job to release workflow (after sign + provenance)
-- Evidence bundle tarball (`irondome-evidence-bundle.tar.gz`) attached to every GitHub release
-- Release body updated to reference evidence bundle
-
-### 5g. Enterprise pilot limitations ✅ (remediated)
-
-**Previous gap:** No documented scope limits, tenancy assumptions, unsupported compliance claims.
-
-**Remediation:**
-- Added `docs/ENTERPRISE_PILOT_LIMITATIONS.md` with scale limits, tenancy assumptions, Redis requirements, supported deployment modes, unsupported compliance claims, known issues, graduation criteria
-
-### 5h. Third-party security review plan ✅ (remediated)
-
-**Previous gap:** External pentest needed but no plan or budget.
-
-**Remediation:**
-- Added `docs/security/THIRD_PARTY_REVIEW.md` with scope, methodology, timeline, budget, vendor requirements, findings handling
+**Recommendation:**
+- If the gate is load-bearing for paid beta, add Ed25519-signed key verification
+- If not, document it as a placeholder and remove the gate until it's real
 
 ---
 
@@ -201,9 +184,11 @@ This document tracks the gaps between IronDome's capabilities and enterprise dep
 |---|---|---|---|---|
 | R1 | Admission webhook outage blocks deployments | Critical | Low | ✅ Mitigated: runbook, PDB, failure policy docs |
 | R2 | Certificate expiry/rotation failure | High | Low | ✅ Mitigated: cert-manager, rotation runbook, alerts |
-| R3 | Sandbox boundary weaker than assumed | Critical | Medium | ⚠️ Partial: profiles added, pentest plan documented (THIRD_PARTY_REVIEW.md) |
+| R3 | Sandbox boundary weaker than assumed | Critical | Medium | ⚠️ Partial: isolation level honestly scoped as `syscall_policy`/`moderate`; external validation pending |
 | R4 | Policy signing lifecycle incomplete | High | Low | ✅ Mitigated: governance docs, approval workflow, audit |
 | R5 | Missing production scale evidence | High | Medium | ⚠️ Partial: test summary generated per CI run, scale benchmarks pending |
 | R6 | No observability/alerting | High | Low | ✅ Mitigated: metrics contract, dashboards, alert rules |
 | R7 | Compliance evidence gaps | Medium | Low | ✅ Mitigated: evidence bundle, patch SLA, access review |
 | R8 | Multi-tenant data leakage | High | Low | ✅ Mitigated: RBAC matrix, tenant isolation, IdP docs |
+| R9 | Default-deny policy breaks package managers | High | High | ⚠️ Partial: `--allow-runtime` guidance in README; per-runtime profiles pending (5d) |
+| R10 | Seccomp provides syscall filtering, not containment | Medium | N/A (design) | ✅ Documented: `isolation_level=syscall_policy`, composition guidance in SANDBOX_HARDENING.md |

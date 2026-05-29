@@ -4,9 +4,9 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
+| 0.5.x   | :white_check_mark: |
 | 0.3.x   | :white_check_mark: |
-| 0.2.x   | :white_check_mark: |
-| < 0.2   | :x:                |
+| < 0.3   | :x:                |
 
 IronDome is pre-1.0. Only the latest release receives security fixes.
 
@@ -70,8 +70,9 @@ Include in your report:
 
 Known limitations:
 - **Subprocess backend**: post-hoc pattern analysis only — cannot prevent violations, only detect them. This is by design and documented. Use `seccomp-bpf` or `seatbelt` for real enforcement.
-- **seccomp-bpf**: kernel-level enforcement, but syscalls not in the filter are allowed by default allowlist. New Linux kernel syscalls may not be covered.
+- **seccomp-bpf**: kernel-level syscall filtering, but **not a containment boundary**. Processes with `open`/`write` in the safe set can access host files. No namespace/mount isolation, no `PR_SET_NO_NEW_PRIVS`, no `setrlimit`. Compose with `bubblewrap`, `gVisor`, or container runtimes for full containment. See `docs/security/SANDBOX_HARDENING.md` for details.
 - **seatbelt**: macOS sandbox-exec profiles have known edge cases around `/tmp` and inherited file descriptors.
+- **Default-deny policies**: omit `clone`, `clone3`, `fork`, `vfork`, `wait4`, `socket` from the safe set. Package managers like `npm` and `pip` need these. Use `--allow-runtime node` or per-runtime profiles.
 
 ## L4 Behavioral Analysis Bypass Reporting
 

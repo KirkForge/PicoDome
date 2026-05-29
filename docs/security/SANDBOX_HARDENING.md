@@ -2,7 +2,9 @@
 
 ## Overview
 
-IronDome's L3 sandbox provides kernel-level isolation for running untrusted commands. This document describes the security boundaries, hardening options, and what IronDome does **not** protect against.
+IronDome's L3 sandbox provides **syscall policy enforcement** for running untrusted commands. This document describes the security boundaries, hardening options, and what IronDome does **not** protect against.
+
+> **Important:** IronDome's seccomp-bpf backend is a **syscall policy harness**, not a full containment boundary. It filters syscalls at the kernel level (real enforcement), but does not provide namespace/mount/filesystem isolation, privilege dropping, or resource limits. See §Seccomp limitations for details.
 
 ## Security boundary
 
@@ -10,7 +12,7 @@ IronDome's L3 sandbox provides kernel-level isolation for running untrusted comm
 ┌─────────────────────────────────────────────┐
 │              IronDome Sandbox                │
 │                                             │
-│  seccomp-bpf ──► Syscall filter (deny-by-default)  │
+│  seccomp-bpf ──► Syscall policy (deny-by-default)   │
 │  seatbelt    ──► macOS sandbox-exec         │
 │  subprocess  ──► Process monitoring fallback │
 │                                             │
@@ -18,7 +20,44 @@ IronDome's L3 sandbox provides kernel-level isolation for running untrusted comm
 │  │ Network │  │Filesystem│  │  Process   │  │
 │  │  filter │  │  filter  │  │  filter    │  │
 │  └─────────┘  └──────────┘  └───────────┘  │
+│                                             │
+│  NOT provided:                              │
+│  ✗ Namespace/mount isolation                 │
+│  ✗ PR_SET_NO_NEW_PRIVS                      │
+│  ✗ setrlimit / cgroups                      │
+│  ✗ Chroot / pivot_root                      │
 └─────────────────────────────────────────────┘
+```
+
+## Seccomp-bpf limitations
+
+The seccomp-bpf backend provides real kernel-level syscall filtering, but it has important boundaries:
+
+1. **No filesystem isolation**: A process with `open`/`write` in the safe set can read `~/.ssh/id_*`, `~/.aws/credentials`, `.npmrc` tokens, and write anywhere the invoking user can. Seccomp filters syscalls, not paths. Use `bubblewrap`/`gVisor` for filesystem containment.
+
+2. **No namespace isolation**: No mount, PID, network, or user namespaces. The sandboxed process shares the host's filesystem tree and network stack.
+
+3. **No `PR_SET_NO_NEW_PRIVS`**: The seccomp filter is installed without `prctl(PR_SET_NO_NEW_PRIVS)`, so the filter is not guaranteed to survive `execve` in all kernel configurations.
+
+4. **No resource limits**: No `setrlimit` or `cgroups` integration. A fork bomb, memory bomb, or file descriptor exhaustion in the sandbox affects the host.
+
+5. **Default-deny kills silently**: Processes killed by `SIGSYS` (seccomp violation) produce no diagnostic. For actionable error messages, use `SCMP_ACT_ERRNO(EPERM)` for non-fatal denials. IronDome defines `SCMP_ACT_ERRNO_EPERM` as a constant for this purpose, but default-deny policies still use `KILL_PROCESS`.
+
+6. **Safe set omits process-spawning syscalls**: `_SAFE_SYSCALLS` does not include `clone`, `clone3`, `fork`, `vfork`, `wait4`, or `socket`. Default-deny policies will kill `npm install`, `pip install`, and most package managers on their first `clone3` call. Use `--allow-runtime node` or per-runtime profiles for these workloads.
+
+### Composing with full containment
+
+For safe execution of truly untrusted packages, compose IronDome with:
+
+- **User namespaces + `bubblewrap`**: Filesystem, PID, and network isolation
+- **`gVisor`**: Kernel-level sandboxing with comprehensive syscall filtering
+- **Container runtimes (Docker/Podman)**: Mount and PID isolation with resource limits
+- **`setrlimit` / `cgroups`**: Memory, CPU, and file descriptor limits
+
+Example: IronDome + bubblewrap:
+```bash
+bwrap --unshare-all --dev /dev --ro-bind /usr /usr --tmpfs /tmp \
+  -- irondome pipeline --allow-runtime node npm install some-package
 ```
 
 ## Hardening layers
@@ -101,8 +140,9 @@ IronDome's sandbox **does not protect against**:
 1. Kernel exploits that bypass seccomp (0-days in the kernel)
 2. Node-level compromise (container escape via container runtime bugs)
 3. Side-channel attacks (Spectre/Meltdown class)
-4. Supply-chain attacks on IronDome itself (mitigated by SLSA/Sigstore)
-5. Misconfigured cluster permissions (admin access to IronDome namespace)
+4. Host filesystem access by processes with `open`/`write` in the safe set
+5. Resource exhaustion (fork bombs, memory bombs) without external `setrlimit`/`cgroups`
+6. Misconfigured cluster permissions (admin access to IronDome namespace)
 
 ## Recommended hardening checklist
 
@@ -121,6 +161,8 @@ For production deployment:
 - [ ] Set up Prometheus alerting for certificate expiry
 - [ ] Restrict RBAC to minimum required permissions
 - [ ] Run the malicious workload test corpus (`IRONDOME_SANDBOX_TESTS=1 pytest tests/test_malicious_workloads.py`)
+- [ ] **Compose with `bubblewrap` or `gVisor` for full containment** when executing truly untrusted packages
+- [ ] **Use `--allow-runtime node` or per-runtime profiles** for default-deny policies with package managers
 
 ## External security validation
 
@@ -130,6 +172,7 @@ IronDome recommends the following for enterprise deployments:
 2. **Red team exercise** targeting the L3 sandbox boundary
 3. **Kernel CVE monitoring** for seccomp-bpf and container runtime
 4. **Regular audit** of policy changes and enforcement decisions
+5. **Containment assessment** — verify that composed isolation (seccomp + bwrap/gVisor) actually contains test payloads before relying on it
 
 ## Filesystem restrictions
 

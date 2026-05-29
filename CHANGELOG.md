@@ -149,3 +149,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README backend table updated to reflect honest `syscall_policy` / `moderate` labels
 - Added scoping note about seccomp limitations (no namespace/mount isolation, no NO_NEW_PRIVS, no rlimits)
 - Added `--allow-runtime` guidance for default-deny policies with package managers
+
+### Documentation
+
+- Updated `docs/security/threat-model.md` — added L3 isolation levels honest assessment table, seccomp-bpf specific limitations section, composition guidance, per-runtime profile recommendations
+- Updated `docs/security/SANDBOX_HARDENING.md` — added seccomp-bpf limitations section (no fs isolation, no namespaces, no NO_NEW_PRIVS, no rlimits, silent SIGSYS kills), composition examples with bubblewrap/gVisor, updated hardening checklist
+- Updated `docs/runbooks/sandbox-escape.md` — added EPERM vs SIGSYS distinction, honest sandbox boundary documentation, composition guidance for full containment
+- Updated `docs/ENTERPRISE_GAP_ANALYSIS.md` — added scope note about syscall_policy vs full containment, new gaps for per-runtime profiles and containment composition, updated risk register with R9/R10
