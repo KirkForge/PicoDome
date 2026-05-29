@@ -8,7 +8,7 @@
 [![Tests](https://img.shields.io/badge/tests-295%20passing-brightgreen)](https://github.com/KirkForge/IronDome)
 [![Deterministic](https://img.shields.io/badge/deterministic-sha256%20verified-brightgreen)](SCAAT.md)
 [![SLSA L3](https://img.shields.io/badge/SLSA-L3-blueviolet)](SLSA.md)
-[![License: Personal Use / Commercial](https://img.shields.io/badge/license-personal%20use%20%2F%20commercial-orange)](LICENSE)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange)](LICENSE)
 
 <img src="docs/banner.png" alt="IronDome" width="100%">
 
@@ -193,7 +193,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## License
 
-KirkForge Personal Use License — free for personal, non-commercial use. Commercial use requires a license from KirkForge. See [LICENSE](LICENSE) and [Shogun](https://github.com/KirkForge/Shogun) for commercial licensing.
+PolyForm Noncommercial License 1.0.0 — free for personal, educational, research, hobby, and other non-commercial use. Commercial use requires a separate commercial license from KirkForge. See [LICENSE](LICENSE), [LICENSE-SUMMARY.md](LICENSE-SUMMARY.md), and [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
 
 ## Related
 
