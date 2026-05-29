@@ -70,3 +70,14 @@ test-summary-*.json
 # Internal docs (not for public release)
 STATE.md
 commit.sh
+
+# --- Security baseline (do not remove) ---
+token.json
+token_*.json
+*token*.json
+*.pickle
+client_secret*.json
+credentials.json
+*.db-shm
+*.db-wal
+*.sqlite
