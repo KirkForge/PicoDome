@@ -8,7 +8,7 @@
 [![Tests](https://img.shields.io/badge/tests-295%20passing-brightgreen)](https://github.com/KirkForge/IronDome)
 [![Deterministic](https://img.shields.io/badge/deterministic-sha256%20verified-brightgreen)](SCAAT.md)
 [![SLSA L3](https://img.shields.io/badge/SLSA-L3-blueviolet)](SLSA.md)
-[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange)](LICENSE)
+[![License: BUSL-1.1](https://img.shields.io/badge/license-BUSL--1.1-blue)](LICENSE)
 
 <img src="docs/banner.png" alt="IronDome" width="100%">
 
@@ -193,7 +193,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## License
 
-PolyForm Noncommercial License 1.0.0 — free for personal, educational, research, hobby, and other non-commercial use. Commercial use requires a separate commercial license from KirkForge. See [LICENSE](LICENSE), [LICENSE-SUMMARY.md](LICENSE-SUMMARY.md), and [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
+Business Source License 1.1 (BUSL-1.1) — source-available; production use allowed except for competitive offerings. Commercial use that competes with KirkForge's paid products requires a separate commercial license. After 3 years, converts to Apache-2.0. See [LICENSE](LICENSE), [LICENSE-SUMMARY.md](LICENSE-SUMMARY.md), and [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
 
 ## Related
 

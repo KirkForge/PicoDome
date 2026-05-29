@@ -1,15 +1,20 @@
 # Commercial License
 
-Commercial, enterprise, SaaS, consulting, managed-service, government-contracting, or internal business use requires a separate commercial license from KirkForge.
+Commercial use that competes with KirkForge's paid offerings requires a separate commercial license from KirkForge.
 
-Examples of commercial use include:
+Under the Business Source License 1.1 (BUSL-1.1), you may use the software for non-production purposes and internal production use without a commercial license. However, offering the software to third parties on a hosted or embedded basis as a competitive offering requires a commercial license.
 
-- using the software inside a company or business;
-- using the software in commercial CI/CD, security, compliance, audit, monitoring, or policy workflows;
-- integrating the software into a commercial product, platform, service, or SaaS offering;
-- using the software on behalf of a paying client;
-- redistributing, hosting, or packaging the software as part of a paid offering.
+Examples of use requiring a commercial license:
 
-Individual non-commercial use remains free under the PolyForm Noncommercial License 1.0.0.
+- offering the software as a hosted/managed service that competes with KirkForge's products
+- embedding the software in a paid product that competes with KirkForge's products
+- packaging the software so it must be accessed or downloaded for your competitive offering to operate
+
+Examples of use **not** requiring a commercial license:
+
+- internal use within your organization
+- non-production use (development, testing, evaluation)
+- academic or educational use
+- personal/hobby projects
 
 For commercial licensing, contact: kirk@kirkforge.dev

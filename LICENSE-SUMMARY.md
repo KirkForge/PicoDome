@@ -1,18 +1,29 @@
 # License Summary
 
-This project is **source-available** and free for personal, educational, research, hobby, and other non-commercial use under the PolyForm Noncommercial License 1.0.0.
+This project is licensed under the **Business Source License 1.1 (BUSL-1.1)**.
 
-Commercial use requires a separate paid commercial license from KirkForge.
+## What you can do
 
-Commercial use includes, but is not limited to:
+- **Copy, modify, and redistribute** the source code
+- **Non-production use** is always allowed (development, testing, evaluation)
+- **Production use** is allowed provided you do not offer the Licensed Work to third parties on a hosted or embedded basis as a competitive offering
 
-- use by a company, business, commercial organization, or contractor acting for one;
-- use in CI/CD, security monitoring, compliance, audit, managed-service, consulting, or enterprise workflows;
-- use as part of a paid product, SaaS platform, hosted service, internal business system, or revenue-generating service;
-- resale, sublicensing, paid hosting, or offering the software to third parties as part of a product or service.
+## What requires a commercial license
 
-Individual developers, students, researchers, hobbyists, and private citizens using the software for non-commercial purposes do not need a commercial license.
+Commercial use that competes with KirkForge's paid offerings requires a separate commercial license. This includes:
 
-For commercial licensing, contact KirkForge or use the commercial licensing channel listed in the project README.
+- Offering the software as a hosted/managed service that competes with KirkForge's products
+- Embedding the software in a paid product that competes with KirkForge's products
+- Using the software in a way that requires downloading or accessing it for your competitive offering to operate
 
-This summary is not a substitute for the license. The binding public license terms are in `LICENSE`.
+**Internal use within your organization** (including affiliates under common control) is **not** considered competitive and does not require a commercial license.
+
+## Change Date
+
+After **three years** from the date the Licensed Work is published, the license automatically converts to **Apache-2.0**, granting full open-source rights.
+
+## Contact
+
+For commercial licensing, contact kirk@kirkforge.dev or see COMMERCIAL-LICENSE.md.
+
+This summary is not a substitute for the license. The binding license terms are in `LICENSE`.
