@@ -9,6 +9,7 @@
 [![Deterministic](https://img.shields.io/badge/deterministic-sha256%20verified-brightgreen)](SCAAT.md)
 [![SLSA L3](https://img.shields.io/badge/SLSA-L3-blueviolet)](SLSA.md)
 [![License: BUSL-1.1](https://img.shields.io/badge/license-BUSL--1.1-blue)](LICENSE)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support%20my%20hardware-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/KirkForge)
 
 <img src="docs/banner.png" alt="IronDome" width="100%">
 
