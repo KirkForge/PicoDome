@@ -3,9 +3,9 @@ requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "irondome"
+name = "picodome"
 version = "0.5.0"
-description = "Iron Dome — deterministic runtime sandbox and behavioral analysis for supply-chain security"
+description = "PicoDome — deterministic runtime sandbox and behavioral analysis for supply-chain security"
 readme = "README.md"
 license = "BUSL-1.1"
 license-files = ["LICENSE*", "COMMERCIAL-LICENSE.md"]
@@ -20,7 +20,7 @@ keywords = [
     "supply-chain",
     "security",
     "deterministic",
-    "irondome",
+    "picodome",
     "shogun",
     "command-center",
     "runtime",
@@ -36,8 +36,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
     "Intended Audience :: Information Technology",
-    "License :: Free For Educational Use",
-    "License :: Free For Home Use",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -66,6 +64,7 @@ Commercial = "https://github.com/KirkForge/Shogun"
 "Bug Tracker" = "https://github.com/KirkForge/IronDome/issues"
 
 [project.scripts]
+picodome = "irondome.cli:main"
 irondome = "irondome.cli:main"
 
 [project.optional-dependencies]
