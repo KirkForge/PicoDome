@@ -131,39 +131,47 @@ def get_license_info() -> LicenseInfo:
 
 
 def _validate_key(key: str) -> LicenseInfo | None:
-    """
-    Validate a license key.
+    """Validate a license key.
 
-    In the current version, this is a placeholder that Shogun will
-    replace with actual key validation. For now, commercial keys
-    follow the format: shogun-<tier>-<org>-<hash>
+    PicoDome is free for personal use. Commercial use requires a PicoShogun
+    license key issued by the PicoShogun command centre.
 
-    Args:
-        key: License key string.
+    Key format: shogun-<tier>-<org>-<hash>
+    The <hash> portion must be a valid SHA-256 HMAC of the key prefix,
+    signed with the PicoShogun instance secret.
 
-    Returns:
-        LicenseInfo if valid, None otherwise.
+    **This validation is honest about its limitations.** Without a running
+    PicoShogun instance to verify against, we can only validate format —
+    not cryptographic authenticity. Set PICODOME_LICENSE_KEY or place a
+    license file to enable commercial features.
     """
     if not key.startswith("shogun-"):
         logger.warning("Invalid license key format: must start with 'shogun-'")
         return None
 
     parts = key.split("-")
-    if len(parts) < 3:
-        logger.warning("Invalid license key format: too few parts")
+    if len(parts) < 4:
+        logger.warning("Invalid license key format: expected shogun-<tier>-<org>-<hash>")
         return None
 
     tier_str = parts[1]
+    org = parts[2]
+    key_hash = parts[3]
+
     try:
         tier = LicenseTier(tier_str)
     except ValueError:
-        logger.warning("Invalid license key tier: %s", tier_str)
+        logger.warning("Invalid license key tier: %s (expected: personal, commercial, enterprise)", tier_str)
         return None
 
-    # Shogun will replace this with actual cryptographic verification
-    # For now, accept any well-formed key
-    org = parts[2] if len(parts) > 2 else ""
+    # Validate hash length (SHA-256 HMAC produces 64 hex chars; we accept ≥16)
+    if len(key_hash) < 16:
+        logger.warning("License key hash too short (%d chars, minimum 16)", len(key_hash))
+        return None
 
+    # NOTE: Full cryptographic verification requires a running PicoShogun instance.
+    # This check validates format only. For production, verify the HMAC against
+    # PICOSHOGUN_SECRET_KEY via the PicoShogun API.
     return LicenseInfo(
         tier=tier,
         holder="",

@@ -70,18 +70,18 @@ class TestLicenseInfo:
 
 class TestValidateKey:
     def test_valid_commercial_key(self):
-        info = _validate_key("shogun-commercial-testorg-abc123")
+        info = _validate_key("shogun-commercial-testorg-abc123def4567890")
         assert info is not None
         assert info.tier == LicenseTier.COMMERCIAL
         assert info.organization == "testorg"
 
     def test_valid_enterprise_key(self):
-        info = _validate_key("shogun-enterprise-bigcorp-xyz789")
+        info = _validate_key("shogun-enterprise-bigcorp-xyz789abc123def4")
         assert info is not None
         assert info.tier == LicenseTier.ENTERPRISE
 
     def test_valid_personal_key(self):
-        info = _validate_key("shogun-personal-user1-def456")
+        info = _validate_key("shogun-personal-user1-def456abc789xyz012")
         assert info is not None
         assert info.tier == LicenseTier.PERSONAL
 
@@ -109,7 +109,7 @@ class TestLoadLicenseFile:
         path.write_text(
             json.dumps(
                 {
-                    "key": "shogun-commercial-testorg-abc",
+                    "key": "shogun-commercial-testorg-abc123def4567890",
                     "holder": "Test User",
                     "organization": "TestOrg",
                 }
@@ -152,7 +152,7 @@ class TestCheckLicense:
             assert info.tier == LicenseTier.PERSONAL
 
     def test_env_key(self):
-        with patch.dict(os.environ, {"PICODOME_LICENSE_KEY": "shogun-commercial-testorg-key"}, clear=False):
+        with patch.dict(os.environ, {"PICODOME_LICENSE_KEY": "shogun-commercial-testorg-1234567890abcdef"}, clear=False):
             _reset_cache()
             info = check_license()
             assert info.tier == LicenseTier.COMMERCIAL
@@ -162,7 +162,7 @@ class TestCheckLicense:
         license_path.write_text(
             json.dumps(
                 {
-                    "key": "shogun-enterprise-testorg-key",
+                    "key": "shogun-enterprise-testorg-1234567890abcdef",
                     "holder": "Local User",
                 }
             )
@@ -198,7 +198,7 @@ class TestRequireCommercial:
             assert result is False
 
     def test_commercial_returns_true(self):
-        with patch.dict(os.environ, {"PICODOME_LICENSE_KEY": "shogun-commercial-testorg-key"}, clear=False):
+        with patch.dict(os.environ, {"PICODOME_LICENSE_KEY": "shogun-commercial-testorg-1234567890abcdef"}, clear=False):
             _reset_cache()
             result = require_commercial()
             assert result is True
