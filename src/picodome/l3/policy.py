@@ -153,7 +153,7 @@ NODE_RULES: list = [
         "action": "allow",
         "description": "Allow process spawning (node, npm)",
     },
-    {"rule_id": "L3-NODE-BIND-001", "target": "network_bind", "action": "deny", "description": "Deny network binding"},
+    {"rule_id": "L3-NODE-BIND-001", "target": "network_bind", "action": "allow", "description": "Allow network binding (npm needs NETLINK bind for DNS)"},
     {
         "rule_id": "L3-NODE-EXEC-001",
         "target": "file_exec",
@@ -221,7 +221,7 @@ PYTHON_RULES: list = [
         "action": "allow",
         "description": "Allow process spawning (python, pip)",
     },
-    {"rule_id": "L3-PY-BIND-001", "target": "network_bind", "action": "deny", "description": "Deny network binding"},
+    {"rule_id": "L3-PY-BIND-001", "target": "network_bind", "action": "allow", "description": "Allow network binding (pip needs NETLINK bind for DNS)"},
     {
         "rule_id": "L3-PY-EXEC-001",
         "target": "file_exec",

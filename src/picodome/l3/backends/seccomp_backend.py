@@ -237,6 +237,20 @@ _SAFE_SYSCALLS = {
     "kill",
     "setsid",
     "sigprocmask",
+    # Modern binary runtime requirements
+    "statx",
+    "getppid",
+    "umask",
+    # io_uring — used by libuv/node.js for async I/O (Linux 5.1+)
+    "io_uring_setup",
+    "io_uring_enter",
+    # Thread scheduling — used by node.js/libuv
+    "sched_getparam",
+    "sched_getscheduler",
+    # File advisory — used by pip and other package managers
+    "fadvise64",
+    # File sync — used by pip for atomic file writes
+    "fsync",
 }
 
 

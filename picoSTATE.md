@@ -92,6 +92,12 @@ A deterministic runtime sandbox and behavioral analysis engine for supply-chain 
 - **CRITICAL**: Added close_range, kill, setsid, sigprocmask to _SAFE_SYSCALLS and _PROCESS_SYSCALLS — CPython subprocess.run uses close_range() in the fork/exec child path; without it, spawned children die with SIGSYS while the parent exits 0 (silent ALLOW masking child death)
 - Added subprocess child-survival integration tests (assert child returncode, not just parent verdict)
 
+### Opus 4.8 review (round 3)
+- Verified all round-2 fixes: child processes survive, enforcement still works (network KILL still kills)
+- **Runtime syscall coverage**: Added statx, getppid, umask, fadvise64, fsync, io_uring_setup, io_uring_enter, sched_getparam, sched_getscheduler to _SAFE_SYSCALLS — required by modern node.js/libuv and pip runtimes
+- Changed node/python policies: network_bind → allow (npm/pip need NETLINK bind for DNS resolution)
+- npm install and pip install now complete successfully under seccomp sandbox
+
 ### GPT 5.5 review
 - Cluster shutdown hang: heartbeat/health threads use `stop_event.wait()` instead of `time.sleep()`, so `stop()` wakes them immediately
 - `SeccompBackend.is_available()` now tests both permissive and fail-closed filter creation (catches containers that allow SCMP_ACT_ALLOW but reject SCMP_ACT_KILL_PROCESS)
