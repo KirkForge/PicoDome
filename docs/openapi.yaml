@@ -7,7 +7,7 @@ info:
 
     ## Authentication
     All endpoints except `/health` and `/ready` require a Bearer token via the
-    `Authorization` header. Tokens are configured via `IRONDOME_API_TOKENS`
+    `Authorization` header. Tokens are configured via `PICODOME_API_TOKENS`
     or `~/.picodome/api-tokens`.
 
     Token format: `picodome-<role>-<secret>` (e.g., `picodome-admin-abc123`)
@@ -20,7 +20,7 @@ info:
 
     ## CORS
     CORS headers are included on all responses. Configure allowed origins
-    via the `IRONDOME_CORS_ORIGINS` environment variable (default: `*`).
+    via the `PICODOME_CORS_ORIGINS` environment variable (default: `*`).
 
     ## Error Codes
     Every error response includes a machine-readable `code` field:
@@ -98,7 +98,7 @@ paths:
       summary: Prometheus metrics
       description: |
         Returns Prometheus-format metrics. Requires `scan:read` permission
-        on the main port. If `IRONDOME_METRICS_PORT` is set, metrics are
+        on the main port. If `PICODOME_METRICS_PORT` is set, metrics are
         available on that port without authentication.
       operationId: getMetrics
       responses:

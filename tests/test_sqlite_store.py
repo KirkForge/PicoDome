@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from irondome.daemon.sqlite_store import SQLiteScanJobStore
+from picodome.daemon.sqlite_store import SQLiteScanJobStore
 
 
 @pytest.fixture
@@ -122,18 +122,18 @@ class TestSQLiteStoreFromEnv:
 
     def test_from_env_default(self):
         store = SQLiteScanJobStore.from_env()
-        assert store.db_path == Path.home() / ".irondome" / "jobs.db"
+        assert store.db_path == Path.home() / ".picodome" / "jobs.db"
 
     def test_from_env_custom_path(self, tmp_path):
         import os
 
         db_path = tmp_path / "env_test.db"
-        os.environ["IRONDOME_SQLITE_PATH"] = str(db_path)
+        os.environ["PICODOME_SQLITE_PATH"] = str(db_path)
         try:
             store = SQLiteScanJobStore.from_env()
             assert store.db_path == db_path
         finally:
-            del os.environ["IRONDOME_SQLITE_PATH"]
+            del os.environ["PICODOME_SQLITE_PATH"]
 
 
 class TestSQLiteStoreClose:

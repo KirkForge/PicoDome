@@ -2,9 +2,9 @@
 
 import pytest
 
-from irondome.l3.backends.subprocess_backend import SubprocessBackend
-from irondome.l3.models import Policy, SyscallAction, Verdict
-from irondome.l3.policy import default_policy
+from picodome.l3.backends.subprocess_backend import SubprocessBackend
+from picodome.l3.models import Policy, SyscallAction, Verdict
+from picodome.l3.policy import default_policy
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ class TestBackendBasics:
         assert "hello" in result.stdout
 
     def test_backend_run_returns_sandbox_result(self, backend):
-        from irondome.l3.models import SandboxResult
+        from picodome.l3.models import SandboxResult
 
         result = backend.run(["echo", "test"], default_policy())
         assert isinstance(result, SandboxResult)

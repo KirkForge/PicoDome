@@ -21,7 +21,7 @@ keywords = [
     "security",
     "deterministic",
     "picodome",
-    "shogun",
+    "picodome",
     "command-center",
     "runtime",
     "npm",
@@ -64,8 +64,7 @@ Commercial = "https://github.com/KirkForge/PicoShogun"
 "Bug Tracker" = "https://github.com/KirkForge/PicoDome/issues"
 
 [project.scripts]
-picodome = "irondome.cli:main"
-irondome = "irondome.cli:main"
+picodome = "picodome.cli:main"
 
 [project.optional-dependencies]
 dev = [
@@ -89,10 +88,10 @@ all = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["irondome*"]
+include = ["picodome*"]
 
 [tool.setuptools.package-data]
-irondome = ["py.typed", "docs/rules/*.md"]
+picodome = ["py.typed", "docs/rules/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -128,7 +127,7 @@ warn_unreachable = true
 exclude = ["build/", "dist/", ".venv/"]
 
 [tool.coverage.run]
-source = ["irondome"]
+source = ["picodome"]
 omit = ["tests/*", "*/__pycache__/*"]
 
 [tool.coverage.report]

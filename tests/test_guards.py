@@ -3,7 +3,7 @@
 import hashlib
 import json
 
-from irondome.models import Finding, Severity, Verdict
+from picodome.models import Finding, Severity, Verdict
 
 
 def _validate_findings_deterministic(findings: list) -> list:
@@ -121,7 +121,7 @@ class TestValidateFindingsDeterministic:
 
 class TestValidateResultSorted:
     def test_sorted_dict_passes(self):
-        from irondome.l3.models import SandboxResult
+        from picodome.l3.models import SandboxResult
 
         r = SandboxResult(
             run_id="test",
@@ -164,7 +164,7 @@ class TestValidateResultSorted:
 class TestValidateNoRandomness:
     def test_two_deterministic_runs_produce_same_output(self):
         """Two SandboxResults with same explicit fields should be identical."""
-        from irondome.l3.models import SandboxResult
+        from picodome.l3.models import SandboxResult
 
         r1 = SandboxResult(
             run_id="det-001",
@@ -185,7 +185,7 @@ class TestValidateNoRandomness:
         assert _validate_no_randomness(r1, r2)
 
     def test_two_different_results_not_equal(self):
-        from irondome.l3.models import SandboxResult
+        from picodome.l3.models import SandboxResult
 
         r1 = SandboxResult(
             run_id="det-001",
@@ -205,7 +205,7 @@ class TestValidateNoRandomness:
 
     def test_json_hash_deterministic(self):
         """Two deterministic dicts should produce the same JSON hash."""
-        from irondome.l3.models import SandboxResult
+        from picodome.l3.models import SandboxResult
 
         r = SandboxResult(
             run_id="hash-test",
@@ -222,7 +222,7 @@ class TestValidateNoRandomness:
 
     def test_analysis_result_deterministic_hash(self):
         """AnalysisResult with explicit fields should hash deterministically."""
-        from irondome.l4.models import AnalysisResult, BehavioralVerdict
+        from picodome.l4.models import AnalysisResult, BehavioralVerdict
 
         ar = AnalysisResult(
             target="test",
@@ -237,7 +237,7 @@ class TestValidateNoRandomness:
 
     def test_auto_uuid_breaks_determinism(self):
         """Auto-generated finding_id makes Findings non-deterministic."""
-        from irondome.models import _generate_finding_id
+        from picodome.models import _generate_finding_id
 
         f1 = Finding(rule_id="R1", severity=Severity.LOW, message="m", finding_id=_generate_finding_id())
         f2 = Finding(rule_id="R1", severity=Severity.LOW, message="m", finding_id=_generate_finding_id())
@@ -248,7 +248,7 @@ class TestValidateNoRandomness:
 class TestGuardIntegration:
     def test_sandbox_result_deterministic_roundtrip(self):
         """Full round-trip: create → to_dict → JSON → parse → verify."""
-        from irondome.l3.models import SandboxEvent, SandboxResult
+        from picodome.l3.models import SandboxEvent, SandboxResult
 
         r = SandboxResult(
             run_id="rt-001",

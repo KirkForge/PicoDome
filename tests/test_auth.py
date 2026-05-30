@@ -1,4 +1,4 @@
-"""Tests for irondome.auth — constant-time token validation and hash-based RBAC."""
+"""Tests for picodome.auth — constant-time token validation and hash-based RBAC."""
 
 import hashlib
 import hmac
@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from irondome.auth import (
+from picodome.auth import (
     RBAC,
     AuthError,
     Role,
@@ -33,7 +33,7 @@ class TestConstantTimeEqual:
         assert _constant_time_equal("hello", "") is False
 
     def test_prefix_match_still_fails(self):
-        assert _constant_time_equal("irondome-admin-secret123", "irondome-admin-secret456") is False
+        assert _constant_time_equal("picodome-admin-secret123", "picodome-admin-secret456") is False
 
     def test_uses_hmac_compare_digest(self):
         """Verify we're using hmac.compare_digest internally."""
@@ -66,8 +66,8 @@ class TestRBAC:
 
     def test_register_and_lookup(self):
         rbac = RBAC()
-        rbac.register_token("irondome-admin-secret123", "admin")
-        assert rbac.get_role("irondome-admin-secret123") == "admin"
+        rbac.register_token("picodome-admin-secret123", "admin")
+        assert rbac.get_role("picodome-admin-secret123") == "admin"
 
     def test_unknown_token_gets_reader(self):
         rbac = RBAC()
@@ -75,24 +75,24 @@ class TestRBAC:
 
     def test_submitter_permissions(self):
         rbac = RBAC()
-        rbac.register_token("irondome-submitter-abc", "submitter")
-        token = "irondome-submitter-abc"
+        rbac.register_token("picodome-submitter-abc", "submitter")
+        token = "picodome-submitter-abc"
         assert rbac.has_permission(token, "scan:submit") is True
         assert rbac.has_permission(token, "scan:read") is True
         assert rbac.has_permission(token, "policy:write") is False
 
     def test_reader_permissions(self):
         rbac = RBAC()
-        rbac.register_token("irondome-reader-abc", "reader")
-        token = "irondome-reader-abc"
+        rbac.register_token("picodome-reader-abc", "reader")
+        token = "picodome-reader-abc"
         assert rbac.has_permission(token, "scan:read") is True
         assert rbac.has_permission(token, "policy:read") is True
         assert rbac.has_permission(token, "scan:submit") is False
 
     def test_admin_has_wildcard(self):
         rbac = RBAC()
-        rbac.register_token("irondome-admin-abc", "admin")
-        token = "irondome-admin-abc"
+        rbac.register_token("picodome-admin-abc", "admin")
+        token = "picodome-admin-abc"
         assert rbac.has_permission(token, "scan:submit") is True
         assert rbac.has_permission(token, "any:permission") is True
 
@@ -117,17 +117,17 @@ class TestTokenAuth:
     """Tests for TokenAuth with constant-time validation."""
 
     def test_valid_token(self):
-        with patch.dict(os.environ, {"IRONDOME_API_TOKENS": "test-token-123"}, clear=False):
+        with patch.dict(os.environ, {"PICODOME_API_TOKENS": "test-token-123"}, clear=False):
             auth = TokenAuth()
             assert auth.validate("test-token-123") is True
 
     def test_invalid_token(self):
-        with patch.dict(os.environ, {"IRONDOME_API_TOKENS": "test-token-123"}, clear=False):
+        with patch.dict(os.environ, {"PICODOME_API_TOKENS": "test-token-123"}, clear=False):
             auth = TokenAuth()
             assert auth.validate("wrong-token") is False
 
     def test_multiple_tokens(self):
-        with patch.dict(os.environ, {"IRONDOME_API_TOKENS": "token-1,token-2,token-3"}, clear=False):
+        with patch.dict(os.environ, {"PICODOME_API_TOKENS": "token-1,token-2,token-3"}, clear=False):
             auth = TokenAuth()
             assert auth.validate("token-1") is True
             assert auth.validate("token-2") is True
@@ -136,14 +136,14 @@ class TestTokenAuth:
 
     def test_role_extraction_from_token(self):
         with patch.dict(
-            os.environ, {"IRONDOME_API_TOKENS": "irondome-admin-secret123,irondome-reader-abc456"}, clear=False
+            os.environ, {"PICODOME_API_TOKENS": "picodome-admin-secret123,picodome-reader-abc456"}, clear=False
         ):
             auth = TokenAuth()
-            assert auth.get_role("irondome-admin-secret123") == "admin"
-            assert auth.get_role("irondome-reader-abc456") == "reader"
+            assert auth.get_role("picodome-admin-secret123") == "admin"
+            assert auth.get_role("picodome-reader-abc456") == "reader"
 
     def test_token_without_prefix_gets_reader(self):
-        with patch.dict(os.environ, {"IRONDOME_API_TOKENS": "my-simple-token"}, clear=False):
+        with patch.dict(os.environ, {"PICODOME_API_TOKENS": "my-simple-token"}, clear=False):
             auth = TokenAuth()
             assert auth.get_role("my-simple-token") == Role.READER
 
@@ -151,8 +151,8 @@ class TestTokenAuth:
         with patch.dict(
             os.environ,
             {
-                "IRONDOME_API_TOKENS": "",
-                "IRONDOME_DEV_MODE": "1",
+                "PICODOME_API_TOKENS": "",
+                "PICODOME_DEV_MODE": "1",
             },
             clear=False,
         ):
@@ -164,8 +164,8 @@ class TestTokenAuth:
         with patch.dict(
             os.environ,
             {
-                "IRONDOME_API_TOKENS": "",
-                "IRONDOME_DEV_MODE": "",
+                "PICODOME_API_TOKENS": "",
+                "PICODOME_DEV_MODE": "",
             },
             clear=False,
         ):
@@ -176,8 +176,8 @@ class TestTokenAuth:
         with patch.dict(
             os.environ,
             {
-                "IRONDOME_ENTERPRISE_MODE": "1",
-                "IRONDOME_API_TOKENS": "short",
+                "PICODOME_ENTERPRISE_MODE": "1",
+                "PICODOME_API_TOKENS": "short",
             },
             clear=False,
         ):
@@ -188,8 +188,8 @@ class TestTokenAuth:
         with patch.dict(
             os.environ,
             {
-                "IRONDOME_ENTERPRISE_MODE": "1",
-                "IRONDOME_API_TOKENS": "",
+                "PICODOME_ENTERPRISE_MODE": "1",
+                "PICODOME_API_TOKENS": "",
             },
             clear=False,
         ):
@@ -198,12 +198,12 @@ class TestTokenAuth:
             assert auth.is_configured is False
 
     def test_enterprise_mode_accepts_long_token(self):
-        long_token = "irondome-admin-" + "a" * 50
+        long_token = "picodome-admin-" + "a" * 50
         with patch.dict(
             os.environ,
             {
-                "IRONDOME_ENTERPRISE_MODE": "1",
-                "IRONDOME_API_TOKENS": long_token,
+                "PICODOME_ENTERPRISE_MODE": "1",
+                "PICODOME_API_TOKENS": long_token,
             },
             clear=False,
         ):
@@ -214,9 +214,9 @@ class TestTokenAuth:
         with patch.dict(
             os.environ,
             {
-                "IRONDOME_ENTERPRISE_MODE": "1",
-                "IRONDOME_DEV_MODE": "1",
-                "IRONDOME_API_TOKENS": "",
+                "PICODOME_ENTERPRISE_MODE": "1",
+                "PICODOME_DEV_MODE": "1",
+                "PICODOME_API_TOKENS": "",
             },
             clear=False,
         ):
@@ -225,16 +225,16 @@ class TestTokenAuth:
                 TokenAuth()
 
     def test_has_permission(self):
-        with patch.dict(os.environ, {"IRONDOME_API_TOKENS": "irondome-admin-secret123"}, clear=False):
+        with patch.dict(os.environ, {"PICODOME_API_TOKENS": "picodome-admin-secret123"}, clear=False):
             auth = TokenAuth()
-            assert auth.has_permission("irondome-admin-secret123", "scan:submit") is True
-            assert auth.has_permission("irondome-admin-secret123", "any:thing") is True
+            assert auth.has_permission("picodome-admin-secret123", "scan:submit") is True
+            assert auth.has_permission("picodome-admin-secret123", "any:thing") is True
 
     def test_is_enterprise(self):
         with patch.dict(
             os.environ,
             {
-                "IRONDOME_ENTERPRISE_MODE": "1",
+                "PICODOME_ENTERPRISE_MODE": "1",
             },
             clear=False,
         ):
@@ -245,7 +245,7 @@ class TestTokenAuth:
         with patch.dict(
             os.environ,
             {
-                "IRONDOME_ENTERPRISE_MODE": "",
+                "PICODOME_ENTERPRISE_MODE": "",
             },
             clear=False,
         ):
@@ -259,13 +259,13 @@ class TestTokenAuth:
         with patch.dict(
             os.environ,
             {
-                "IRONDOME_API_TOKENS": "test-token-123",
+                "PICODOME_API_TOKENS": "test-token-123",
             },
             clear=False,
         ):
             TokenAuth()
             # _constant_time_equal should be used, not `==`
             # Verify by checking that the auth module imports hmac.compare_digest
-            from irondome import auth as auth_module
+            from picodome import auth as auth_module
 
             assert hasattr(auth_module, "_constant_time_equal")

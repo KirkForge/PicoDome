@@ -17,10 +17,10 @@ import threading
 
 import pytest
 
-from irondome.audit import AuditEventType
-from irondome.audit.logger import AuditEvent
-from irondome.audit.sinks import SyslogSink, create_sink
-from irondome.audit.sinks.base import SinkConfig
+from picodome.audit import AuditEventType
+from picodome.audit.logger import AuditEvent
+from picodome.audit.sinks import SyslogSink, create_sink
+from picodome.audit.sinks.base import SinkConfig
 
 
 def _make_event(actor: str = "test", **kwargs) -> AuditEvent:

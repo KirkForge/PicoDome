@@ -2,13 +2,13 @@ name: Test GitHub Action
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
     paths:
       - 'action.yml'
       - 'action.yaml'
       - '.github/workflows/test-action.yml'
   pull_request:
-    branches: [main, master]
+    branches: [main]
     paths:
       - 'action.yml'
       - 'action.yaml'

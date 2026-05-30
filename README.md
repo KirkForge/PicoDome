@@ -58,7 +58,7 @@ picodome diff result_a.json result_b.json
 picodome pipeline --workspace /path/to/monorepo
 ```
 
-> The `irondome` CLI alias still works for backward compatibility.
+> The `picodome` CLI alias still works for backward compatibility.
 
 ## L3 Backends
 
@@ -164,7 +164,7 @@ severity_overrides:
   L4-ENTROPY: info
 ```
 
-Environment variables (`PICODOME_*`) override config, and CLI flags override everything. The `IRONDOME_*` env vars still work for backward compatibility.
+Environment variables (`PICODOME_*`) override config, and CLI flags override everything. The `PICODOME_*` env vars still work for backward compatibility.
 
 ## Security
 

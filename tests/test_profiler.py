@@ -1,7 +1,7 @@
 """Tests for L4 profiler — extracting behavioral profiles from sandbox results and traces."""
 
-from irondome.l3.models import SandboxResult, Verdict
-from irondome.l4.profiler import (
+from picodome.l3.models import SandboxResult, Verdict
+from picodome.l4.profiler import (
     _extract_dns_queries,
     _extract_file_operations,
     _extract_network_calls,

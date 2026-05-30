@@ -1,6 +1,6 @@
-"""Tests for irondome.errors — structured error codes."""
+"""Tests for picodome.errors — structured error codes."""
 
-from irondome.errors import ErrorCode, ErrorCodes
+from picodome.errors import ErrorCode, ErrorCodes
 
 
 class TestErrorCode:

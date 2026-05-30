@@ -15,9 +15,9 @@ from __future__ import annotations
 import json
 import os
 
-from irondome.audit import AuditEventType
-from irondome.audit.logger import AuditEvent
-from irondome.audit.sinks import FileSink, SinkConfig, create_sink
+from picodome.audit import AuditEventType
+from picodome.audit.logger import AuditEvent
+from picodome.audit.sinks import FileSink, SinkConfig, create_sink
 
 
 def _make_event(actor: str = "test", event_type=AuditEventType.SCAN_START, **kwargs) -> AuditEvent:

@@ -17,9 +17,9 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from irondome.audit import AuditEventType, AuditLogger
-from irondome.audit.logger import AuditEvent
-from irondome.audit.sinks.base import (
+from picodome.audit import AuditEventType, AuditLogger
+from picodome.audit.logger import AuditEvent
+from picodome.audit.sinks.base import (
     SINK_REGISTRY,
     AuditSink,
     NullSink,
@@ -308,7 +308,7 @@ class TestAuditLoggerSinks:
         assert len(counting.received) == 0
 
     def test_setup_audit_logger_starts_sinks(self, tmp_path):
-        from irondome.audit import setup_audit_logger
+        from picodome.audit import setup_audit_logger
 
         counting = CountingSink()
         audit = setup_audit_logger(

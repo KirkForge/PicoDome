@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from irondome.l3.models import (
+from picodome.l3.models import (
     Policy,
     PolicyRule,
     RuleTarget,
@@ -14,7 +14,7 @@ from irondome.l3.models import (
     SandboxResult,
     SyscallAction,
 )
-from irondome.l4.models import (
+from picodome.l4.models import (
     Baseline,
     BehavioralProfile,
     DnsQuery,
@@ -23,7 +23,7 @@ from irondome.l4.models import (
     ProcessSpawn,
     TimingPoint,
 )
-from irondome.models import (
+from picodome.models import (
     Finding,
     Severity,
     Verdict,
@@ -192,7 +192,7 @@ def npm_baseline():
 @pytest.fixture
 def default_policy():
     """The built-in default policy."""
-    from irondome.l3.policy import default_policy
+    from picodome.l3.policy import default_policy
 
     return default_policy()
 

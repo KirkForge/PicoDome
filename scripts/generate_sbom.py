@@ -23,7 +23,7 @@ from typing import Any
 
 # ── PicoDome version ───────────────────────────────────────────────
 try:
-    from irondome import __version__ as PICODOME_VERSION
+    from picodome import __version__ as PICODOME_VERSION
 except ImportError:
     PICODOME_VERSION = "unknown"
 

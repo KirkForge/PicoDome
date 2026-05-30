@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import json
 
-from irondome.formatters.cyclonedx import format_cyclonedx
-from irondome.formatters.github import format_github
-from irondome.formatters.ml_context import format_ml_context
-from irondome.formatters.sarif import format_sarif
-from irondome.formatters.table import format_table
-from irondome.l3.models import SandboxEvent, SandboxResult
-from irondome.l4.models import AnalysisResult, BehavioralProfile, BehavioralVerdict
-from irondome.models import Finding, Severity, Verdict
+from picodome.formatters.cyclonedx import format_cyclonedx
+from picodome.formatters.github import format_github
+from picodome.formatters.ml_context import format_ml_context
+from picodome.formatters.sarif import format_sarif
+from picodome.formatters.table import format_table
+from picodome.l3.models import SandboxEvent, SandboxResult
+from picodome.l4.models import AnalysisResult, BehavioralProfile, BehavioralVerdict
+from picodome.models import Finding, Severity, Verdict
 
 
 def _make_findings():

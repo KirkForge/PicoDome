@@ -24,7 +24,7 @@ import threading
 
 import pytest
 
-from irondome.cluster.manager import (
+from picodome.cluster.manager import (
     DEFAULT_CLUSTER_PORT,
     ClusterManager,
     ClusterNode,
@@ -184,7 +184,7 @@ class TestClusterNode:
         id2 = ClusterNode.generate_id()
         # Same process = same ID
         assert id1 == id2
-        assert id1.startswith("irondome-")
+        assert id1.startswith("picodome-")
 
     def test_node_status_enum(self):
         """Test NodeStatus enum values."""
@@ -1004,7 +1004,7 @@ class TestClusterIntegration:
     def test_singleton_cluster_manager(self):
         """Test module-level singleton functions."""
         # Reset singleton
-        import irondome.cluster.manager as mgr_mod
+        import picodome.cluster.manager as mgr_mod
 
         mgr_mod._cluster_manager = None
 

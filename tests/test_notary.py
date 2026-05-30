@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from irondome.audit import AuditEventType, AuditLogger
-from irondome.notary import (
+from picodome.audit import AuditEventType, AuditLogger
+from picodome.notary import (
     AuditNotary,
     NotaryConnectionError,
     NotaryError,
@@ -459,7 +459,7 @@ class TestDefaultNotary:
     def test_default_notary_is_null(self):
         """Default notary is NullNotary (offline mode)."""
         # Reset global state
-        import irondome.notary.rekor as rekor_mod
+        import picodome.notary.rekor as rekor_mod
 
         rekor_mod._default_notary = None
         notary = get_default_notary()
@@ -467,7 +467,7 @@ class TestDefaultNotary:
 
     def test_set_default_notary(self):
         """set_default_notary changes the global notary."""
-        import irondome.notary.rekor as rekor_mod
+        import picodome.notary.rekor as rekor_mod
 
         rekor_mod._default_notary = None
         custom = NullNotary(hmac_key="custom-key")
@@ -476,7 +476,7 @@ class TestDefaultNotary:
 
     def test_set_default_notary_rekor(self):
         """Can set a RekorNotary as default."""
-        import irondome.notary.rekor as rekor_mod
+        import picodome.notary.rekor as rekor_mod
 
         rekor_notary = RekorNotary(rekor_url="https://rekor.test.com")
         set_default_notary(rekor_notary)

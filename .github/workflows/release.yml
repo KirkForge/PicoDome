@@ -65,7 +65,7 @@ jobs:
           pip install mypy
 
       - name: Run mypy
-        run: mypy src/irondome
+        run: mypy src/picodome
 
   lint:
     name: Lint & Format
@@ -113,7 +113,7 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          VERSION=$(python -c "from irondome import __version__; print(__version__)" 2>/dev/null || echo "unknown")
+          VERSION=$(python -c "from picodome import __version__; print(__version__)" 2>/dev/null || echo "unknown")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building PicoDome version: $VERSION"
 
@@ -123,7 +123,7 @@ jobs:
       - name: Verify wheel imports
         run: |
           pip install dist/picodome-*.whl
-          python -c "from irondome import __version__; print(f'irondome {__version__} imported successfully')"
+          python -c "from picodome import __version__; print(f'picodome {__version__} imported successfully')"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -341,7 +341,7 @@ jobs:
       - name: Verify version matches
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-          INSTALLED_VERSION=$(python -c "from irondome import __version__; print(__version__)")
+          INSTALLED_VERSION=$(python -c "from picodome import __version__; print(__version__)")
           echo "Tag version: $TAG_VERSION"
           echo "Installed version: $INSTALLED_VERSION"
           if [ "$TAG_VERSION" != "$INSTALLED_VERSION" ]; then

@@ -1,6 +1,6 @@
 global-exclude __pycache__
 global-exclude *.pyc
-recursive-include src/irondome/docs *.md
+recursive-include src/picodome/docs *.md
 include LICENSE
 include README.md
 include CHANGELOG.md

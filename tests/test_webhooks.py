@@ -2,7 +2,7 @@
 
 import json
 
-from irondome.webhooks import (
+from picodome.webhooks import (
     WebhookConfig,
     WebhookDispatcher,
     WebhookEvent,

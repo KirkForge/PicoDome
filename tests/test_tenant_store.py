@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import pytest
 
-from irondome.daemon.store import PersistentScanJobStore
-from irondome.tenant import TenantId
-from irondome.tenant.store import TenantAwareScanJobStore
+from picodome.daemon.store import PersistentScanJobStore
+from picodome.tenant import TenantId
+from picodome.tenant.store import TenantAwareScanJobStore
 
 
 @pytest.fixture

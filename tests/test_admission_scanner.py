@@ -20,8 +20,8 @@ from unittest import mock
 
 import pytest
 
-from irondome.admission import AdmissionRequest
-from irondome.admission.scanner import SEVERITY_LEVELS, ImageScanner
+from picodome.admission import AdmissionRequest
+from picodome.admission.scanner import SEVERITY_LEVELS, ImageScanner
 
 
 class MockScanHandler(BaseHTTPRequestHandler):
@@ -171,8 +171,8 @@ class TestImageScannerConfig:
         with mock.patch.dict(
             os.environ,
             {
-                "IRONDOME_ADMISSION_SCAN_ENABLED": "true",
-                "IRONDOME_ADMISSION_DAEMON_URL": "http://mydaemon:8443",
+                "PICODOME_ADMISSION_SCAN_ENABLED": "true",
+                "PICODOME_ADMISSION_DAEMON_URL": "http://mydaemon:8443",
             },
         ):
             scanner = ImageScanner()

@@ -91,7 +91,7 @@ For the admission controller, the service account needs no special RBAC permissi
 
 ### Token-to-role mapping
 
-Tokens are mapped to roles via the `IRONDOME_API_TOKENS` environment variable or the tokens file:
+Tokens are mapped to roles via the `PICODOME_API_TOKENS` environment variable or the tokens file:
 
 ```
 # Format: token:role

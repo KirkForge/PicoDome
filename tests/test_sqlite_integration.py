@@ -6,7 +6,7 @@ import json
 import os
 from unittest import mock
 
-from irondome.daemon.sqlite_store import SQLiteScanJobStore
+from picodome.daemon.sqlite_store import SQLiteScanJobStore
 
 
 class TestSQLiteStoreIntegration:
@@ -102,7 +102,7 @@ class TestSQLiteStoreIntegration:
     def test_from_env_creates_store(self, tmp_path):
         """Test from_env with custom path."""
         db_path = str(tmp_path / "env.db")
-        with mock.patch.dict(os.environ, {"IRONDOME_SQLITE_PATH": db_path}):
+        with mock.patch.dict(os.environ, {"PICODOME_SQLITE_PATH": db_path}):
             store = SQLiteScanJobStore.from_env()
             assert str(store.db_path) == db_path
             store.add("env-1", ["echo"], "env-test")

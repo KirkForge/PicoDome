@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction
-from irondome.l3.policy import default_policy, load_policy
+from picodome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction
+from picodome.l3.policy import default_policy, load_policy
 
 
 class TestPolicyPresets:
@@ -303,21 +303,21 @@ class TestCustomPolicyCreation:
 
 class TestPolicyBuiltins:
     def test_strict_policy(self):
-        from irondome.l3.policy import strict_policy
+        from picodome.l3.policy import strict_policy
 
         policy = strict_policy()
         assert policy.name == "iron-dome-strict"
         assert policy.default_action == SyscallAction.DENY
 
     def test_node_policy(self):
-        from irondome.l3.policy import node_policy
+        from picodome.l3.policy import node_policy
 
         policy = node_policy()
         assert policy.name == "iron-dome-node"
         assert policy.default_action == SyscallAction.DENY
 
     def test_python_policy_builtin(self):
-        from irondome.l3.policy import python_policy
+        from picodome.l3.policy import python_policy
 
         policy = python_policy()
         assert policy.name == "iron-dome-python"
@@ -329,7 +329,7 @@ class TestPolicyBuiltins:
 
 class TestPolicyExportImport:
     def test_export_and_import_roundtrip(self, tmp_path):
-        from irondome.l3.policy import default_policy, export_policy, import_policy
+        from picodome.l3.policy import default_policy, export_policy, import_policy
 
         original = default_policy()
         path = tmp_path / "exported-policy.json"
@@ -342,13 +342,13 @@ class TestPolicyExportImport:
         assert len(loaded.rules) == len(original.rules)
 
     def test_import_nonexistent_file(self, tmp_path):
-        from irondome.l3.policy import import_policy
+        from picodome.l3.policy import import_policy
 
         with pytest.raises((FileNotFoundError, ValueError)):
             import_policy(tmp_path / "nonexistent.json")
 
     def test_import_invalid_policy(self, tmp_path):
-        from irondome.l3.policy import import_policy
+        from picodome.l3.policy import import_policy
 
         path = tmp_path / "bad-policy.json"
         path.write_text('{"name": "bad", "version": "1", "default_action": "deny", "rules": []}')
@@ -361,7 +361,7 @@ class TestPolicyExportImport:
 
 class TestPolicyValidationExtra:
     def test_validate_empty_policy(self):
-        from irondome.l3.policy import validate_policy
+        from picodome.l3.policy import validate_policy
 
         empty = Policy(name="empty", version="1.0", default_action=SyscallAction.DENY, rules=[])
         errors = validate_policy(empty)
@@ -369,7 +369,7 @@ class TestPolicyValidationExtra:
         assert any("no rules" in e.lower() for e in errors)
 
     def test_validate_duplicate_rule_ids(self):
-        from irondome.l3.policy import validate_policy
+        from picodome.l3.policy import validate_policy
 
         dup = Policy(
             name="dup",
@@ -384,7 +384,7 @@ class TestPolicyValidationExtra:
         assert any("Duplicate rule ID" in e for e in errors)
 
     def test_validate_good_policy(self):
-        from irondome.l3.policy import validate_policy
+        from picodome.l3.policy import validate_policy
 
         good = default_policy()
         errors = validate_policy(good)
@@ -396,7 +396,7 @@ class TestPolicyValidationExtra:
 
 class TestLoadPolicy:
     def test_load_policy_from_json_file(self, tmp_path):
-        from irondome.l3.policy import load_policy
+        from picodome.l3.policy import load_policy
 
         policy_data = {
             "name": "test-loaded",
@@ -418,25 +418,25 @@ class TestLoadPolicy:
         assert policy.name == "test-loaded"
 
     def test_load_policy_by_name(self):
-        from irondome.l3.policy import load_policy
+        from picodome.l3.policy import load_policy
 
         policy = load_policy(name="default")
         assert policy.name == "iron-dome-default"
 
     def test_load_policy_by_name_strict(self):
-        from irondome.l3.policy import load_policy
+        from picodome.l3.policy import load_policy
 
         policy = load_policy(name="strict")
         assert policy.name == "iron-dome-strict"
 
     def test_load_policy_invalid_name(self):
-        from irondome.l3.policy import load_policy
+        from picodome.l3.policy import load_policy
 
         with pytest.raises(ValueError, match="Invalid policy name"):
             load_policy(name="../etc/passwd")
 
     def test_load_policy_no_args_returns_default(self):
-        from irondome.l3.policy import load_policy
+        from picodome.l3.policy import load_policy
 
         policy = load_policy()
         assert policy.name == "iron-dome-default"

@@ -2,12 +2,12 @@
 
 import pytest
 
-from irondome.baseline_hardening import (
+from picodome.baseline_hardening import (
     BaselineUpdateRateLimit,
     HardenedBaselineManager,
     SignedBaseline,
 )
-from irondome.l4.models import Baseline
+from picodome.l4.models import Baseline
 
 
 @pytest.fixture

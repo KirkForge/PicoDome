@@ -6,16 +6,16 @@ import json
 
 import pytest
 
-from irondome.guards import (
+from picodome.guards import (
     DeterminismViolation,
     DeterministicGuard,
     deterministic_hash,
     diff_results,
     validate_findings_deterministic,
 )
-from irondome.l3.models import SandboxEvent, SandboxResult, Verdict
-from irondome.l4.models import AnalysisResult, BehavioralProfile, BehavioralVerdict
-from irondome.models import Finding, Severity
+from picodome.l3.models import SandboxEvent, SandboxResult, Verdict
+from picodome.l4.models import AnalysisResult, BehavioralProfile, BehavioralVerdict
+from picodome.models import Finding, Severity
 
 
 def _make_sandbox_result(**overrides):

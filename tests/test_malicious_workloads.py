@@ -14,14 +14,14 @@ import os
 
 import pytest
 
-from irondome.l3.engine import sandbox_run
-from irondome.l4.engine import create_default_engine
-from irondome.l4.profiler import profile_from_sandbox_result
+from picodome.l3.engine import sandbox_run
+from picodome.l4.engine import create_default_engine
+from picodome.l4.profiler import profile_from_sandbox_result
 
 # Skip if no sandbox backend available
 pytestmark = pytest.mark.skipif(
-    os.environ.get("IRONDOME_SANDBOX_TESTS", "").lower() not in ("1", "true", "yes"),
-    reason="Set IRONDOME_SANDBOX_TESTS=1 to run sandbox-dependent malicious workload tests",
+    os.environ.get("PICODOME_SANDBOX_TESTS", "").lower() not in ("1", "true", "yes"),
+    reason="Set PICODOME_SANDBOX_TESTS=1 to run sandbox-dependent malicious workload tests",
 )
 
 
@@ -77,7 +77,7 @@ class TestFilesystemEscape:
     def test_write_outside_sandbox(self):
         """Attempting to write outside the sandbox directory should be denied."""
         result = sandbox_run(
-            command=["touch", "/tmp/irondome-escape-test"],
+            command=["touch", "/tmp/picodome-escape-test"],
             timeout=5,
             deterministic=True,
         )

@@ -62,7 +62,7 @@ def run_tests(output_dir: Path) -> dict[str, any]:
             "-m",
             "pytest",
             "--junitxml=" + str(junit_path),
-            "--cov=irondome",
+            "--cov=picodome",
             "--cov-report=xml:" + str(coverage_path),
             "--cov-report=term-missing",
             "-v",

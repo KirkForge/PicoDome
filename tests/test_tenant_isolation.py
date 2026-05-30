@@ -20,9 +20,9 @@ import hashlib
 
 import pytest
 
-from irondome.audit import AuditEventType, AuditLogger
-from irondome.daemon.store import PersistentScanJobStore
-from irondome.tenant import (
+from picodome.audit import AuditEventType, AuditLogger
+from picodome.daemon.store import PersistentScanJobStore
+from picodome.tenant import (
     DEFAULT_TENANT,
     TenantContext,
     TenantId,
@@ -30,7 +30,7 @@ from irondome.tenant import (
     setup_tenant_registry,
     tenant_key,
 )
-from irondome.tenant.store import TenantAwareScanJobStore
+from picodome.tenant.store import TenantAwareScanJobStore
 
 
 class TestCrossTenantJobAccess:

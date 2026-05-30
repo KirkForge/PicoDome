@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import hashlib
 
-from irondome.tenant import (
+from picodome.tenant import (
     DEFAULT_TENANT,
     TenantContext,
     TenantId,
@@ -34,7 +34,7 @@ class _TestHandler:
 
     def _resolve_tenant(self, token: str | None) -> TenantId:
         """Same logic as PicoDomeHandler._resolve_tenant."""
-        from irondome.tenant import get_tenant_registry
+        from picodome.tenant import get_tenant_registry
 
         registry = get_tenant_registry()
         header_tenant = self.headers_map.get("X-Tenant")
@@ -134,7 +134,7 @@ class TestTenantsEndpoint:
 
     def test_list_tenants_endpoint_exists(self):
         """Verify the tenants endpoint is registered in the daemon routes."""
-        from irondome.daemon.server import PicoDomeHandler
+        from picodome.daemon.server import PicoDomeHandler
 
         # Just verify the method exists
         assert hasattr(PicoDomeHandler, "_handle_list_tenants")
@@ -149,7 +149,7 @@ class TestTenantsEndpoint:
         )
 
         # The handler would call get_tenant_registry().list_tenants()
-        from irondome.tenant import get_tenant_registry
+        from picodome.tenant import get_tenant_registry
 
         registry = get_tenant_registry()
         tenants = registry.list_tenants()
@@ -172,7 +172,7 @@ class TestTenantsEndpoint:
 
     def test_empty_tenants_list(self):
         setup_tenant_registry([])
-        from irondome.tenant import get_tenant_registry
+        from picodome.tenant import get_tenant_registry
 
         registry = get_tenant_registry()
         tenants = registry.list_tenants()

@@ -50,7 +50,7 @@ class TestK8sDeployment:
     def test_dev_mode_detected(self, tmp_path: Path) -> None:
         content = textwrap.dedent("""\
             env:
-              - name: IRONDOME_DEV_MODE
+              - name: PICODOME_DEV_MODE
                 value: "1"
         """)
         deploy_dir = tmp_path / "kubernetes"
@@ -68,7 +68,7 @@ class TestK8sDeployment:
     def test_tls_dev_detected(self, tmp_path: Path) -> None:
         content = textwrap.dedent("""\
             env:
-              - name: IRONDOME_TLS_DEV
+              - name: PICODOME_TLS_DEV
                 value: "1"
         """)
         deploy_dir = tmp_path / "kubernetes"
@@ -141,7 +141,7 @@ class TestK8sDeployment:
             apiVersion: apps/v1
             kind: Deployment
             metadata:
-              name: irondome
+              name: picodome
             spec:
               template:
                 spec:
@@ -149,14 +149,14 @@ class TestK8sDeployment:
                     runAsNonRoot: true
                     runAsUser: 1000
                   containers:
-                    - name: irondome
+                    - name: picodome
                       env:
-                        - name: IRONDOME_ENTERPRISE_MODE
+                        - name: PICODOME_ENTERPRISE_MODE
                           value: "1"
-                        - name: IRONDOME_API_TOKENS
+                        - name: PICODOME_API_TOKENS
                           valueFrom:
                             secretKeyRef:
-                              name: irondome-tokens
+                              name: picodome-tokens
                               key: api-tokens
                       securityContext:
                         readOnlyRootFilesystem: true
@@ -257,7 +257,7 @@ class TestHelmTemplates:
     def test_dev_mode_in_template(self, tmp_path: Path) -> None:
         content = textwrap.dedent("""\
             env:
-              - name: IRONDOME_DEV_MODE
+              - name: PICODOME_DEV_MODE
                 value: "1"
         """)
         helm_dir = tmp_path / "picodome"
@@ -334,7 +334,7 @@ class TestDockerfile:
         content = textwrap.dedent("""\
             FROM python:3.12-slim
             COPY . /app
-            USER irondome
+            USER picodome
             CMD ["python", "-m", "picodome"]
         """)
         _write_tmp_file(tmp_path, "Dockerfile", content)
@@ -368,7 +368,7 @@ class TestSourceHardcodedSecrets:
         src_dir = tmp_path / "picodome"
         src_dir.mkdir(parents=True)
         (src_dir / "__init__.py").write_text("")
-        (src_dir / "good.py").write_text('token = os.environ.get("IRONDOME_API_TOKENS", "")\n')
+        (src_dir / "good.py").write_text('token = os.environ.get("PICODOME_API_TOKENS", "")\n')
 
         findings: list[Finding] = []
         check_source_hardcoded_secrets(findings, src_dir=src_dir)

@@ -17,8 +17,8 @@ from unittest import mock
 
 import pytest
 
-from irondome.ratelimit.limiter import RateLimitConfig
-from irondome.ratelimit.redis_limiter import RedisTokenBucketLimiter
+from picodome.ratelimit.limiter import RateLimitConfig
+from picodome.ratelimit.redis_limiter import RedisTokenBucketLimiter
 
 
 class TestFallbackWhenNoRedis:
@@ -198,6 +198,6 @@ class TestRedisLimiterConfig:
         assert limiter.redis_url == "redis://myredis:6379/1"
 
     def test_url_from_env(self):
-        with mock.patch.dict(os.environ, {"IRONDOME_REDIS_URL": "redis://custom:6379/2"}):
+        with mock.patch.dict(os.environ, {"PICODOME_REDIS_URL": "redis://custom:6379/2"}):
             limiter = RedisTokenBucketLimiter()
             assert limiter.redis_url == "redis://custom:6379/2"

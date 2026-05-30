@@ -15,7 +15,7 @@ from unittest import mock
 
 import pytest
 
-from irondome.redis_health import RedisConfig, check_redis_health, is_redis_available
+from picodome.redis_health import RedisConfig, check_redis_health, is_redis_available
 
 
 class TestRedisConfig:
@@ -27,7 +27,7 @@ class TestRedisConfig:
         assert config.retry_on_timeout is True
 
     def test_from_env_with_url(self):
-        with mock.patch.dict(os.environ, {"IRONDOME_REDIS_URL": "redis://myhost:6379/2"}):
+        with mock.patch.dict(os.environ, {"PICODOME_REDIS_URL": "redis://myhost:6379/2"}):
             config = RedisConfig.from_env()
             assert config.url == "redis://myhost:6379/2"
 
@@ -35,8 +35,8 @@ class TestRedisConfig:
         with mock.patch.dict(
             os.environ,
             {
-                "IRONDOME_REDIS_URL": "redis://localhost:6379/0",
-                "IRONDOME_REDIS_ENABLED": "true",
+                "PICODOME_REDIS_URL": "redis://localhost:6379/0",
+                "PICODOME_REDIS_ENABLED": "true",
             },
         ):
             config = RedisConfig.from_env()
@@ -46,8 +46,8 @@ class TestRedisConfig:
         with mock.patch.dict(
             os.environ,
             {
-                "IRONDOME_REDIS_URL": "redis://localhost:6379/0",
-                "IRONDOME_REDIS_ENABLED": "false",
+                "PICODOME_REDIS_URL": "redis://localhost:6379/0",
+                "PICODOME_REDIS_ENABLED": "false",
             },
         ):
             config = RedisConfig.from_env()
@@ -57,8 +57,8 @@ class TestRedisConfig:
         with mock.patch.dict(
             os.environ,
             {
-                "IRONDOME_REDIS_URL": "redis://localhost:6379/0",
-                "IRONDOME_REDIS_TIMEOUT": "10.0",
+                "PICODOME_REDIS_URL": "redis://localhost:6379/0",
+                "PICODOME_REDIS_TIMEOUT": "10.0",
             },
         ):
             config = RedisConfig.from_env()
@@ -118,7 +118,7 @@ class TestHealthEndpointIntegration:
     def test_health_includes_redis_status(self):
         """Verify the /health endpoint structure includes redis key."""
         # This tests the response format, not a live server
-        from irondome.redis_health import check_redis_health
+        from picodome.redis_health import check_redis_health
 
         redis_health = check_redis_health()
         expected_keys = {"connected", "latency_ms", "version", "error", "mode"}

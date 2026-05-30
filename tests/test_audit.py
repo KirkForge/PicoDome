@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from irondome.audit import AuditEvent, AuditEventType, AuditLogger
+from picodome.audit import AuditEvent, AuditEventType, AuditLogger
 
 
 @pytest.fixture

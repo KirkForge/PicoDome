@@ -160,7 +160,7 @@ For production deployment:
 - [ ] Configure HPA for production load
 - [ ] Set up Prometheus alerting for certificate expiry
 - [ ] Restrict RBAC to minimum required permissions
-- [ ] Run the malicious workload test corpus (`IRONDOME_SANDBOX_TESTS=1 pytest tests/test_malicious_workloads.py`)
+- [ ] Run the malicious workload test corpus (`PICODOME_SANDBOX_TESTS=1 pytest tests/test_malicious_workloads.py`)
 - [ ] **Compose with `bubblewrap` or `gVisor` for full containment** when executing truly untrusted packages
 - [ ] **Use `--allow-runtime node` or per-runtime profiles** for default-deny policies with package managers
 

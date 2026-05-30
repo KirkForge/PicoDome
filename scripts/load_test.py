@@ -18,10 +18,10 @@ import statistics
 import time
 from typing import Any
 
-from irondome import __version__
-from irondome.l3.engine import sandbox_run
-from irondome.l4.engine import create_default_engine
-from irondome.l4.profiler import profile_from_sandbox_result
+from picodome import __version__
+from picodome.l3.engine import sandbox_run
+from picodome.l4.engine import create_default_engine
+from picodome.l4.profiler import profile_from_sandbox_result
 
 
 def benchmark_scan(

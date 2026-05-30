@@ -5,7 +5,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from irondome.l3.models import (
+from picodome.l3.models import (
     Policy,
     PolicyRule,
     RuleTarget,
@@ -13,7 +13,7 @@ from irondome.l3.models import (
     SandboxResult,
     SyscallAction,
 )
-from irondome.l4.models import (
+from picodome.l4.models import (
     AnalysisResult,
     DnsQuery,
     DriftResult,
@@ -22,7 +22,7 @@ from irondome.l4.models import (
     ProcessSpawn,
     TimingPoint,
 )
-from irondome.models import (
+from picodome.models import (
     BehavioralVerdict,
     Finding,
     ScanStats,
@@ -129,7 +129,7 @@ class TestFinding:
         assert f1.finding_id == ""
         assert f2.finding_id == ""
         # Use _generate_finding_id() for non-deterministic IDs
-        from irondome.models import _generate_finding_id
+        from picodome.models import _generate_finding_id
 
         id1 = _generate_finding_id()
         id2 = _generate_finding_id()
@@ -287,7 +287,7 @@ class TestSandboxResult:
         assert r.run_id == ""
         assert r.timestamp == ""
         # Non-deterministic mode uses helper functions
-        from irondome.models import _generate_run_id, _generate_timestamp
+        from picodome.models import _generate_run_id, _generate_timestamp
 
         run_id = _generate_run_id()
         ts = _generate_timestamp()

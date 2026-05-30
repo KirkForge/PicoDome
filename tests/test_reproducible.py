@@ -13,7 +13,7 @@ from unittest import mock
 
 import pytest
 
-from irondome.reproducible import (
+from picodome.reproducible import (
     ReproducibleBuild,
     ReproducibleBuildError,
     _epoch_to_iso,
@@ -60,27 +60,27 @@ def sample_requirements_no_hashes(tmp_path):
 @pytest.fixture
 def sample_wheel(tmp_path):
     """Create a minimal valid .whl file for testing."""
-    wheel_path = tmp_path / "irondome-0.3.0-py3-none-any.whl"
+    wheel_path = tmp_path / "picodome-0.3.0-py3-none-any.whl"
     with zipfile.ZipFile(wheel_path, "w") as zf:
         # Use epoch timestamp (1980-01-01 in DOS format = zip minimum)
-        info = zipfile.ZipInfo("irondome/__init__.py", date_time=(1980, 1, 1, 0, 0, 0))
+        info = zipfile.ZipInfo("picodome/__init__.py", date_time=(1980, 1, 1, 0, 0, 0))
         zf.writestr(info, '__version__ = "0.3.0"\n')
         # Add WHEEL metadata without Generated timestamp
-        info2 = zipfile.ZipInfo("irondome-0.3.0.dist-info/WHEEL", date_time=(1980, 1, 1, 0, 0, 0))
+        info2 = zipfile.ZipInfo("picodome-0.3.0.dist-info/WHEEL", date_time=(1980, 1, 1, 0, 0, 0))
         zf.writestr(info2, "Wheel-Version: 1.0\nRoot-Is-Purelib: true\n")
         # Add METADATA
-        info3 = zipfile.ZipInfo("irondome-0.3.0.dist-info/METADATA", date_time=(1980, 1, 1, 0, 0, 0))
-        zf.writestr(info3, "Metadata-Version: 2.1\nName: irondome\nVersion: 0.3.0\n")
+        info3 = zipfile.ZipInfo("picodome-0.3.0.dist-info/METADATA", date_time=(1980, 1, 1, 0, 0, 0))
+        zf.writestr(info3, "Metadata-Version: 2.1\nName: picodome\nVersion: 0.3.0\n")
     return str(wheel_path)
 
 
 @pytest.fixture
 def sample_wheel_with_timestamps(tmp_path):
     """Create a .whl file with non-epoch timestamps (non-reproducible)."""
-    wheel_path = tmp_path / "irondome-0.3.0-py3-none-any.whl"
+    wheel_path = tmp_path / "picodome-0.3.0-py3-none-any.whl"
     with zipfile.ZipFile(wheel_path, "w") as zf:
         # Non-epoch timestamp (2025-06-15 10:30:00)
-        info = zipfile.ZipInfo("irondome/__init__.py", date_time=(2025, 6, 15, 10, 30, 0))
+        info = zipfile.ZipInfo("picodome/__init__.py", date_time=(2025, 6, 15, 10, 30, 0))
         zf.writestr(info, '__version__ = "0.3.0"\n')
     return str(wheel_path)
 
@@ -88,7 +88,7 @@ def sample_wheel_with_timestamps(tmp_path):
 @pytest.fixture
 def source_dir(tmp_path):
     """Create a minimal source directory for manifest generation."""
-    src = tmp_path / "src" / "irondome"
+    src = tmp_path / "src" / "picodome"
     src.mkdir(parents=True)
     (src / "__init__.py").write_text('__version__ = "0.3.0"\n', encoding="utf-8")
     (src / "reproducible.py").write_text("# reproducible builds\n", encoding="utf-8")

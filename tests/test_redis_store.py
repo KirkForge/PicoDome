@@ -5,7 +5,7 @@ Covers:
 - Job creation, retrieval, update, list with mock Redis
 - Serialization/deserialization of job data
 - Health check (available property)
-- Config from IRONDOME_REDIS_URL env var
+- Config from PICODOME_REDIS_URL env var
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from unittest import mock
 
 import pytest
 
-from irondome.daemon.redis_store import (
+from picodome.daemon.redis_store import (
     _DEFAULT_REDIS_URL,
     RedisScanJobStore,
 )
@@ -205,6 +205,6 @@ class TestRedisStoreConfig:
         assert store.redis_url == "redis://myredis:6379/1"
 
     def test_url_from_env(self):
-        with mock.patch.dict(os.environ, {"IRONDOME_REDIS_URL": "redis://custom:6379/2"}):
+        with mock.patch.dict(os.environ, {"PICODOME_REDIS_URL": "redis://custom:6379/2"}):
             store = RedisScanJobStore()
             assert store.redis_url == "redis://custom:6379/2"

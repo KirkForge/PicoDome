@@ -2,8 +2,8 @@
 
 import pytest
 
-from irondome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction
-from irondome.policy_versioned import PolicyVersion, VersionedPolicyStore
+from picodome.l3.models import Policy, PolicyRule, RuleTarget, SyscallAction
+from picodome.policy_versioned import PolicyVersion, VersionedPolicyStore
 
 
 @pytest.fixture

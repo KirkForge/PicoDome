@@ -17,8 +17,8 @@ from unittest import mock
 
 import pytest
 
-from irondome.l3.policy import load_policy
-from irondome.policy_versioned.signing import (
+from picodome.l3.policy import load_policy
+from picodome.policy_versioned.signing import (
     generate_key,
     key_to_hex,
     load_key,
@@ -46,7 +46,7 @@ class TestLoadKeyPublic:
     def test_load_key_from_env(self):
         key = generate_key()
         hex_str = key_to_hex(key)
-        with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY": hex_str}, clear=True):
+        with mock.patch.dict(os.environ, {"PICODOME_POLICY_KEY": hex_str}, clear=True):
             loaded = load_key()
             assert loaded == key
 
@@ -56,7 +56,7 @@ class TestLoadKeyPublic:
         key_file = tmp_path / "policy.key"
         key_file.write_text(hex_str)
 
-        with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY_FILE": str(key_file)}, clear=True):
+        with mock.patch.dict(os.environ, {"PICODOME_POLICY_KEY_FILE": str(key_file)}, clear=True):
             loaded = load_key()
             assert loaded == key
 
@@ -69,7 +69,7 @@ class TestLoadKeyPublic:
         key_file = keys_dir / "key"
         key_file.write_text(hex_str)
 
-        with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY_FILE": str(key_file)}, clear=True):
+        with mock.patch.dict(os.environ, {"PICODOME_POLICY_KEY_FILE": str(key_file)}, clear=True):
             loaded = load_key()
             assert loaded == key
 
@@ -84,8 +84,8 @@ class TestLoadKeyPublic:
         with mock.patch.dict(
             os.environ,
             {
-                "IRONDOME_POLICY_KEY": hex1,
-                "IRONDOME_POLICY_KEY_FILE": str(key_file),
+                "PICODOME_POLICY_KEY": hex1,
+                "PICODOME_POLICY_KEY_FILE": str(key_file),
             },
             clear=True,
         ):
@@ -97,11 +97,11 @@ class TestLoadKeyPublic:
             assert load_key() is None
 
     def test_load_key_invalid_hex(self):
-        with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY": "not-valid-hex"}, clear=True):
+        with mock.patch.dict(os.environ, {"PICODOME_POLICY_KEY": "not-valid-hex"}, clear=True):
             assert load_key() is None
 
     def test_load_key_file_not_found(self):
-        with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY_FILE": "/nonexistent/key"}, clear=True):
+        with mock.patch.dict(os.environ, {"PICODOME_POLICY_KEY_FILE": "/nonexistent/key"}, clear=True):
             assert load_key() is None
 
 
@@ -121,7 +121,7 @@ class TestPolicyVerificationInLoadPolicy:
         policy_file.write_text(SAMPLE_POLICY_JSON)
         sign_policy_companion(policy_file, key)
 
-        with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY": key_to_hex(key)}, clear=True):
+        with mock.patch.dict(os.environ, {"PICODOME_POLICY_KEY": key_to_hex(key)}, clear=True):
             policy = load_policy(path=policy_file, verify_signature=True)
             assert policy.name == "test-policy"
 
@@ -131,7 +131,7 @@ class TestPolicyVerificationInLoadPolicy:
         policy_file = tmp_path / "policy.json"
         policy_file.write_text(SAMPLE_POLICY_JSON)
 
-        with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY": key_to_hex(key)}, clear=True):
+        with mock.patch.dict(os.environ, {"PICODOME_POLICY_KEY": key_to_hex(key)}, clear=True):
             with pytest.raises(ValueError, match="signature verification failed"):
                 load_policy(path=policy_file, verify_signature=True)
 
@@ -147,7 +147,7 @@ class TestPolicyVerificationInLoadPolicy:
         tampered["name"] = "tampered-policy"
         policy_file.write_text(json.dumps(tampered))
 
-        with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY": key_to_hex(key)}, clear=True):
+        with mock.patch.dict(os.environ, {"PICODOME_POLICY_KEY": key_to_hex(key)}, clear=True):
             with pytest.raises(ValueError, match="signature verification failed"):
                 load_policy(path=policy_file, verify_signature=True)
 
@@ -159,7 +159,7 @@ class TestPolicyVerificationInLoadPolicy:
         policy_file.write_text(SAMPLE_POLICY_JSON)
         sign_policy_companion(policy_file, key1)
 
-        with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY": key_to_hex(key2)}, clear=True):
+        with mock.patch.dict(os.environ, {"PICODOME_POLICY_KEY": key_to_hex(key2)}, clear=True):
             with pytest.raises(ValueError, match="signature verification failed"):
                 load_policy(path=policy_file, verify_signature=True)
 
@@ -190,7 +190,7 @@ class TestHelmPolicySigning:
         repo_root = Path(__file__).resolve().parent.parent
         deploy_path = repo_root / "deploy" / "helm" / "picodome" / "templates" / "deployment.yaml"
         content = deploy_path.read_text()
-        assert "IRONDOME_POLICY_KEY" in content
-        assert "IRONDOME_POLICY_KEY_FILE" in content
-        assert "IRONDOME_POLICY_VERIFY" in content
+        assert "PICODOME_POLICY_KEY" in content
+        assert "PICODOME_POLICY_KEY_FILE" in content
+        assert "PICODOME_POLICY_VERIFY" in content
         assert "policy-key" in content

@@ -27,11 +27,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import irondome.audit.logger as audit_logger_mod
-from irondome.audit import AuditEventType, AuditLogger
-from irondome.auth import RBAC, TokenAuth
-from irondome.daemon.server import PicoDomeHandler
-from irondome.ratelimit import RateLimitConfig, TokenBucketLimiter
+import picodome.audit.logger as audit_logger_mod
+from picodome.audit import AuditEventType, AuditLogger
+from picodome.auth import RBAC, TokenAuth
+from picodome.daemon.server import PicoDomeHandler
+from picodome.ratelimit import RateLimitConfig, TokenBucketLimiter
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -79,25 +79,25 @@ class TestAuditEventTypeCoverage:
     # Map each AuditEventType to the module/function that should emit it.
     # This serves as living documentation of where each event is produced.
     EMIT_LOCATIONS = {
-        AuditEventType.SCAN_START: "irondome.daemon.server._handle_submit_scan",
-        AuditEventType.SCAN_COMPLETE: "irondome.daemon.server._handle_submit_scan",
-        AuditEventType.SCAN_ALERT: "irondome.cluster.manager (scan alert)",
-        AuditEventType.POLICY_CREATE: "irondome.daemon.server._handle_create_policy",
-        AuditEventType.POLICY_UPDATE: "irondome.policy_versioned.store",
-        AuditEventType.POLICY_ROLLBACK: "irondome.policy_versioned.store",
-        AuditEventType.POLICY_DELETE: "irondome.policy_versioned.store",
-        AuditEventType.BASELINE_CREATE: "irondome.baseline_hardening",
-        AuditEventType.BASELINE_UPDATE: "irondome.baseline_hardening",
-        AuditEventType.BASELINE_DELETE: "irondome.baseline_hardening",
-        AuditEventType.DAEMON_START: "irondome.daemon.server.PicoDomeDaemon.start",
-        AuditEventType.DAEMON_STOP: "irondome.daemon.server.PicoDomeDaemon.stop",
-        AuditEventType.AUTH_SUCCESS: "irondome.daemon.server._require_auth",
-        AuditEventType.AUTH_FAILURE: "irondome.daemon.server._require_auth / _require_permission",
-        AuditEventType.COMMAND_DENIED: "irondome.daemon.server._handle_submit_scan",
-        AuditEventType.RATE_LIMITED: "irondome.daemon.server._require_auth",
-        AuditEventType.DATA_RETENTION_CLEANUP: "irondome.retention.manager",
-        AuditEventType.DATA_EXPORT: "irondome.retention.manager",
-        AuditEventType.DATA_DELETE: "irondome.retention.manager",
+        AuditEventType.SCAN_START: "picodome.daemon.server._handle_submit_scan",
+        AuditEventType.SCAN_COMPLETE: "picodome.daemon.server._handle_submit_scan",
+        AuditEventType.SCAN_ALERT: "picodome.cluster.manager (scan alert)",
+        AuditEventType.POLICY_CREATE: "picodome.daemon.server._handle_create_policy",
+        AuditEventType.POLICY_UPDATE: "picodome.policy_versioned.store",
+        AuditEventType.POLICY_ROLLBACK: "picodome.policy_versioned.store",
+        AuditEventType.POLICY_DELETE: "picodome.policy_versioned.store",
+        AuditEventType.BASELINE_CREATE: "picodome.baseline_hardening",
+        AuditEventType.BASELINE_UPDATE: "picodome.baseline_hardening",
+        AuditEventType.BASELINE_DELETE: "picodome.baseline_hardening",
+        AuditEventType.DAEMON_START: "picodome.daemon.server.PicoDomeDaemon.start",
+        AuditEventType.DAEMON_STOP: "picodome.daemon.server.PicoDomeDaemon.stop",
+        AuditEventType.AUTH_SUCCESS: "picodome.daemon.server._require_auth",
+        AuditEventType.AUTH_FAILURE: "picodome.daemon.server._require_auth / _require_permission",
+        AuditEventType.COMMAND_DENIED: "picodome.daemon.server._handle_submit_scan",
+        AuditEventType.RATE_LIMITED: "picodome.daemon.server._require_auth",
+        AuditEventType.DATA_RETENTION_CLEANUP: "picodome.retention.manager",
+        AuditEventType.DATA_EXPORT: "picodome.retention.manager",
+        AuditEventType.DATA_DELETE: "picodome.retention.manager",
     }
 
     def test_all_event_types_have_emit_location(self):
@@ -224,7 +224,7 @@ class TestDaemonAuditEmission:
 
         # Set up auth
         if tokens:
-            with patch.dict(os.environ, {"IRONDOME_API_TOKENS": tokens}, clear=False):
+            with patch.dict(os.environ, {"PICODOME_API_TOKENS": tokens}, clear=False):
                 rbac = RBAC()
                 auth = TokenAuth(rbac=rbac)
         else:
@@ -247,7 +247,7 @@ class TestDaemonAuditEmission:
     def test_auth_success_emitted(self, tmp_path):
         """Successful auth should emit AUTH_SUCCESS."""
         audit_dir = tmp_path / "audit"
-        token = "irondome-admin-" + "a" * 50
+        token = "picodome-admin-" + "a" * 50
         audit = self._setup_handler(audit_dir, tokens=token)
 
         handler = PicoDomeHandler.__new__(PicoDomeHandler)
@@ -269,7 +269,7 @@ class TestDaemonAuditEmission:
     def test_auth_failure_no_token_emitted(self, tmp_path):
         """Missing token should emit AUTH_FAILURE with actor='anonymous'."""
         audit_dir = tmp_path / "audit"
-        token = "irondome-admin-" + "a" * 50
+        token = "picodome-admin-" + "a" * 50
         audit = self._setup_handler(audit_dir, tokens=token)
 
         handler = PicoDomeHandler.__new__(PicoDomeHandler)
@@ -290,7 +290,7 @@ class TestDaemonAuditEmission:
     def test_auth_failure_bad_token_emitted(self, tmp_path):
         """Invalid token should emit AUTH_FAILURE."""
         audit_dir = tmp_path / "audit"
-        token = "irondome-admin-" + "a" * 50
+        token = "picodome-admin-" + "a" * 50
         audit = self._setup_handler(audit_dir, tokens=token)
 
         handler = PicoDomeHandler.__new__(PicoDomeHandler)
@@ -310,7 +310,7 @@ class TestDaemonAuditEmission:
         audit_dir = tmp_path / "audit"
         # Very restrictive rate limit: 1 request per 10 seconds, burst of 1
         rate_config = RateLimitConfig(rate_per_second=0.01, burst_size=1)
-        token = "irondome-admin-" + "a" * 50
+        token = "picodome-admin-" + "a" * 50
         audit = self._setup_handler(audit_dir, tokens=token, rate_config=rate_config)
 
         handler = PicoDomeHandler.__new__(PicoDomeHandler)
@@ -337,7 +337,7 @@ class TestDaemonAuditEmission:
     def test_command_denied_emitted(self, tmp_path):
         """Denied command should emit COMMAND_DENIED event."""
         audit_dir = tmp_path / "audit"
-        token = "irondome-admin-" + "a" * 50
+        token = "picodome-admin-" + "a" * 50
         audit = self._setup_handler(audit_dir, tokens=token)
 
         # Test _validateCommand directly first
@@ -370,7 +370,7 @@ class TestDaemonAuditEmission:
         """Insufficient permissions should emit AUTH_FAILURE."""
         audit_dir = tmp_path / "audit"
         # Set up a reader token (no write permissions)
-        reader_token = "irondome-reader-abc1234567890abcdefghijklmnopqr"
+        reader_token = "picodome-reader-abc1234567890abcdefghijklmnopqr"
         audit = self._setup_handler(audit_dir, tokens=reader_token)
 
         handler = PicoDomeHandler.__new__(PicoDomeHandler)
@@ -392,7 +392,7 @@ class TestDaemonAuditEmission:
         """After auth success, auth failure, command denied, and rate limited
         events, the audit chain must still be intact."""
         audit_dir = tmp_path / "audit"
-        token = "irondome-admin-" + "a" * 50
+        token = "picodome-admin-" + "a" * 50
         audit = self._setup_handler(audit_dir, tokens=token)
 
         # Record various security events

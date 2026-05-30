@@ -34,11 +34,11 @@ spec:
             - "--cert-file=/tls/tls.crt"
             - "--key-file=/tls/tls.key"
           env:
-            - name: IRONDOME_ADMISSION_SCAN_ENABLED
+            - name: PICODOME_ADMISSION_SCAN_ENABLED
               value: {{ .Values.admission.scanEnabled | quote }}
-            - name: IRONDOME_ADMISSION_SCAN_MIN_SEVERITY
+            - name: PICODOME_ADMISSION_SCAN_MIN_SEVERITY
               value: {{ .Values.admission.scanMinSeverity | quote }}
-            - name: IRONDOME_ADMISSION_DAEMON_URL
+            - name: PICODOME_ADMISSION_DAEMON_URL
               value: {{ .Values.admission.daemonUrl | quote }}
           ports:
             - name: https

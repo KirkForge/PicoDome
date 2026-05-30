@@ -1,10 +1,10 @@
-"""Tests for irondome.daemon.store — persistent scan job store."""
+"""Tests for picodome.daemon.store — persistent scan job store."""
 
 import json
 
 import pytest
 
-from irondome.daemon.store import PersistentScanJobStore
+from picodome.daemon.store import PersistentScanJobStore
 
 
 @pytest.fixture

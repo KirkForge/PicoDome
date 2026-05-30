@@ -35,7 +35,7 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
-# IronDome runtime
+# PicoDome runtime
 .picodome/
 *.log
 

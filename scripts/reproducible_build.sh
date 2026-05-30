@@ -13,8 +13,8 @@
 # Environment variables:
 #   SOURCE_DATE_EPOCH - If set, used for all timestamps (recommended: CI sets this)
 #   PYTHONHASHSEED    - If set, used for hash randomization (default: 0)
-#   IRONDOME_OFFLINE  - If set, build in offline/air-gapped mode (default: 1)
-#   IRONDOME_REQUIRE_HASHES - If set, require hash verification (default: 1)
+#   PICODOME_OFFLINE  - If set, build in offline/air-gapped mode (default: 1)
+#   PICODOME_REQUIRE_HASHES - If set, require hash verification (default: 1)
 
 set -euo pipefail
 
@@ -40,8 +40,8 @@ export PYTHONHASHSEED="${PYTHONHASHSEED:-0}"
 export PYTHONUTF8=1
 export LC_ALL=C.UTF-8
 
-IRONDOME_OFFLINE="${IRONDOME_OFFLINE:-1}"
-IRONDOME_REQUIRE_HASHES="${IRONDOME_REQUIRE_HASHES:-1}"
+PICODOME_OFFLINE="${PICODOME_OFFLINE:-1}"
+PICODOME_REQUIRE_HASHES="${PICODOME_REQUIRE_HASHES:-1}"
 
 echo "═══════════════════════════════════════════════════════════════════"
 echo "  PicoDome Reproducible Build"
@@ -50,8 +50,8 @@ echo "  SOURCE_DATE_EPOCH : ${EPOCH}"
 echo "  PYTHONHASHSEED    : ${PYTHONHASHSEED}"
 echo "  Project dir       : ${PROJECT_DIR}"
 echo "  Build dir         : ${BUILD_DIR}"
-echo "  Offline           : ${IRONDOME_OFFLINE}"
-echo "  Require hashes    : ${IRONDOME_REQUIRE_HASHES}"
+echo "  Offline           : ${PICODOME_OFFLINE}"
+echo "  Require hashes    : ${PICODOME_REQUIRE_HASHES}"
 echo "═══════════════════════════════════════════════════════════════════"
 
 cd "${PROJECT_DIR}"
@@ -73,11 +73,11 @@ PIP_ARGS=(
     "--no-build-isolation"
 )
 
-if [ "${IRONDOME_REQUIRE_HASHES}" = "1" ]; then
+if [ "${PICODOME_REQUIRE_HASHES}" = "1" ]; then
     PIP_ARGS+=("--require-hashes")
 fi
 
-if [ "${IRONDOME_OFFLINE}" = "1" ]; then
+if [ "${PICODOME_OFFLINE}" = "1" ]; then
     PIP_ARGS+=("--offline" 2>/dev/null) || true
 fi
 
@@ -85,7 +85,7 @@ fi
 REQ_FILE="${PROJECT_DIR}/requirements.txt"
 if [ -f "${REQ_FILE}" ]; then
     echo "  Found requirements.txt — verifying hashes..."
-    if [ "${IRONDOME_REQUIRE_HASHES}" = "1" ]; then
+    if [ "${PICODOME_REQUIRE_HASHES}" = "1" ]; then
         # Check that requirements.txt has hash lines
         HASH_COUNT=$(grep -c "^--hash=" "${REQ_FILE}" 2>/dev/null || echo "0")
         if [ "${HASH_COUNT}" = "0" ]; then
@@ -142,7 +142,7 @@ echo "  Found wheel: $(basename "${WHEEL_FILE}")"
 python3 -c "
 import sys
 sys.path.insert(0, '${PROJECT_DIR}/src')
-from irondome.reproducible import verify_reproducible_build
+from picodome.reproducible import verify_reproducible_build
 result = verify_reproducible_build('${WHEEL_FILE}')
 if result['violations']:
     print('  ⚠  Timestamp violations found:')
@@ -199,7 +199,7 @@ echo "▶ Step 6: Generating build manifest..."
 python3 -c "
 import sys
 sys.path.insert(0, '${PROJECT_DIR}/src')
-from irondome.reproducible import generate_build_manifest
+from picodome.reproducible import generate_build_manifest
 manifest_path = generate_build_manifest('${PROJECT_DIR}')
 print(f'  Manifest written to: {manifest_path}')
 "

@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from irondome.l4.baseline import (
+from picodome.l4.baseline import (
     load_all_baselines,
     load_baseline,
     load_baselines_from_path,
     register_baseline,
 )
-from irondome.l4.models import Baseline
+from picodome.l4.models import Baseline
 
 
 class TestLoadAllBaselines:
@@ -106,13 +106,13 @@ class TestRegisterCustomBaseline:
             assert loaded.name == "my-custom"
             assert loaded.package == "myapp"
         finally:
-            from irondome.l4.baseline import SHIPPED_BASELINES
+            from picodome.l4.baseline import SHIPPED_BASELINES
 
             SHIPPED_BASELINES.pop("my-custom", None)
 
     def test_register_overrides_existing(self):
         # Save original to restore after test
-        from irondome.l4.baseline import SHIPPED_BASELINES
+        from picodome.l4.baseline import SHIPPED_BASELINES
 
         original = SHIPPED_BASELINES.get("python-script")
         try:

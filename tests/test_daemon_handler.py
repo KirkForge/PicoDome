@@ -8,11 +8,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import irondome.audit.logger as audit_logger_mod
-from irondome.audit import AuditLogger
-from irondome.auth import RBAC, TokenAuth
-from irondome.daemon.server import PicoDomeDaemon, PicoDomeHandler, create_app
-from irondome.ratelimit import RateLimitConfig, TokenBucketLimiter
+import picodome.audit.logger as audit_logger_mod
+from picodome.audit import AuditLogger
+from picodome.auth import RBAC, TokenAuth
+from picodome.daemon.server import PicoDomeDaemon, PicoDomeHandler, create_app
+from picodome.ratelimit import RateLimitConfig, TokenBucketLimiter
 
 
 @pytest.fixture(autouse=True)
@@ -32,7 +32,7 @@ def _make_handler(tmp_path, token=None, rate_config=None):
         rate_config = RateLimitConfig(rate_per_second=100, burst_size=100)
 
     if token:
-        with patch.dict(os.environ, {"IRONDOME_API_TOKENS": token}, clear=False):
+        with patch.dict(os.environ, {"PICODOME_API_TOKENS": token}, clear=False):
             rbac = RBAC()
             auth = TokenAuth(rbac=rbac)
     else:
@@ -96,7 +96,7 @@ class TestHandlerMetrics:
         handler._handle_metrics()
         # Metrics writes directly to wfile, not _send_text
         output = handler.wfile.getvalue()
-        assert b"irondome_scans_total" in output or handler._send_text.called or handler.wfile.getvalue() != b""
+        assert b"picodome_scans_total" in output or handler._send_text.called or handler.wfile.getvalue() != b""
 
 
 class TestHandlerPolicies:
@@ -258,7 +258,7 @@ class TestCreateApp:
     def test_create_app_with_tokens(self):
         with patch.dict(os.environ, {}, clear=True):
             create_app(tokens="test-token-abc123456789012345678901234567890")
-            assert os.environ.get("IRONDOME_API_TOKENS") == "test-token-abc123456789012345678901234567890"
+            assert os.environ.get("PICODOME_API_TOKENS") == "test-token-abc123456789012345678901234567890"
 
 
 # ─── PicoDomeDaemon lifecycle ───────────────────────────────────────

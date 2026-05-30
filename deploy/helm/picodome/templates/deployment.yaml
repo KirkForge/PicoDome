@@ -47,64 +47,64 @@ spec:
               protocol: TCP
             {{- end }}
           env:
-            - name: IRONDOME_DAEMON_HOST
+            - name: PICODOME_DAEMON_HOST
               value: {{ .Values.daemon.host | quote }}
-            - name: IRONDOME_DAEMON_PORT
+            - name: PICODOME_DAEMON_PORT
               value: {{ .Values.daemon.port | quote }}
             {{- if .Values.metrics.separatePort }}
-            - name: IRONDOME_METRICS_PORT
+            - name: PICODOME_METRICS_PORT
               value: {{ .Values.metrics.port | quote }}
             {{- end }}
             {{- if .Values.auth.existingSecret }}
-            - name: IRONDOME_API_TOKENS
+            - name: PICODOME_API_TOKENS
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.auth.existingSecret }}
                   key: api-tokens
             {{- else if .Values.auth.tokens }}
-            - name: IRONDOME_API_TOKENS
+            - name: PICODOME_API_TOKENS
               value: {{ .Values.auth.tokens | quote }}
             {{- end }}
             {{- if .Values.enterprise.enabled }}
-            - name: IRONDOME_ENTERPRISE_MODE
+            - name: PICODOME_ENTERPRISE_MODE
               value: "1"
             {{- end }}
             {{- if .Values.mtls.enabled }}
-            - name: IRONDOME_TLS_CERT
+            - name: PICODOME_TLS_CERT
               value: "/tls/tls.crt"
-            - name: IRONDOME_TLS_KEY
+            - name: PICODOME_TLS_KEY
               value: "/tls/tls.key"
-            - name: IRONDOME_TLS_CA
+            - name: PICODOME_TLS_CA
               value: "/tls/ca.crt"
             {{- end }}
             {{- if .Values.persistence.enabled }}
-            - name: IRONDOME_JOB_STORE_DIR
+            - name: PICODOME_JOB_STORE_DIR
               value: "/home/picodome/.picodome"
             {{- end }}
             {{- if .Values.policySigning.verify }}
-            - name: IRONDOME_POLICY_VERIFY
+            - name: PICODOME_POLICY_VERIFY
               value: "1"
             {{- end }}
             {{- if .Values.policySigning.existingSecret }}
-            - name: IRONDOME_POLICY_KEY_FILE
+            - name: PICODOME_POLICY_KEY_FILE
               value: "/etc/picodome/keys/key"
             {{- else if .Values.policySigning.key }}
-            - name: IRONDOME_POLICY_KEY
+            - name: PICODOME_POLICY_KEY
               value: {{ .Values.policySigning.key | quote }}
             {{- end }}
             {{- if .Values.policySigning.keyId }}
-            - name: IRONDOME_POLICY_KEY_ID
+            - name: PICODOME_POLICY_KEY_ID
               value: {{ .Values.policySigning.keyId | quote }}
             {{- end }}
             {{- if ne .Values.store.backend "jsonl" }}
-            - name: IRONDOME_STORE_BACKEND
+            - name: PICODOME_STORE_BACKEND
               value: {{ .Values.store.backend | quote }}
             {{- end }}
             {{- if .Values.store.sqlitePath }}
-            - name: IRONDOME_SQLITE_PATH
+            - name: PICODOME_SQLITE_PATH
               value: {{ .Values.store.sqlitePath | quote }}
             {{- end }}
-            - name: IRONDOME_CORS_ORIGINS
+            - name: PICODOME_CORS_ORIGINS
               value: {{ .Values.cors.origins | quote }}
           volumeMounts:
             {{- if .Values.mtls.enabled }}

@@ -1,15 +1,15 @@
 # =============================================================================
-# Iron Dome — Multi-stage Dockerfile
+# PicoDome — Multi-stage Dockerfile
 # =============================================================================
-# Produces a minimal runtime image with Iron Dome installed.
+# Produces a minimal runtime image with PicoDome installed.
 #
 # Supports both CLI and daemon modes:
-#   CLI:     irondome sandbox <command>
-#   Daemon:  irondome daemon --host 0.0.0.0 --port 8443
-#   gRPC:    irondome daemon --transport grpc
+#   CLI:     picodome sandbox <command>
+#   Daemon:  picodome daemon --host 0.0.0.0 --port 8443
+#   gRPC:    picodome daemon --transport grpc
 #
 # For full seccomp-bpf kernel sandboxing, the runtime image includes
-# libseccomp2. Without it, Iron Dome falls back to the subprocess
+# libseccomp2. Without it, PicoDome falls back to the subprocess
 # backend (observational only — not suitable for enterprise mode).
 # =============================================================================
 
@@ -38,7 +38,7 @@ RUN python -m build --wheel --no-isolation
 FROM python:3.12-slim AS runtime
 
 LABEL org.opencontainers.image.source="https://github.com/KirkForge/PicoDome"
-LABEL org.opencontainers.image.title="Iron Dome"
+LABEL org.opencontainers.image.title="PicoDome"
 LABEL org.opencontainers.image.version="0.5.0"
 LABEL org.opencontainers.image.description="Deterministic runtime sandbox and behavioral analysis engine for supply-chain security"
 
@@ -48,12 +48,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Create non-root user and data directory
-RUN groupadd --system irondome && \
-    useradd --system --gid irondome --create-home --home-dir /home/irondome irondome && \
-    mkdir -p /home/irondome/.irondome && \
-    chown irondome:irondome /home/irondome/.irondome
+RUN groupadd --system picodome && \
+    useradd --system --gid picodome --create-home --home-dir /home/picodome picodome && \
+    mkdir -p /home/picodome/.picodome && \
+    chown picodome:picodome /home/picodome/.picodome
 
-WORKDIR /home/irondome
+WORKDIR /home/picodome
 
 # Copy and install wheel from builder
 COPY --from=builder /build/dist/*.whl /tmp/
@@ -63,18 +63,18 @@ RUN pip install --no-cache-dir /tmp/*.whl && rm -f /tmp/*.whl
 EXPOSE 8443 50051
 
 # Persistent data volume
-VOLUME /home/irondome/.irondome
+VOLUME /home/picodome/.picodome
 
 # Health check — verify CLI is functional
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD irondome --version || exit 1
+    CMD picodome --version || exit 1
 
-# Graceful shutdown: SIGTERM triggers IronDomeDaemon.stop()
+# Graceful shutdown: SIGTERM triggers PicoDomeDaemon.stop()
 STOPSIGNAL SIGTERM
 
 # Switch to non-root user
-USER irondome
+USER picodome
 
-# Default: CLI mode. Override for daemon: irondome daemon --host 0.0.0.0
+# Default: CLI mode. Override for daemon: picodome daemon --host 0.0.0.0
 # Use tini as PID 1 for proper signal forwarding
-ENTRYPOINT ["tini", "--", "irondome"]
+ENTRYPOINT ["tini", "--", "picodome"]

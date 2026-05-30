@@ -1,6 +1,6 @@
 """Tests for OpenTelemetry tracing hooks."""
 
-from irondome.tracing import (
+from picodome.tracing import (
     _NoopSpan,
     _NoopTracer,
     get_tracer,
@@ -38,7 +38,7 @@ class TestTracingNoop:
 
     def test_get_tracer_returns_noop_when_disabled(self):
         tracer = get_tracer()
-        # Without IRONDOME_TRACING_ENABLED, should be no-op
+        # Without PICODOME_TRACING_ENABLED, should be no-op
         assert isinstance(tracer, _NoopTracer)
 
     def test_is_tracing_available(self):
@@ -79,7 +79,7 @@ class TestTraceDaemonRequest:
             pass
 
     def test_trace_post_request(self):
-        with trace_daemon_request(method="POST", path="/api/v1/scan", request_id="irondome-abc123"):
+        with trace_daemon_request(method="POST", path="/api/v1/scan", request_id="picodome-abc123"):
             pass
 
     def test_trace_request_with_attrs(self):

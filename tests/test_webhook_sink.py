@@ -22,10 +22,10 @@ from typing import Any
 
 import pytest
 
-from irondome.audit import AuditEventType
-from irondome.audit.logger import AuditEvent
-from irondome.audit.sinks import WebhookSink, create_sink
-from irondome.audit.sinks.base import SinkConfig, SinkHealth
+from picodome.audit import AuditEventType
+from picodome.audit.logger import AuditEvent
+from picodome.audit.sinks import WebhookSink, create_sink
+from picodome.audit.sinks.base import SinkConfig, SinkHealth
 
 
 def _make_event(actor: str = "test", **kwargs) -> AuditEvent:

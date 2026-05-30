@@ -3,7 +3,7 @@
 import threading
 import time
 
-from irondome.ratelimit import JobPriority, JobQueue, RateLimitConfig, TokenBucketLimiter
+from picodome.ratelimit import JobPriority, JobQueue, RateLimitConfig, TokenBucketLimiter
 
 
 class TestTokenBucketLimiter:

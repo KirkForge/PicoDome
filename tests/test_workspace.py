@@ -7,10 +7,10 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from irondome.l3.models import SandboxResult
-from irondome.l4.models import AnalysisResult, BehavioralProfile, BehavioralVerdict
-from irondome.models import Finding, Severity, Verdict
-from irondome.workspace import (
+from picodome.l3.models import SandboxResult
+from picodome.l4.models import AnalysisResult, BehavioralProfile, BehavioralVerdict
+from picodome.models import Finding, Severity, Verdict
+from picodome.workspace import (
     PROJECT_MARKERS,
     SKIP_DIRS,
     ProjectInfo,
@@ -281,9 +281,9 @@ class TestScanWorkspace:
             (proj / "requirements.txt").write_text("flask\n")
         return proj
 
-    @patch("irondome.workspace.sandbox_run")
-    @patch("irondome.workspace.profile_from_sandbox_result")
-    @patch("irondome.workspace.create_default_engine")
+    @patch("picodome.workspace.sandbox_run")
+    @patch("picodome.workspace.profile_from_sandbox_result")
+    @patch("picodome.workspace.create_default_engine")
     def test_scan_single_project(self, mock_engine_fn, mock_profile, mock_sandbox, tmp_path):
         self._make_project(tmp_path)
         mock_sandbox.return_value = _make_sandbox_result()
@@ -300,9 +300,9 @@ class TestScanWorkspace:
         assert result.failed_projects == 0
         assert result.total_findings == 0
 
-    @patch("irondome.workspace.sandbox_run")
-    @patch("irondome.workspace.profile_from_sandbox_result")
-    @patch("irondome.workspace.create_default_engine")
+    @patch("picodome.workspace.sandbox_run")
+    @patch("picodome.workspace.profile_from_sandbox_result")
+    @patch("picodome.workspace.create_default_engine")
     def test_scan_with_findings(self, mock_engine_fn, mock_profile, mock_sandbox, tmp_path):
         self._make_project(tmp_path)
         mock_sandbox.return_value = _make_sandbox_result(verdict=Verdict.DENY, stdout="evil")
@@ -320,9 +320,9 @@ class TestScanWorkspace:
         assert result.total_findings >= 1
         assert result.failed_projects >= 1
 
-    @patch("irondome.workspace.sandbox_run")
-    @patch("irondome.workspace.profile_from_sandbox_result")
-    @patch("irondome.workspace.create_default_engine")
+    @patch("picodome.workspace.sandbox_run")
+    @patch("picodome.workspace.profile_from_sandbox_result")
+    @patch("picodome.workspace.create_default_engine")
     def test_scan_sandbox_exception(self, mock_engine_fn, mock_profile, mock_sandbox, tmp_path):
         self._make_project(tmp_path)
         mock_sandbox.side_effect = RuntimeError("sandbox failed")
@@ -333,9 +333,9 @@ class TestScanWorkspace:
         assert result.failed_projects >= 1
         assert len(result.errors) >= 1
 
-    @patch("irondome.workspace.sandbox_run")
-    @patch("irondome.workspace.profile_from_sandbox_result")
-    @patch("irondome.workspace.create_default_engine")
+    @patch("picodome.workspace.sandbox_run")
+    @patch("picodome.workspace.profile_from_sandbox_result")
+    @patch("picodome.workspace.create_default_engine")
     def test_scan_multiple_projects(self, mock_engine_fn, mock_profile, mock_sandbox, tmp_path):
         self._make_project(tmp_path, name="proj-a", ptype="node")
         self._make_project(tmp_path, name="proj-b", ptype="python")
@@ -351,9 +351,9 @@ class TestScanWorkspace:
         assert result.total_projects == 2
         assert result.scanned_projects == 2
 
-    @patch("irondome.workspace.sandbox_run")
-    @patch("irondome.workspace.profile_from_sandbox_result")
-    @patch("irondome.workspace.create_default_engine")
+    @patch("picodome.workspace.sandbox_run")
+    @patch("picodome.workspace.profile_from_sandbox_result")
+    @patch("picodome.workspace.create_default_engine")
     def test_scan_empty_workspace(self, mock_engine_fn, mock_profile, mock_sandbox, tmp_path):
         mock_engine = MagicMock()
         mock_engine_fn.return_value = mock_engine
@@ -362,9 +362,9 @@ class TestScanWorkspace:
         assert result.total_projects == 0
         assert result.scanned_projects == 0
 
-    @patch("irondome.workspace.sandbox_run")
-    @patch("irondome.workspace.profile_from_sandbox_result")
-    @patch("irondome.workspace.create_default_engine")
+    @patch("picodome.workspace.sandbox_run")
+    @patch("picodome.workspace.profile_from_sandbox_result")
+    @patch("picodome.workspace.create_default_engine")
     def test_scan_custom_commands(self, mock_engine_fn, mock_profile, mock_sandbox, tmp_path):
         proj = self._make_project(tmp_path)
         mock_sandbox.return_value = _make_sandbox_result()
@@ -379,9 +379,9 @@ class TestScanWorkspace:
         result = scan_workspace(tmp_path, commands=commands)
         assert result.scanned_projects == 1
 
-    @patch("irondome.workspace.sandbox_run")
-    @patch("irondome.workspace.profile_from_sandbox_result")
-    @patch("irondome.workspace.create_default_engine")
+    @patch("picodome.workspace.sandbox_run")
+    @patch("picodome.workspace.profile_from_sandbox_result")
+    @patch("picodome.workspace.create_default_engine")
     def test_scan_duration_ms(self, mock_engine_fn, mock_profile, mock_sandbox, tmp_path):
         self._make_project(tmp_path)
         mock_sandbox.return_value = _make_sandbox_result()
@@ -395,9 +395,9 @@ class TestScanWorkspace:
         result = scan_workspace(tmp_path)
         assert result.duration_ms >= 0
 
-    @patch("irondome.workspace.sandbox_run")
-    @patch("irondome.workspace.profile_from_sandbox_result")
-    @patch("irondome.workspace.create_default_engine")
+    @patch("picodome.workspace.sandbox_run")
+    @patch("picodome.workspace.profile_from_sandbox_result")
+    @patch("picodome.workspace.create_default_engine")
     def test_scan_fail_on_critical(self, mock_engine_fn, mock_profile, mock_sandbox, tmp_path):
         self._make_project(tmp_path)
         mock_sandbox.return_value = _make_sandbox_result()
@@ -416,9 +416,9 @@ class TestScanWorkspace:
         assert result.scanned_projects == 1
         assert result.failed_projects == 0
 
-    @patch("irondome.workspace.sandbox_run")
-    @patch("irondome.workspace.profile_from_sandbox_result")
-    @patch("irondome.workspace.create_default_engine")
+    @patch("picodome.workspace.sandbox_run")
+    @patch("picodome.workspace.profile_from_sandbox_result")
+    @patch("picodome.workspace.create_default_engine")
     def test_scan_no_commands_skips_project(self, mock_engine_fn, mock_profile, mock_sandbox, tmp_path):
         proj = tmp_path / "custom-proj"
         proj.mkdir()
@@ -439,7 +439,7 @@ class TestScanWorkspace:
 
 
 class TestScanWorkspaceToJson:
-    @patch("irondome.workspace.scan_workspace")
+    @patch("picodome.workspace.scan_workspace")
     def test_returns_json(self, mock_scan, tmp_path):
         wr = WorkspaceResult()
         wr.total_projects = 1
@@ -451,7 +451,7 @@ class TestScanWorkspaceToJson:
         assert "summary" in data
         assert data["summary"]["total_projects"] == 1
 
-    @patch("irondome.workspace.scan_workspace")
+    @patch("picodome.workspace.scan_workspace")
     def test_writes_output_file(self, mock_scan, tmp_path):
         wr = WorkspaceResult()
         wr.total_projects = 0
@@ -463,7 +463,7 @@ class TestScanWorkspaceToJson:
         written = json.loads(output.read_text())
         assert "summary" in written
 
-    @patch("irondome.workspace.scan_workspace")
+    @patch("picodome.workspace.scan_workspace")
     def test_includes_workspace_root(self, mock_scan, tmp_path):
         wr = WorkspaceResult()
         mock_scan.return_value = wr

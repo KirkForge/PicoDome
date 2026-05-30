@@ -17,8 +17,8 @@ Covers:
 
 from __future__ import annotations
 
-from irondome.admission import AdmissionRequest
-from irondome.admission.validator import DEFAULT_VALIDATOR, PodSecurityValidator
+from picodome.admission import AdmissionRequest
+from picodome.admission.validator import DEFAULT_VALIDATOR, PodSecurityValidator
 
 
 def _make_pod_request(pod_spec: dict, operation: str = "CREATE") -> AdmissionRequest:

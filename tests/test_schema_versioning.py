@@ -4,8 +4,8 @@ import json
 import tempfile
 from pathlib import Path
 
-from irondome.audit.logger import AUDIT_SCHEMA_VERSION, AuditEventType, AuditLogger
-from irondome.daemon.store import JOB_STORE_SCHEMA_VERSION, PersistentScanJobStore
+from picodome.audit.logger import AUDIT_SCHEMA_VERSION, AuditEventType, AuditLogger
+from picodome.daemon.store import JOB_STORE_SCHEMA_VERSION, PersistentScanJobStore
 
 
 class TestAuditSchemaVersioning:

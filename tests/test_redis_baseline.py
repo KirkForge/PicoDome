@@ -15,8 +15,8 @@ from unittest import mock
 
 import pytest
 
-from irondome.l4.models import Baseline
-from irondome.l4.redis_baseline import RedisBaselineStore
+from picodome.l4.models import Baseline
+from picodome.l4.redis_baseline import RedisBaselineStore
 
 
 class TestFallbackToShipped:
@@ -213,6 +213,6 @@ class TestRedisBaselineWithMock:
 
 class TestRedisBaselineConfig:
     def test_url_from_env(self):
-        with mock.patch.dict(os.environ, {"IRONDOME_REDIS_URL": "redis://custom:6379/5"}):
+        with mock.patch.dict(os.environ, {"PICODOME_REDIS_URL": "redis://custom:6379/5"}):
             store = RedisBaselineStore()
             assert store.redis_url == "redis://custom:6379/5"

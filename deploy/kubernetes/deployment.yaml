@@ -36,22 +36,22 @@ spec:
               containerPort: 8443
               protocol: TCP
           env:
-            - name: IRONDOME_DAEMON_HOST
+            - name: PICODOME_DAEMON_HOST
               value: "0.0.0.0"
-            - name: IRONDOME_DAEMON_PORT
+            - name: PICODOME_DAEMON_PORT
               value: "8443"
-            - name: IRONDOME_API_TOKENS
+            - name: PICODOME_API_TOKENS
               valueFrom:
                 secretKeyRef:
                   name: picodome-tokens
                   key: api-tokens
-            - name: IRONDOME_ENTERPRISE_MODE
+            - name: PICODOME_ENTERPRISE_MODE
               value: "1"
-            - name: IRONDOME_TLS_CERT
+            - name: PICODOME_TLS_CERT
               value: "/tls/tls.crt"
-            - name: IRONDOME_TLS_KEY
+            - name: PICODOME_TLS_KEY
               value: "/tls/tls.key"
-            - name: IRONDOME_TLS_CA
+            - name: PICODOME_TLS_CA
               value: "/tls/ca.crt"
           volumeMounts:
             - name: tls

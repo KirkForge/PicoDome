@@ -18,7 +18,7 @@ from unittest import mock
 
 import pytest
 
-from irondome.tenant import (
+from picodome.tenant import (
     DEFAULT_TENANT,
     TenantContext,
     TenantId,
@@ -276,7 +276,7 @@ class TestEnvLoading:
         with mock.patch.dict(
             os.environ,
             {
-                "IRONDOME_TENANTS": "alpha:Team Alpha;beta:Team Beta",
+                "PICODOME_TENANTS": "alpha:Team Alpha;beta:Team Beta",
             },
             clear=False,
         ):
@@ -290,8 +290,8 @@ class TestEnvLoading:
         with mock.patch.dict(
             os.environ,
             {
-                "IRONDOME_TENANTS": "alpha:Team Alpha",
-                "IRONDOME_TENANT_TOKEN_MAP": "hash1:alpha,hash2:alpha",
+                "PICODOME_TENANTS": "alpha:Team Alpha",
+                "PICODOME_TENANT_TOKEN_MAP": "hash1:alpha,hash2:alpha",
             },
             clear=False,
         ):
@@ -308,7 +308,7 @@ class TestEnvLoading:
         with mock.patch.dict(
             os.environ,
             {
-                "IRONDOME_TENANTS": "alpha",
+                "PICODOME_TENANTS": "alpha",
             },
             clear=False,
         ):

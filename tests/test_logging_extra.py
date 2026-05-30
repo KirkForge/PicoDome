@@ -1,11 +1,11 @@
-"""Tests for irondome.logging — structured JSON/SIEM logging."""
+"""Tests for picodome.logging — structured JSON/SIEM logging."""
 
 from __future__ import annotations
 
 import json
 import logging
 
-from irondome.logging import (
+from picodome.logging import (
     PicoDomeJSONFormatter,
     PicoDomeTextFormatter,
     get_log_context,
@@ -17,7 +17,7 @@ class TestJSONFormatter:
     def test_basic_format(self):
         fmt = PicoDomeJSONFormatter()
         record = logging.LogRecord(
-            name="irondome.test",
+            name="picodome.test",
             level=logging.INFO,
             pathname="",
             lineno=0,
@@ -29,25 +29,25 @@ class TestJSONFormatter:
         data = json.loads(output)
         assert data["message"] == "test message"
         assert data["level"] == "INFO"
-        assert data["logger"] == "irondome.test"
+        assert data["logger"] == "picodome.test"
         assert "timestamp" in data
 
     def test_includes_version(self):
         fmt = PicoDomeJSONFormatter(include_version=True)
-        record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
+        record = logging.LogRecord("picodome.test", logging.INFO, "", 0, "msg", (), None)
         data = json.loads(fmt.format(record))
-        assert "irondome_version" in data
+        assert "picodome_version" in data
 
     def test_excludes_version(self):
         fmt = PicoDomeJSONFormatter(include_version=False)
-        record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
+        record = logging.LogRecord("picodome.test", logging.INFO, "", 0, "msg", (), None)
         data = json.loads(fmt.format(record))
-        assert "irondome_version" not in data
+        assert "picodome_version" not in data
 
     def test_extra_context(self):
         fmt = PicoDomeJSONFormatter()
-        record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
-        record.irondome_context = {"command": ["echo"], "target": "pkg"}
+        record = logging.LogRecord("picodome.test", logging.INFO, "", 0, "msg", (), None)
+        record.picodome_context = {"command": ["echo"], "target": "pkg"}
         data = json.loads(fmt.format(record))
         assert data["command"] == ["echo"]
         assert data["target"] == "pkg"
@@ -60,13 +60,13 @@ class TestJSONFormatter:
             import sys
 
             exc_info = sys.exc_info()
-        record = logging.LogRecord("irondome.test", logging.ERROR, "", 0, "msg", (), exc_info)
+        record = logging.LogRecord("picodome.test", logging.ERROR, "", 0, "msg", (), exc_info)
         data = json.loads(fmt.format(record))
         assert "exception" in data
 
     def test_deterministic_key_order(self):
         fmt = PicoDomeJSONFormatter()
-        record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
+        record = logging.LogRecord("picodome.test", logging.INFO, "", 0, "msg", (), None)
         output = fmt.format(record)
         # Keys should be sorted (deterministic)
         keys = list(json.loads(output).keys())
@@ -76,28 +76,28 @@ class TestJSONFormatter:
 class TestTextFormatter:
     def test_basic_format(self):
         fmt = PicoDomeTextFormatter(use_color=False)
-        record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
+        record = logging.LogRecord("picodome.test", logging.INFO, "", 0, "msg", (), None)
         output = fmt.format(record)
         assert "msg" in output
         assert "INFO" in output
 
     def test_color_format(self):
         fmt = PicoDomeTextFormatter(use_color=True)
-        record = logging.LogRecord("irondome.test", logging.WARNING, "", 0, "warning msg", (), None)
+        record = logging.LogRecord("picodome.test", logging.WARNING, "", 0, "warning msg", (), None)
         output = fmt.format(record)
         assert "\033[" in output  # ANSI code present
 
     def test_no_color_format(self):
         fmt = PicoDomeTextFormatter(use_color=False)
-        record = logging.LogRecord("irondome.test", logging.WARNING, "", 0, "msg", (), None)
+        record = logging.LogRecord("picodome.test", logging.WARNING, "", 0, "msg", (), None)
         output = fmt.format(record)
         assert "\033[" not in output
 
     def test_verbose_format(self):
         fmt = PicoDomeTextFormatter(use_color=False, verbose=True)
-        record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
+        record = logging.LogRecord("picodome.test", logging.INFO, "", 0, "msg", (), None)
         output = fmt.format(record)
-        assert "irondome.test" in output
+        assert "picodome.test" in output
 
 
 class TestSetupLogging:

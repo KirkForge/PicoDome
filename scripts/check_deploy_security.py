@@ -103,11 +103,11 @@ def check_k8s_deployment(findings: list[Finding]) -> None:
     lines = _read_file_lines(deploy_path)
 
     for i, line in enumerate(lines, 1):
-        # DEV_MODE enabled (matches IRONDOME_DEV_MODE with "1" on same or next line)
-        if "IRONDOME_DEV_MODE" in line:
+        # DEV_MODE enabled (matches PICODOME_DEV_MODE with "1" on same or next line)
+        if "PICODOME_DEV_MODE" in line:
             # Check if "1" is on the same line
             if (
-                re.search(r"IRONDOME_DEV_MODE.*1", line)
+                re.search(r"PICODOME_DEV_MODE.*1", line)
                 or i < len(lines)
                 and re.search(r'value:\s*["\']?1["\']?', lines[i])
             ):
@@ -115,16 +115,16 @@ def check_k8s_deployment(findings: list[Finding]) -> None:
                     Finding(
                         "CRITICAL",
                         "dev-mode-k8s",
-                        "IRONDOME_DEV_MODE=1 found in K8s deployment — disables authentication",
+                        "PICODOME_DEV_MODE=1 found in K8s deployment — disables authentication",
                         str(deploy_path),
                         i,
                     )
                 )
 
         # TLS dev mode
-        if "IRONDOME_TLS_DEV" in line:
+        if "PICODOME_TLS_DEV" in line:
             if (
-                re.search(r"IRONDOME_TLS_DEV.*1", line)
+                re.search(r"PICODOME_TLS_DEV.*1", line)
                 or i < len(lines)
                 and re.search(r'value:\s*["\']?1["\']?', lines[i])
             ):
@@ -132,7 +132,7 @@ def check_k8s_deployment(findings: list[Finding]) -> None:
                     Finding(
                         "HIGH",
                         "tls-dev-k8s",
-                        "IRONDOME_TLS_DEV=1 found in K8s deployment — uses self-signed certs",
+                        "PICODOME_TLS_DEV=1 found in K8s deployment — uses self-signed certs",
                         str(deploy_path),
                         i,
                     )
@@ -187,12 +187,12 @@ def check_k8s_deployment(findings: list[Finding]) -> None:
 
     # Check for enterprise mode
     content = "\n".join(lines)
-    if "IRONDOME_ENTERPRISE_MODE" not in content:
+    if "PICODOME_ENTERPRISE_MODE" not in content:
         findings.append(
             Finding(
                 "MEDIUM",
                 "enterprise-mode-missing-k8s",
-                "IRONDOME_ENTERPRISE_MODE not set in K8s deployment — enterprise enforcement disabled",
+                "PICODOME_ENTERPRISE_MODE not set in K8s deployment — enterprise enforcement disabled",
                 str(deploy_path),
             )
         )
@@ -352,9 +352,9 @@ def check_helm_templates(findings: list[Finding]) -> None:
 
         for i, line in enumerate(lines, 1):
             # Dev mode in templates (name and value may be on separate lines)
-            if "IRONDOME_DEV_MODE" in line and "comment" not in line.lower():
+            if "PICODOME_DEV_MODE" in line and "comment" not in line.lower():
                 if (
-                    re.search(r"IRONDOME_DEV_MODE.*1", line)
+                    re.search(r"PICODOME_DEV_MODE.*1", line)
                     or i < len(lines)
                     and re.search(r'value:\s*["\']?1["\']?', lines[i])
                 ):
@@ -362,16 +362,16 @@ def check_helm_templates(findings: list[Finding]) -> None:
                         Finding(
                             "CRITICAL",
                             "dev-mode-template",
-                            f"IRONDOME_DEV_MODE=1 in template: {line.strip()}",
+                            f"PICODOME_DEV_MODE=1 in template: {line.strip()}",
                             str(tpl_path),
                             i,
                         )
                     )
 
             # TLS dev mode in templates
-            if "IRONDOME_TLS_DEV" in line and "comment" not in line.lower():
+            if "PICODOME_TLS_DEV" in line and "comment" not in line.lower():
                 if (
-                    re.search(r"IRONDOME_TLS_DEV.*1", line)
+                    re.search(r"PICODOME_TLS_DEV.*1", line)
                     or i < len(lines)
                     and re.search(r'value:\s*["\']?1["\']?', lines[i])
                 ):
@@ -379,7 +379,7 @@ def check_helm_templates(findings: list[Finding]) -> None:
                         Finding(
                             "HIGH",
                             "tls-dev-template",
-                            f"IRONDOME_TLS_DEV=1 in template: {line.strip()}",
+                            f"PICODOME_TLS_DEV=1 in template: {line.strip()}",
                             str(tpl_path),
                             i,
                         )
@@ -532,24 +532,24 @@ def check_source_hardcoded_secrets(findings: list[Finding], src_dir: Path | None
 def check_env_defaults(findings: list[Finding]) -> None:
     """Check that environment variable defaults favor secure settings."""
     # Check auth.py for dev-mode bypass
-    auth_path = SRC_DIR / "irondome" / "auth.py"
+    auth_path = SRC_DIR / "picodome" / "auth.py"
     if auth_path.exists():
         lines = _read_file_lines(auth_path)
         content = "\n".join(lines)
 
         # Verify dev mode is opt-in, not default
-        if 'os.environ.get("IRONDOME_DEV_MODE", "").lower() in ("1", "true", "yes")' not in content:
+        if 'os.environ.get("PICODOME_DEV_MODE", "").lower() in ("1", "true", "yes")' not in content:
             findings.append(
                 Finding(
                     "MEDIUM",
                     "dev-mode-default",
-                    "IRONDOME_DEV_MODE default may not be opt-in",
+                    "PICODOME_DEV_MODE default may not be opt-in",
                     str(auth_path),
                 )
             )
 
     # Check daemon server for observational_only backend rejection in enterprise
-    server_path = SRC_DIR / "irondome" / "daemon" / "server.py"
+    server_path = SRC_DIR / "picodome" / "daemon" / "server.py"
     if server_path.exists():
         lines = _read_file_lines(server_path)
         content = "\n".join(lines)

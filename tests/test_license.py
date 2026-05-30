@@ -1,4 +1,4 @@
-"""Tests for irondome.license — license tier enforcement."""
+"""Tests for picodome.license — license tier enforcement."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from irondome.license import (
+from picodome.license import (
     LicenseInfo,
     LicenseTier,
     _load_license_file,
@@ -152,13 +152,13 @@ class TestCheckLicense:
             assert info.tier == LicenseTier.PERSONAL
 
     def test_env_key(self):
-        with patch.dict(os.environ, {"IRONDOME_LICENSE_KEY": "shogun-commercial-testorg-key"}, clear=False):
+        with patch.dict(os.environ, {"PICODOME_LICENSE_KEY": "shogun-commercial-testorg-key"}, clear=False):
             _reset_cache()
             info = check_license()
             assert info.tier == LicenseTier.COMMERCIAL
 
     def test_local_license_file(self, tmp_path):
-        license_path = tmp_path / ".irondome-license"
+        license_path = tmp_path / ".picodome-license"
         license_path.write_text(
             json.dumps(
                 {
@@ -198,7 +198,7 @@ class TestRequireCommercial:
             assert result is False
 
     def test_commercial_returns_true(self):
-        with patch.dict(os.environ, {"IRONDOME_LICENSE_KEY": "shogun-commercial-testorg-key"}, clear=False):
+        with patch.dict(os.environ, {"PICODOME_LICENSE_KEY": "shogun-commercial-testorg-key"}, clear=False):
             _reset_cache()
             result = require_commercial()
             assert result is True

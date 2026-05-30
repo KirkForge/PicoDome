@@ -1,6 +1,6 @@
 """Tests for API versioning."""
 
-from irondome.api_versioning import (
+from picodome.api_versioning import (
     CURRENT_API_VERSION,
     APIVersion,
     APIVersionNegotiator,

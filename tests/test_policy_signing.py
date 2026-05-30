@@ -18,7 +18,7 @@ import json
 import os
 from unittest import mock
 
-from irondome.policy_versioned.signing import (
+from picodome.policy_versioned.signing import (
     SIGNATURE_MARKER,
     generate_key,
     key_to_hex,
@@ -218,8 +218,8 @@ class TestKeyManagement:
     def test_load_key_from_env(self):
         key = generate_key()
         hex_str = key_to_hex(key)
-        with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY": hex_str}):
-            from irondome.policy_versioned.signing import _load_key
+        with mock.patch.dict(os.environ, {"PICODOME_POLICY_KEY": hex_str}):
+            from picodome.policy_versioned.signing import _load_key
 
             loaded = _load_key()
             assert loaded == key
@@ -230,17 +230,17 @@ class TestKeyManagement:
         key_file = tmp_path / "policy.key"
         key_file.write_text(hex_str)
 
-        with mock.patch.dict(os.environ, {"IRONDOME_POLICY_KEY_FILE": str(key_file)}, clear=False):
+        with mock.patch.dict(os.environ, {"PICODOME_POLICY_KEY_FILE": str(key_file)}, clear=False):
             # Remove direct key env if set
-            os.environ.pop("IRONDOME_POLICY_KEY", None)
-            from irondome.policy_versioned.signing import _load_key
+            os.environ.pop("PICODOME_POLICY_KEY", None)
+            from picodome.policy_versioned.signing import _load_key
 
             loaded = _load_key()
             assert loaded == key
 
     def test_load_key_none_when_not_configured(self):
         with mock.patch.dict(os.environ, {}, clear=True):
-            from irondome.policy_versioned.signing import _load_key
+            from picodome.policy_versioned.signing import _load_key
 
             assert _load_key() is None
 

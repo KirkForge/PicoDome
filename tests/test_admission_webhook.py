@@ -17,7 +17,7 @@ import threading
 from http.server import HTTPServer
 from typing import Any
 
-from irondome.admission import (
+from picodome.admission import (
     AdmissionHandler,
     AdmissionRequest,
     AdmissionResponse,

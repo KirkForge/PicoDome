@@ -97,6 +97,6 @@ To forward audit events to a central log system:
 2. **HTTP webhooks**: Configure `WebhookSink` with your endpoint URL and secret.
 3. **File + shipper**: Use `FileSink` and tail the JSONL with Filebeat/Fluentd/Fluent Bit.
 
-Set `IRONDOME_AUDIT_SINK` to `file`, `syslog`, `webhook`, or a comma-separated combination.
+Set `PICODOME_AUDIT_SINK` to `file`, `syslog`, `webhook`, or a comma-separated combination.
 
 This is a starter guide intended to evolve into a hardened reference deployment.
