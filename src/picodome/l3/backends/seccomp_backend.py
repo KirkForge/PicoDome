@@ -129,6 +129,11 @@ _PROCESS_SYSCALLS = {
     "wait4",
     "waitid",
     "waitpid",
+    # Process management — needed by npm, pip, yarn
+    "kill",
+    "setsid",
+    "sigprocmask",
+    "close_range",
 }
 
 # Comprehensive safe syscalls needed for basic binary execution
@@ -226,6 +231,12 @@ _SAFE_SYSCALLS = {
     "wait4",
     "waitid",
     "waitpid",
+    # CPython subprocess fork/exec path (close_range kills children without this)
+    "close_range",
+    # Process management — signal dispatch, session creation, signal mask
+    "kill",
+    "setsid",
+    "sigprocmask",
 }
 
 

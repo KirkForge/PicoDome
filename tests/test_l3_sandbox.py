@@ -108,6 +108,63 @@ class TestSeccompBackend:
         assert result.overall_verdict == Verdict.ALLOW
         assert "42" in result.stdout
 
+    def test_sandbox_subprocess_child_survives(self):
+        """Child process spawned via subprocess.run must survive seccomp.
+
+        This is the exact regression that broke npm/pip installs: CPython's
+        subprocess module calls close_range() in the child between fork and
+        exec.  If close_range is missing from the allowlist, the child dies
+        with SIGSYS (returncode -31) while the parent exits 0 — a silent
+        failure masked as ALLOW.
+        """
+        from picodome.l3.backends.seccomp_backend import SeccompBackend
+
+        backend = SeccompBackend()
+        if not backend.is_available():
+            pytest.skip("seccomp-bpf not available on this platform")
+
+        from picodome.l3.policy import node_policy
+
+        # Run Python code that spawns a child via subprocess.run('/bin/true')
+        # and exits with the child's return code — not just the parent's.
+        result = backend.run(
+            [
+                "python3", "-c",
+                "import subprocess, sys; sys.exit(subprocess.run(['/bin/true']).returncode)",
+            ],
+            node_policy(),
+            timeout=10.0,
+        )
+        # The child must survive (exit 0), not die with SIGSYS (returncode -31).
+        assert result.exit_code == 0, (
+            f"Child process killed: exit_code={result.exit_code}, verdict={result.overall_verdict}. "
+            f"close_range/kill/setsid/sigprocmask may be missing from the seccomp allowlist."
+        )
+        assert result.overall_verdict == Verdict.ALLOW
+
+    def test_sandbox_node_policy_subprocess_child(self):
+        """Node policy must allow subprocess children (npm install path)."""
+        from picodome.l3.backends.seccomp_backend import SeccompBackend
+
+        backend = SeccompBackend()
+        if not backend.is_available():
+            pytest.skip("seccomp-bpf not available on this platform")
+
+        from picodome.l3.policy import node_policy
+
+        result = backend.run(
+            [
+                "python3", "-c",
+                "import subprocess, sys; sys.exit(subprocess.run(['/bin/true']).returncode)",
+            ],
+            node_policy(),
+            timeout=10.0,
+        )
+        assert result.exit_code == 0, (
+            f"Child killed under node policy: exit_code={result.exit_code}"
+        )
+        assert result.overall_verdict == Verdict.ALLOW
+
     def test_sandbox_blocks_network(self):
         """Network access should be killed by seccomp."""
         result = sandbox_run(
