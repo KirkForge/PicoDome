@@ -1,4 +1,4 @@
-"""Iron Dome Audit — structured, tamper-evident audit logging.
+"""PicoDome Audit — structured, tamper-evident audit logging.
 
 Append-only JSON-lines audit log with hash chaining for integrity.
 Every policy mutation, scan execution, and baseline change is recorded

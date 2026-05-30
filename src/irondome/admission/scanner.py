@@ -4,13 +4,13 @@ When a pod is submitted, the admission controller can optionally
 scan the container images before allowing deployment. If a scan
 finds critical/high vulnerabilities, the pod is denied.
 
-This connects the K8s admission webhook to IronDome's L3 sandbox
+This connects the K8s admission webhook to PicoDome's L3 sandbox
 and L4 behavioral analysis engine.
 
 Configuration:
   IRONDOME_ADMISSION_SCAN_ENABLED — 'true' to enable image scanning
   IRONDOME_ADMISSION_SCAN_MIN_SEVERITY — minimum severity to block (default: high)
-  IRONDOME_ADMISSION_DAEMON_URL — URL of the IronDome daemon for scan requests
+  IRONDOME_ADMISSION_DAEMON_URL — URL of the PicoDome daemon for scan requests
 """
 
 from __future__ import annotations
@@ -41,14 +41,14 @@ SEVERITY_LEVELS = {
 class ImageScanner:
     """Scan container images before allowing deployment.
 
-    Connects to the IronDome daemon to submit scan requests for
+    Connects to the PicoDome daemon to submit scan requests for
     each container image in the pod. If any image scan returns
     findings at or above the configured severity, the pod is denied.
 
     Args:
         enabled: Whether image scanning is enabled.
         min_severity: Minimum severity level to block deployment.
-        daemon_url: URL of the IronDome daemon.
+        daemon_url: URL of the PicoDome daemon.
         timeout: Seconds to wait for scan response.
     """
 
@@ -112,7 +112,7 @@ class ImageScanner:
     def _scan_image(self, image: str, container_name: str) -> tuple[bool, str]:
         """Scan a single container image.
 
-        Sends a scan request to the IronDome daemon and checks the results.
+        Sends a scan request to the PicoDome daemon and checks the results.
 
         Args:
             image: Container image reference (e.g., "nginx:latest").
@@ -122,7 +122,7 @@ class ImageScanner:
             Tuple of (allowed, reason).
         """
         try:
-            # Submit scan to IronDome daemon
+            # Submit scan to PicoDome daemon
             url = f"{self.daemon_url}/api/v1/scan"
             payload = json.dumps(
                 {
@@ -167,14 +167,14 @@ class ImageScanner:
         except URLError as exc:
             if self._fail_closed:
                 logger.error(
-                    "Cannot reach IronDome daemon for image scan '%s': %s — denying (fail-closed)",
+                    "Cannot reach PicoDome daemon for image scan '%s': %s — denying (fail-closed)",
                     image,
                     exc,
                 )
                 return False, f"daemon unreachable: image '{image}' scan could not be performed"
             else:
                 logger.warning(
-                    "Cannot reach IronDome daemon for image scan '%s': %s — allowing (fail-open)",
+                    "Cannot reach PicoDome daemon for image scan '%s': %s — allowing (fail-open)",
                     image,
                     exc,
                 )

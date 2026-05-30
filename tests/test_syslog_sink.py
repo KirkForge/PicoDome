@@ -88,7 +88,7 @@ class TestSyslogSinkFormat:
         # RFC 5424: <pri>VERSION TIMESTAMP HOSTNAME APP-NAME PROCID MSGID SD MSG
         assert msg.startswith("<")
         assert ">1 " in msg
-        assert "irondome" in msg
+        assert "picodome" in msg
         assert "alice" in msg
         assert "scan_start" in msg
 

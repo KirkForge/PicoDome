@@ -27,7 +27,7 @@ ruff format --check src/ tests/
 ### 3. MyPy Type Check Failures
 
 ```bash
-mypy src/irondome
+mypy src/picodome
 ```
 
 - Common: missing type hints on public functions
@@ -37,8 +37,8 @@ mypy src/irondome
 ### 4. Determinism Gate Failure
 
 ```bash
-RUN1=$(python -m irondome sandbox --format json echo deterministic 2>/dev/null | sha256sum)
-RUN2=$(python -m irondome sandbox --format json echo deterministic 2>/dev/null | sha256sum)
+RUN1=$(python -m picodome sandbox --format json echo deterministic 2>/dev/null | sha256sum)
+RUN2=$(python -m picodome sandbox --format json echo deterministic 2>/dev/null | sha256sum)
 diff <(echo "$RUN1") <(echo "$RUN2")
 ```
 
@@ -47,7 +47,7 @@ diff <(echo "$RUN1") <(echo "$RUN2")
 ### 5. Self-Test Failure
 
 ```bash
-python -m irondome sandbox echo "ci-test"
+python -m picodome sandbox echo "ci-test"
 ```
 
 - Ensure the subprocess backend is working
@@ -57,7 +57,7 @@ python -m irondome sandbox echo "ci-test"
 ### 6. Coverage Below Threshold
 
 ```bash
-python -m pytest --cov=irondome --cov-report=term-missing
+python -m pytest --cov=picodome --cov-report=term-missing
 ```
 
 - Add tests for uncovered code paths

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate CycloneDX SBOM for IronDome.
+"""Generate CycloneDX SBOM for PicoDome.
 
 Produces a CycloneDX JSON SBOM from installed packages,
-including IronDome version, Python version, and dependencies.
+including PicoDome version, Python version, and dependencies.
 
 Usage:
     python scripts/generate_sbom.py                  # stdout
@@ -21,11 +21,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-# ── IronDome version ───────────────────────────────────────────────
+# ── PicoDome version ───────────────────────────────────────────────
 try:
-    from irondome import __version__ as IRONDOME_VERSION
+    from irondome import __version__ as PICODOME_VERSION
 except ImportError:
-    IRONDOME_VERSION = "unknown"
+    PICODOME_VERSION = "unknown"
 
 
 def get_installed_packages() -> list[dict[str, Any]]:
@@ -51,12 +51,12 @@ def get_installed_packages() -> list[dict[str, Any]]:
         return []
 
 
-def get_irondome_dependencies() -> list[dict[str, Any]]:
-    """Get IronDome's declared dependencies from importlib.metadata."""
+def get_picodome_dependencies() -> list[dict[str, Any]]:
+    """Get PicoDome's declared dependencies from importlib.metadata."""
     try:
         from importlib.metadata import requires
 
-        deps = requires("irondome") or []
+        deps = requires("picodome") or []
         components: list[dict[str, Any]] = []
         for dep in deps:
             # Remove extras markers for clean display
@@ -85,8 +85,8 @@ def generate_sbom(output: str | None = None, pretty: bool = True) -> str:
     # Build package lookup
     pkg_versions: dict[str, str] = {pkg["name"].lower(): pkg["version"] for pkg in installed}
 
-    # IronDome dependencies from pyproject.toml
-    irondome_deps = [
+    # PicoDome dependencies from pyproject.toml
+    picodome_deps = [
         "pytest",
         "pytest-cov",
         "pyyaml",
@@ -95,14 +95,14 @@ def generate_sbom(output: str | None = None, pretty: bool = True) -> str:
     # Build components list
     components: list[dict[str, Any]] = []
 
-    # Add IronDome itself as the main component
+    # Add PicoDome itself as the main component
     components.append(
         {
             "type": "application",
-            "name": "irondome",
-            "version": IRONDOME_VERSION,
-            "description": "Iron Dome — deterministic runtime sandbox and behavioral analysis for supply-chain security",
-            "purl": f"pkg:pypi/irondome@{IRONDOME_VERSION}",
+            "name": "picodome",
+            "version": PICODOME_VERSION,
+            "description": "PicoDome — deterministic runtime sandbox and behavioral analysis for supply-chain security",
+            "purl": f"pkg:pypi/picodome@{PICODOME_VERSION}",
             "properties": [
                 {"name": "python:version", "value": platform.python_version()},
                 {"name": "python:implementation", "value": platform.python_implementation()},
@@ -113,8 +113,8 @@ def generate_sbom(output: str | None = None, pretty: bool = True) -> str:
         }
     )
 
-    # Add IronDome dependencies
-    for dep_name in irondome_deps:
+    # Add PicoDome dependencies
+    for dep_name in picodome_deps:
         dep_lower = dep_name.lower()
         version = pkg_versions.get(dep_lower, "unknown")
         components.append(
@@ -129,7 +129,7 @@ def generate_sbom(output: str | None = None, pretty: bool = True) -> str:
     # Add all installed packages as dependencies
     for pkg in installed:
         name_lower = pkg["name"].lower()
-        if name_lower not in {d.lower() for d in irondome_deps} and name_lower != "irondome":
+        if name_lower not in {d.lower() for d in picodome_deps} and name_lower != "picodome":
             components.append(
                 {
                     "type": "library",
@@ -151,15 +151,15 @@ def generate_sbom(output: str | None = None, pretty: bool = True) -> str:
             "timestamp": now,
             "component": {
                 "type": "application",
-                "name": "irondome",
-                "version": IRONDOME_VERSION,
-                "description": "Iron Dome — deterministic runtime sandbox and behavioral analysis for supply-chain security",
-                "purl": f"pkg:pypi/irondome@{IRONDOME_VERSION}",
+                "name": "picodome",
+                "version": PICODOME_VERSION,
+                "description": "PicoDome — deterministic runtime sandbox and behavioral analysis for supply-chain security",
+                "purl": f"pkg:pypi/picodome@{PICODOME_VERSION}",
             },
             "tools": [
                 {
                     "vendor": "KirkForge",
-                    "name": "irondome-sbom-generator",
+                    "name": "picodome-sbom-generator",
                     "version": "1.0.0",
                 }
             ],
@@ -172,8 +172,8 @@ def generate_sbom(output: str | None = None, pretty: bool = True) -> str:
         "components": components,
         "dependencies": [
             {
-                "ref": f"pkg:pypi/irondome@{IRONDOME_VERSION}",
-                "dependsOn": [f"pkg:pypi/{dep}@{pkg_versions.get(dep.lower(), 'unknown')}" for dep in irondome_deps],
+                "ref": f"pkg:pypi/picodome@{PICODOME_VERSION}",
+                "dependsOn": [f"pkg:pypi/{dep}@{pkg_versions.get(dep.lower(), 'unknown')}" for dep in picodome_deps],
             }
         ],
     }
@@ -192,7 +192,7 @@ def generate_sbom(output: str | None = None, pretty: bool = True) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate CycloneDX SBOM for IronDome",
+        description="Generate CycloneDX SBOM for PicoDome",
     )
     parser.add_argument(
         "-o",

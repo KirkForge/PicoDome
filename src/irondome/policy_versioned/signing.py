@@ -78,7 +78,7 @@ def load_key() -> bytes | None:
     F4: In enterprise mode, a key MUST be configured or an error is logged.
 
     For Kubernetes, create a Secret and mount it:
-        kubectl create secret generic irondome-policy-key \\
+        kubectl create secret generic picodome-policy-key \\
             --from-literal=key=<hex-encoded-key>
         # Mount in deployment:
         #   volumeMounts:

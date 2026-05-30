@@ -1,7 +1,7 @@
 """
 Reproducible builds — SOURCE_DATE_EPOCH, pinned dep hashes, hermetic pip.
 
-IronDome's core thesis is determinism. Builds MUST be bit-for-bit reproducible.
+PicoDome's core thesis is determinism. Builds MUST be bit-for-bit reproducible.
 This module provides:
 
 - ReproducibleBuild: configuration class for reproducible builds

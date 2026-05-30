@@ -1,4 +1,4 @@
-"""IronDome gRPC Servicer — implements the IronDomeService RPCs.
+"""PicoDome gRPC Servicer — implements the PicoDomeService RPCs.
 
 This module contains the actual RPC handler implementations.
 It is imported lazily by server.py only when grpcio is available.
@@ -17,8 +17,8 @@ from irondome import __version__
 logger = logging.getLogger("irondome.grpc_transport.servicer")
 
 
-class IronDomeServicer:
-    """Implementation of the IronDomeService gRPC service.
+class PicoDomeServicer:
+    """Implementation of the PicoDomeService gRPC service.
 
     Delegates actual scanning to the injected scan engine,
     and logs all RPCs to the audit module.
@@ -315,7 +315,7 @@ def add_servicer_manually(servicer, server):
     """
     import grpc
 
-    service_name = "irondome.IronDomeService"
+    service_name = "irondome.PicoDomeService"
 
     rpc_method_handlers = {
         "Scan": grpc.unary_unary_rpc_method_handler(

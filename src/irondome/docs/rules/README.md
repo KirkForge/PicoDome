@@ -1,4 +1,4 @@
-# Iron Dome — Rule Documentation
+# PicoDome — Rule Documentation
 
 This directory contains detailed documentation for each detection rule.
 

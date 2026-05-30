@@ -1,7 +1,7 @@
-"""IronDome gRPC Server — serves IronDome scan engine over gRPC.
+"""PicoDome gRPC Server — serves PicoDome scan engine over gRPC.
 
 Wraps the existing daemon's scan engine and exposes it via the
-IronDomeService gRPC service defined in proto/irondome.proto.
+PicoDomeService gRPC service defined in proto/irondome.proto.
 
 Uses lazy imports for grpcio so the module degrades gracefully
 when grpcio is not installed.
@@ -55,19 +55,19 @@ class _ScanEngine:
         return engine.analyze(profile, rules=rules, deterministic=deterministic)
 
 
-class IronDomeGRPCServer:
-    """gRPC server for IronDome — serves the scan engine over gRPC.
+class PicoDomeGRPCServer:
+    """gRPC server for PicoDome — serves the scan engine over gRPC.
 
     Usage::
 
-        server = IronDomeGRPCServer(port=50051)
+        server = PicoDomeGRPCServer(port=50051)
         server.start()  # blocks
 
     Or with TLS::
 
         from irondome.mtls import MTLSConfig, create_ssl_context
         config = MTLSConfig(cert_path="server.crt", key_path="server.key", ca_path="ca.crt")
-        server = IronDomeGRPCServer(port=50051, mtls_config=config)
+        server = PicoDomeGRPCServer(port=50051, mtls_config=config)
         server.start()
 
     If grpcio is not installed, start() will raise ImportError with
@@ -104,10 +104,10 @@ class IronDomeGRPCServer:
 
         import grpc
 
-        from irondome.grpc_transport._servicer import IronDomeServicer
+        from irondome.grpc_transport._servicer import PicoDomeServicer
 
         self._server = grpc.server(futures.ThreadPoolExecutor(max_workers=self._max_workers))
-        self._servicer = IronDomeServicer(
+        self._servicer = PicoDomeServicer(
             scan_engine=self._scan_engine,
             start_time=self._start_time,
             scan_count_ref=self,
@@ -117,7 +117,7 @@ class IronDomeGRPCServer:
         try:
             from irondome.grpc_transport.proto import irondome_pb2_grpc as pb2_grpc
 
-            pb2_grpc.add_IronDomeServiceServicer_to_server(self._servicer, self._server)
+            pb2_grpc.add_PicoDomeServiceServicer_to_server(self._servicer, self._server)
         except ImportError:
             # Manual registration for when proto compilation is not done
             logger.warning(
@@ -159,7 +159,7 @@ class IronDomeGRPCServer:
             pass
 
         self._server.start()
-        logger.info("IronDome gRPC server started on %s", address)
+        logger.info("PicoDome gRPC server started on %s", address)
         self._server.wait_for_termination()
 
     def stop(self, grace: float = 5.0) -> None:
@@ -184,7 +184,7 @@ class IronDomeGRPCServer:
             except Exception:
                 pass
 
-            logger.info("IronDome gRPC server stopped")
+            logger.info("PicoDome gRPC server stopped")
 
     def _create_server_credentials(self, mtls_config) -> Any:
         """Create gRPC server credentials from MTLSConfig."""

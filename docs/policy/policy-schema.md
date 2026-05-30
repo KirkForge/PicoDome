@@ -1,6 +1,6 @@
 # Policy schema v1 (starter)
 
-Iron Dome is a runtime sandbox. Enterprise deployments require a first-class, **deny-by-default** policy model.
+PicoDome is a runtime sandbox. Enterprise deployments require a first-class, **deny-by-default** policy model.
 
 This document defines a *starter* policy schema and semantics. It is designed to be:
 - deterministic

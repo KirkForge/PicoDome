@@ -1,7 +1,6 @@
-
 **See also**: [REPORULES.md](../REPORULES.md) — multi-machine sync, git identity, PAT handling, and new-repo bootstrap.
 
-# AGENTS.md — IronDome
+# AGENTS.md — PicoDome
 
 ## ⚠️ Mandatory Rules — Read Before Editing
 
@@ -10,6 +9,32 @@
 - **Git identity**: `Henrik Kirk <285947470+KirkForge@users.noreply.github.com>`
 - **Commit format**: `type(scope): message` — feat, fix, docs, refactor, test, chore, wip
 - **Pre-push CI**: `ci-cleandev` hooks block pushes on failure. Fix, don't bypass.
+
+## What PicoDome IS
+
+PicoDome is a **deterministic runtime sandbox and behavioral analysis engine** for supply-chain security. It protects machines — especially LLMs — from injection attacks embedded in dependencies.
+
+- L3 sandbox: real kernel-level enforcement (seccomp-bpf on Linux, seatbelt on macOS)
+- L4 behavioral analysis: timing anomalies, data exfiltration, entropy spikes, honeypot touches, baseline drift
+- Deterministic output: same command + same policy = same SHA-256, every time
+- Zero hard runtime dependencies
+- Part of the Pico Security Series: PicoSentry (L2 static) → PicoDome (L3+L4 runtime) → PicoWatch (L5 LLM defense) → PicoShogun (command centre)
+
+## What PicoDome is NOT
+
+- Not a Kubernetes platform — Helm charts exist but have no production deployment
+- Not SOC 2 certified — no audit has been performed
+- Not a full containment boundary — seccomp-bpf is a syscall policy harness, not a VM
+- Not "enterprise-grade" — it's pre-1.0 beta software
+
+## Writing Style Rules
+
+- **No "enterprise"** on features that are scaffolded (code + tests but no production deployment)
+- **No inflated scores** — don't write "8.5/10 readiness" on pre-1.0 software
+- **Call scaffolded things scaffolded** — 🔶 means code exists but no production evidence
+- **Call not-built things not built** — ❌ means no code exists
+- **Honest about limitations** — seccomp-bpf is a syscall filter, not a sandbox VM
+- **No AI co-authors in CITATION.cff** — only real humans
 
 ## Python Project Rules
 

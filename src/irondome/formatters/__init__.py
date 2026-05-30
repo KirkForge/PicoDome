@@ -1,4 +1,4 @@
-"""Iron Dome output formatters.
+"""PicoDome output formatters.
 
 Available formatters:
 - format_json: JSON output (deterministic mode available)

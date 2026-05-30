@@ -1,4 +1,4 @@
-"""Token-bucket rate limiter for the Iron Dome daemon.
+"""Token-bucket rate limiter for the PicoDome daemon.
 
 Per-actor rate limiting using the token bucket algorithm. Each actor
 (e.g., API token, IP address) gets an independent bucket with

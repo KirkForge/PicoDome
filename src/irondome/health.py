@@ -1,4 +1,4 @@
-"""Health and readiness checks for Iron Dome daemon mode.
+"""Health and readiness checks for PicoDome daemon mode.
 
 Provides both programmatic health checks and a CLI-accessible
 health verification command.

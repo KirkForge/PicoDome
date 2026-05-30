@@ -37,7 +37,7 @@ RUN python -m build --wheel --no-isolation
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim AS runtime
 
-LABEL org.opencontainers.image.source="https://github.com/KirkForge/IronDome"
+LABEL org.opencontainers.image.source="https://github.com/KirkForge/PicoDome"
 LABEL org.opencontainers.image.title="Iron Dome"
 LABEL org.opencontainers.image.version="0.5.0"
 LABEL org.opencontainers.image.description="Deterministic runtime sandbox and behavioral analysis engine for supply-chain security"

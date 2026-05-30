@@ -39,7 +39,7 @@ class TestAPIVersionNegotiator:
 
     def test_accept_header(self):
         neg = APIVersionNegotiator()
-        version, _ = neg.negotiate(accept_header="application/vnd.irondome.v1+json")
+        version, _ = neg.negotiate(accept_header="application/vnd.picodome.v1+json")
         assert version == "v1"
 
     def test_custom_header(self):

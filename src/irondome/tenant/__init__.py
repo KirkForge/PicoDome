@@ -1,6 +1,6 @@
-"""Multi-tenant isolation for IronDome.
+"""Multi-tenant isolation for PicoDome.
 
-In enterprise deployments, a single IronDome instance serves multiple
+In enterprise deployments, a single PicoDome instance serves multiple
 teams within a company. Each team's data is namespaced by TenantId
 and isolated at the storage, API, and audit layers.
 
@@ -34,7 +34,7 @@ class TenantId:
     """Immutable tenant identifier.
 
     A TenantId is a short, unique string that namespaces all data
-    belonging to a team or organization within a shared IronDome instance.
+    belonging to a team or organization within a shared PicoDome instance.
     """
 
     value: str

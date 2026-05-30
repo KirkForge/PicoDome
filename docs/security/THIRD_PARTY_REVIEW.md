@@ -1,4 +1,4 @@
-# IronDome — Security Review Plan (readiness placeholder)
+# PicoDome — Security Review Plan (readiness placeholder)
 
 > **Status:** Planned — no review has been conducted yet · **Target:** v1.0.0 GA  
 > **Last updated:** 2026-05-27
@@ -12,7 +12,7 @@
 
 Enterprise GA certification requires independent security validation beyond
 self-testing. This document defines the scope, methodology, and engagement
-plan for security review of IronDome. **The review has not yet been conducted.**
+plan for security review of PicoDome. **The review has not yet been conducted.**
 When completed, findings and remediation status will replace this plan document.
 
 ## 2. Reviewer
@@ -50,7 +50,7 @@ and reporting pipeline.
 
 - **Type:** Gray-box (reviewer receives architecture docs + source, no operator credentials)
 - **Duration:** 2–3 weeks
-- **Target environment:** Docker Compose + Kind cluster (provided by IronDome team)
+- **Target environment:** Docker Compose + Kind cluster (provided by PicoDome team)
 - **Deliverable:** Dark-Moon report with findings classified by CVSS severity, reproducible steps, and remediation recommendations
 
 ### 4b. Red Team Exercise
@@ -93,7 +93,7 @@ Internal — Dark-Moon is a KirkForge capability. No external vendor cost.
 
 All findings will be:
 
-1. Logged in the IronDome security issue tracker (private)
+1. Logged in the PicoDome security issue tracker (private)
 2. Triaged within 48 hours of receipt
 3. Remediated per the patch SLA:
    - Critical: 7 days

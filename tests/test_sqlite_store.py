@@ -67,7 +67,7 @@ class TestSQLiteStoreBasic:
         assert job["schema_version"] == 2
 
     def test_command_serialization(self, store):
-        store.add("job-cmd", ["python3", "-m", "irondome", "sandbox", "npm", "install"], "ci")
+        store.add("job-cmd", ["python3", "-m", "picodome", "sandbox", "npm", "install"], "ci")
         job = store.get("job-cmd")
         assert job is not None
         assert isinstance(job["command"], list)

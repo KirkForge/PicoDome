@@ -18,7 +18,7 @@ from __future__ import annotations
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-CHART_DIR = REPO_ROOT / "deploy" / "helm" / "irondome-admission"
+CHART_DIR = REPO_ROOT / "deploy" / "helm" / "picodome-admission"
 
 
 class TestChartYaml:
@@ -27,7 +27,7 @@ class TestChartYaml:
 
     def test_chart_name(self):
         content = (CHART_DIR / "Chart.yaml").read_text()
-        assert "irondome-admission" in content
+        assert "picodome-admission" in content
 
     def test_chart_type(self):
         content = (CHART_DIR / "Chart.yaml").read_text()
@@ -168,11 +168,11 @@ class TestHelpersTemplate:
 
     def test_name_template(self):
         content = (CHART_DIR / "templates" / "_helpers.tpl").read_text()
-        assert "irondome-admission.name" in content
+        assert "picodome-admission.name" in content
 
     def test_labels_template(self):
         content = (CHART_DIR / "templates" / "_helpers.tpl").read_text()
-        assert "irondome-admission.labels" in content
+        assert "picodome-admission.labels" in content
 
 
 class TestPDBTemplate:

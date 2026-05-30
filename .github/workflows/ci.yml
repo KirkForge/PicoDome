@@ -161,9 +161,9 @@ jobs:
 
       - name: Determinism gate — run twice, compare SHA-256
         run: |
-          echo "Running Iron Dome sandbox twice in deterministic mode..."
-          RUN1=$(python -m irondome sandbox --deterministic-output --format json echo "deterministic" 2>/dev/null | sha256sum)
-          RUN2=$(python -m irondome sandbox --deterministic-output --format json echo "deterministic" 2>/dev/null | sha256sum)
+          echo "Running PicoDome sandbox twice in deterministic mode..."
+          RUN1=$(python -m picodome sandbox --deterministic-output --format json echo "deterministic" 2>/dev/null | sha256sum)
+          RUN2=$(python -m picodome sandbox --deterministic-output --format json echo "deterministic" 2>/dev/null | sha256sum)
           echo "Run 1 SHA-256: $RUN1"
           echo "Run 2 SHA-256: $RUN2"
           if [ "$RUN1" != "$RUN2" ]; then
@@ -196,9 +196,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Self-test — irondome pipeline echo "ci-test"
+      - name: Self-test — picodome pipeline echo "ci-test"
         run: |
-          python -m irondome pipeline echo "ci-test"
+          python -m picodome pipeline echo "ci-test"
 
   # ── Deploy Security ──────────────────────────────────────────────
   deploy-security:

@@ -1,18 +1,18 @@
-# Contributing to IronDome
+# Contributing to PicoDome
 
-Thanks for your interest in IronDome! This guide covers how to contribute effectively.
+Thanks for your interest in PicoDome! This guide covers how to contribute effectively.
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/KirkForge/IronDome.git
-cd IronDome
+git clone https://github.com/KirkForge/PicoDome.git
+cd PicoDome
 python3 -m pip install -e ".[dev]"   # Required: CLI tests need the package importable
 python3 -m pytest
 ```
 
 > **Important:** You must install the package in editable mode before running tests.
-> CLI integration tests use `subprocess` to invoke `irondome`, which requires the
+> CLI integration tests use `subprocess` to invoke `picodome`, which requires the
 > package to be importable. Raw `pytest` from a clean checkout will fail at CLI tests
 > without `pip install -e ".[dev]"`.
 
@@ -35,7 +35,7 @@ python3 -m pytest -m "not network"              # Skip network-dependent tests
 ```bash
 ruff check src/ tests/                     # Lint
 ruff format --check src/ tests/            # Format check
-mypy src/irondome --strict                 # Type check
+mypy src/picodome --strict                 # Type check
 ```
 
 ### Pre-push CI Script
@@ -46,18 +46,18 @@ bash scripts/ci.sh                         # Run all checks: mypy, ruff, pytest,
 
 ## Adding a New L3 Backend
 
-IronDome supports multiple sandbox backends (seccomp-bpf, seatbelt, subprocess). Adding a new backend follows this pattern:
+PicoDome supports multiple sandbox backends (seccomp-bpf, seatbelt, subprocess). Adding a new backend follows this pattern:
 
 ### Step-by-Step
 
-1. **Create the backend module** in `src/irondome/l3/backends/` (e.g., `zone_backend.py`):
+1. **Create the backend module** in `src/picodome/l3/backends/` (e.g., `zone_backend.py`):
 
 ```python
 """Zone sandbox backend (Solaris only)."""
 
 from typing import List, Optional
-from irondome.l3.backends.base import SandboxBackend
-from irondome.l3.models import Policy, SandboxResult
+from picodome.l3.backends.base import SandboxBackend
+from picodome.l3.models import Policy, SandboxResult
 
 class ZoneBackend(SandboxBackend):
     @property
@@ -80,12 +80,12 @@ class ZoneBackend(SandboxBackend):
         ...
 ```
 
-2. **Register in the auto-detection** — update `src/irondome/l3/engine.py` `_detect_backend()`:
+2. **Register in the auto-detection** — update `src/picodome/l3/engine.py` `_detect_backend()`:
 
 ```python
 elif system == "SunOS":
     try:
-        from irondome.l3.backends.zone_backend import ZoneBackend
+        from picodome.l3.backends.zone_backend import ZoneBackend
         backend = ZoneBackend()
         if backend.is_available():
             logger.info("Using zone backend (Solaris)")
@@ -98,7 +98,7 @@ elif system == "SunOS":
 
 ```python
 import pytest
-from irondome.l3.backends.zone_backend import ZoneBackend
+from picodome.l3.backends.zone_backend import ZoneBackend
 
 def test_zone_backend_is_available():
     backend = ZoneBackend()
@@ -115,7 +115,7 @@ def test_zone_backend_run_hello():
 4. **Add suspicious pattern detection** — if your backend captures output, delegate to the subprocess backend's pattern checker:
 
 ```python
-from irondome.l3.backends.subprocess_backend import SubprocessBackend
+from picodome.l3.backends.subprocess_backend import SubprocessBackend
 sb = SubprocessBackend()
 events.extend(sb._check_suspicious_patterns(stdout, stderr))
 ```
@@ -130,14 +130,14 @@ L4 detector rules are pure functions that take a `BehavioralProfile` and return 
 
 ### Step-by-Step
 
-1. **Create the detector module** in `src/irondome/l4/rules/` (e.g., `dns_tunnel.py`):
+1. **Create the detector module** in `src/picodome/l4/rules/` (e.g., `dns_tunnel.py`):
 
 ```python
 """L4 DNS tunneling detector."""
 
 from typing import Dict, List, Optional
-from irondome.l4.models import BehavioralProfile, Baseline, Finding
-from irondome.models import Severity
+from picodome.l4.models import BehavioralProfile, Baseline, Finding
+from picodome.models import Severity
 
 def detect_dns_tunneling(
     profile: BehavioralProfile,
@@ -153,10 +153,10 @@ def detect_dns_tunneling(
     return findings
 ```
 
-2. **Register in the engine** — update `src/irondome/l4/engine.py` `create_default_engine()`:
+2. **Register in the engine** — update `src/picodome/l4/engine.py` `create_default_engine()`:
 
 ```python
-from irondome.l4.rules.dns_tunnel import detect_dns_tunneling
+from picodome.l4.rules.dns_tunnel import detect_dns_tunneling
 
 engine.register("L4-DNS", detect_dns_tunneling)
 ```
@@ -164,8 +164,8 @@ engine.register("L4-DNS", detect_dns_tunneling)
 3. **Write tests** in `tests/test_dns_tunnel.py`:
 
 ```python
-from irondome.l4.rules.dns_tunnel import detect_dns_tunneling
-from irondome.l4.models import BehavioralProfile, DnsQuery
+from picodome.l4.rules.dns_tunnel import detect_dns_tunneling
+from picodome.l4.models import BehavioralProfile, DnsQuery
 
 def test_dns_tunnel_detects_long_subdomain():
     profile = BehavioralProfile(
@@ -179,7 +179,7 @@ def test_dns_tunnel_detects_long_subdomain():
     assert findings[0].rule_id == "L4-DNS-001"
 ```
 
-4. **Create rule doc** in `src/irondome/docs/rules/L4-DNS-001.md`.
+4. **Create rule doc** in `src/picodome/docs/rules/L4-DNS-001.md`.
 
 5. **Update `SCAAT.md`** with the new attack vector coverage.
 
@@ -201,16 +201,16 @@ Every L3 suspicious pattern detector **must** be deterministic:
 
 ## Adding a New Output Formatter
 
-IronDome supports multiple output formats (table, JSON, SARIF). Adding a new formatter:
+PicoDome supports multiple output formats (table, JSON, SARIF). Adding a new formatter:
 
-1. **Create the formatter module** in `src/irondome/formatters/` (e.g., `junit.py`):
+1. **Create the formatter module** in `src/picodome/formatters/` (e.g., `junit.py`):
 
 ```python
 """JUnit XML output formatter."""
 
 from typing import Union
-from irondome.l3.models import SandboxResult
-from irondome.l4.models import AnalysisResult
+from picodome.l3.models import SandboxResult
+from picodome.l4.models import AnalysisResult
 
 def format_junit(
     result: Union[SandboxResult, AnalysisResult],
@@ -220,7 +220,7 @@ def format_junit(
     ...
 ```
 
-2. **Register in CLI** — update `src/irondome/cli.py` to add the `--format junit` option.
+2. **Register in CLI** — update `src/picodome/cli.py` to add the `--format junit` option.
 
 3. **Write tests** in `tests/test_junit_formatter.py`.
 
@@ -241,9 +241,9 @@ def format_junit(
 ## Project Structure
 
 ```
-src/irondome/
+src/picodome/
 ├── cli.py               # CLI entry point — all subcommands
-├── config.py            # .irondome.yml loader
+├── config.py            # .picodome.yml loader
 ├── guards.py            # Determinism enforcement (4-layer guard stack)
 ├── license.py           # License management
 ├── logging.py           # Structured JSON logging
@@ -286,16 +286,16 @@ After any sandbox or analysis logic change, verify determinism:
 
 ```bash
 # Run two sandbox executions and compare (byte-identical output)
-irondome sandbox python3 -c "print('hello')" --format json --deterministic-output -o scan_a.json
-irondome sandbox python3 -c "print('hello')" --format json --deterministic-output -o scan_b.json
+picodome sandbox python3 -c "print('hello')" --format json --deterministic-output -o scan_a.json
+picodome sandbox python3 -c "print('hello')" --format json --deterministic-output -o scan_b.json
 diff scan_a.json scan_b.json  # should produce no output
 
 # Or use built-in verification (runs twice, compares SHA-256)
-irondome sandbox python3 -c "print('hello')" --verify-determinism
+picodome sandbox python3 -c "print('hello')" --verify-determinism
 # Should output: "✓ DETERMINISM VERIFIED — results are deterministic"
 
 # Compare two saved result files
-irondome diff scan_a.json scan_b.json
+picodome diff scan_a.json scan_b.json
 # Should output: "✓ Results are IDENTICAL — determinism verified"
 
 # Note: without --deterministic-output, JSON includes timestamps and timing.
@@ -311,7 +311,7 @@ The 4-layer determinism guard stack:
 │  Runs twice, asserts SHA-256 match      │
 ├─────────────────────────────────────────┤
 │  Layer 3: Diff                          │
-│  irondome diff a.json b.json            │
+│  picodome diff a.json b.json            │
 │  Compare two saved results field-by-field│
 ├─────────────────────────────────────────┤
 │  Layer 2: Guard (runtime)               │
@@ -342,8 +342,8 @@ Examples:
 
 ## Reporting Issues
 
-- Include: IronDome version, Python version, OS, sandbox backend in use
-- Include: `irondome version` output
+- Include: PicoDome version, Python version, OS, sandbox backend in use
+- Include: `picodome version` output
 - Include: `--verbose` output if possible
 - For sandbox issues: include the policy and command that triggered the bug
 - For behavioral analysis issues: include the profile and expected vs. actual findings
@@ -354,20 +354,6 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting policy.
 
 ## AI-Assisted Development
 
-Iron Dome is developed with AI assistance. All AI-generated contributions are
+PicoDome is developed with AI assistance. All AI-generated contributions are
 reviewed, tested, and approved by a human maintainer before merge.
 
-### Co-Authorship
-
-When AI tools produce substantive contributions (features, bug fixes, documentation),
-they receive co-author credit:
-
-```
-Co-authored-by: GLM-5.1 <glm@z.ai>
-Co-authored-by: PicoClaw <picoclaw@kirkforge.dev>
-```
-
-- **GLM-5.1** — Code generation, refactoring, test writing
-- **PicoClaw** — Review, analysis, documentation, security auditing
-
-AI co-authors are credited because they did real work. This is transparent and honest.

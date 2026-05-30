@@ -61,7 +61,7 @@ class TestLoadKeyPublic:
             assert loaded == key
 
     def test_load_key_k8s_secret_mount(self, tmp_path):
-        """Simulate K8s secret mount: file in /etc/irondome/keys/key"""
+        """Simulate K8s secret mount: file in /etc/picodome/keys/key"""
         key = generate_key()
         hex_str = key_to_hex(key)
         keys_dir = tmp_path / "keys"
@@ -178,7 +178,7 @@ class TestHelmPolicySigning:
     def test_values_have_policy_signing_config(self):
         """Verify the Helm values.yaml has policySigning section."""
         repo_root = Path(__file__).resolve().parent.parent
-        values_path = repo_root / "deploy" / "helm" / "irondome" / "values.yaml"
+        values_path = repo_root / "deploy" / "helm" / "picodome" / "values.yaml"
         content = values_path.read_text()
         assert "policySigning" in content
         assert "verify" in content
@@ -188,7 +188,7 @@ class TestHelmPolicySigning:
     def test_deployment_has_policy_signing_env(self):
         """Verify the deployment template has policy signing env vars."""
         repo_root = Path(__file__).resolve().parent.parent
-        deploy_path = repo_root / "deploy" / "helm" / "irondome" / "templates" / "deployment.yaml"
+        deploy_path = repo_root / "deploy" / "helm" / "picodome" / "templates" / "deployment.yaml"
         content = deploy_path.read_text()
         assert "IRONDOME_POLICY_KEY" in content
         assert "IRONDOME_POLICY_KEY_FILE" in content

@@ -1,4 +1,4 @@
-"""Tests for IronDome gRPC transport module.
+"""Tests for PicoDome gRPC transport module.
 
 All tests work WITHOUT grpcio installed — gRPC calls are mocked.
 The module must degrade gracefully when grpcio is missing.
@@ -108,20 +108,20 @@ class TestGRPCAvailability:
 
         mod = importlib.import_module("irondome.grpc_transport")
         assert hasattr(mod, "is_grpc_available")
-        assert hasattr(mod, "IronDomeGRPCServer")
-        assert hasattr(mod, "IronDomeGRPCClient")
+        assert hasattr(mod, "PicoDomeGRPCServer")
+        assert hasattr(mod, "PicoDomeGRPCClient")
 
     def test_lazy_import_server(self):
-        """IronDomeGRPCServer should be importable via lazy import."""
-        from irondome.grpc_transport import IronDomeGRPCServer
+        """PicoDomeGRPCServer should be importable via lazy import."""
+        from irondome.grpc_transport import PicoDomeGRPCServer
 
-        assert IronDomeGRPCServer is not None
+        assert PicoDomeGRPCServer is not None
 
     def test_lazy_import_client(self):
-        """IronDomeGRPCClient should be importable via lazy import."""
-        from irondome.grpc_transport import IronDomeGRPCClient
+        """PicoDomeGRPCClient should be importable via lazy import."""
+        from irondome.grpc_transport import PicoDomeGRPCClient
 
-        assert IronDomeGRPCClient is not None
+        assert PicoDomeGRPCClient is not None
 
     def test_invalid_attribute_raises(self):
         """Accessing invalid attribute should raise AttributeError."""
@@ -139,18 +139,18 @@ class TestGRPCServer:
 
     def test_server_creation_with_defaults(self):
         """Server should be creatable with default settings."""
-        from irondome.grpc_transport.server import IronDomeGRPCServer
+        from irondome.grpc_transport.server import PicoDomeGRPCServer
 
-        server = IronDomeGRPCServer()
+        server = PicoDomeGRPCServer()
         assert server._host == "[::]"
         assert server._port == 50051
         assert server._max_workers == 10
 
     def test_server_creation_with_custom_settings(self):
         """Server should accept custom host, port, workers."""
-        from irondome.grpc_transport.server import IronDomeGRPCServer
+        from irondome.grpc_transport.server import PicoDomeGRPCServer
 
-        server = IronDomeGRPCServer(
+        server = PicoDomeGRPCServer(
             host="0.0.0.0",
             port=9999,
             max_workers=20,
@@ -161,9 +161,9 @@ class TestGRPCServer:
 
     def test_server_with_injected_scan_engine(self, fake_scan_fn, fake_analyze_fn):
         """Server should accept dependency-injected scan functions."""
-        from irondome.grpc_transport.server import IronDomeGRPCServer
+        from irondome.grpc_transport.server import PicoDomeGRPCServer
 
-        server = IronDomeGRPCServer(
+        server = PicoDomeGRPCServer(
             scan_fn=fake_scan_fn,
             analyze_fn=fake_analyze_fn,
         )
@@ -172,9 +172,9 @@ class TestGRPCServer:
 
     def test_server_start_raises_without_grpcio(self):
         """Server.start() should raise ImportError if grpcio not installed."""
-        from irondome.grpc_transport.server import IronDomeGRPCServer
+        from irondome.grpc_transport.server import PicoDomeGRPCServer
 
-        server = IronDomeGRPCServer()
+        server = PicoDomeGRPCServer()
 
         with patch("irondome.grpc_transport.server.is_grpc_available", return_value=False):
             with pytest.raises(ImportError, match="grpcio"):
@@ -182,16 +182,16 @@ class TestGRPCServer:
 
     def test_server_stop_without_start(self):
         """Server.stop() should be safe to call without starting."""
-        from irondome.grpc_transport.server import IronDomeGRPCServer
+        from irondome.grpc_transport.server import PicoDomeGRPCServer
 
-        server = IronDomeGRPCServer()
+        server = PicoDomeGRPCServer()
         server.stop()  # Should not raise
 
     def test_server_stop_with_mock_server(self):
         """Server.stop() should call shutdown on the gRPC server."""
-        from irondome.grpc_transport.server import IronDomeGRPCServer
+        from irondome.grpc_transport.server import PicoDomeGRPCServer
 
-        server = IronDomeGRPCServer()
+        server = PicoDomeGRPCServer()
         mock_grpc_server = MagicMock()
         server._server = mock_grpc_server
         server.stop()
@@ -206,18 +206,18 @@ class TestGRPCClient:
 
     def test_client_creation_with_defaults(self):
         """Client should be creatable with default settings."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
         assert client._target == "localhost:50051"
         assert client._timeout == 30.0
         assert client._max_retries == 3
 
     def test_client_creation_with_custom_settings(self):
         """Client should accept custom target, timeout, retries."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient(
+        client = PicoDomeGRPCClient(
             target="example.com:9999",
             timeout=60.0,
             max_retries=5,
@@ -229,25 +229,25 @@ class TestGRPCClient:
 
     def test_client_context_manager(self):
         """Client should work as a context manager."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        with IronDomeGRPCClient() as client:
+        with PicoDomeGRPCClient() as client:
             assert client._target == "localhost:50051"
         # After exiting, channel should be None
         assert client._channel is None
 
     def test_client_close_without_connection(self):
         """Client.close() should be safe without connecting."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
         client.close()  # Should not raise
 
     def test_client_scan_raises_without_grpcio(self):
         """Client.scan() should raise ImportError if grpcio not installed."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
 
         with patch("irondome.grpc_transport.client.is_grpc_available", return_value=False):
             with pytest.raises(ImportError, match="grpcio"):
@@ -255,9 +255,9 @@ class TestGRPCClient:
 
     def test_client_mtls_config_none(self):
         """Client with no mTLS config should use insecure channel."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient(mtls_config=None)
+        client = PicoDomeGRPCClient(mtls_config=None)
         assert client._mtls_config is None
 
 
@@ -338,11 +338,11 @@ class TestServicer:
 
     def test_servicer_scan_with_injected_engine(self, fake_scan_fn, fake_analyze_fn):
         """Servicer should use the injected scan engine."""
-        from irondome.grpc_transport._servicer import IronDomeServicer
+        from irondome.grpc_transport._servicer import PicoDomeServicer
         from irondome.grpc_transport.server import _ScanEngine
 
         engine = _ScanEngine(scan_fn=fake_scan_fn, analyze_fn=fake_analyze_fn)
-        servicer = IronDomeServicer(
+        servicer = PicoDomeServicer(
             scan_engine=engine,
             start_time=time.time(),
             scan_count_ref=MagicMock(),
@@ -365,11 +365,11 @@ class TestServicer:
 
     def test_servicer_health(self):
         """Servicer.Health should return health info."""
-        from irondome.grpc_transport._servicer import IronDomeServicer
+        from irondome.grpc_transport._servicer import PicoDomeServicer
         from irondome.grpc_transport.server import _ScanEngine
 
         engine = _ScanEngine()
-        servicer = IronDomeServicer(
+        servicer = PicoDomeServicer(
             scan_engine=engine,
             start_time=time.time(),
             scan_count_ref=MagicMock(),
@@ -383,9 +383,9 @@ class TestServicer:
 
     def test_servicer_get_policy(self):
         """Servicer.GetPolicy should attempt to load a policy."""
-        from irondome.grpc_transport._servicer import IronDomeServicer
+        from irondome.grpc_transport._servicer import PicoDomeServicer
 
-        servicer = IronDomeServicer(
+        servicer = PicoDomeServicer(
             scan_engine=MagicMock(),
             start_time=time.time(),
             scan_count_ref=MagicMock(),
@@ -401,9 +401,9 @@ class TestServicer:
 
     def test_servicer_query_audit(self):
         """Servicer.QueryAudit should return audit events."""
-        from irondome.grpc_transport._servicer import IronDomeServicer
+        from irondome.grpc_transport._servicer import PicoDomeServicer
 
-        servicer = IronDomeServicer(
+        servicer = PicoDomeServicer(
             scan_engine=MagicMock(),
             start_time=time.time(),
             scan_count_ref=MagicMock(),
@@ -423,7 +423,7 @@ class TestServicer:
 
     def test_servicer_scan_error_handling(self):
         """Servicer.Scan should handle errors gracefully."""
-        from irondome.grpc_transport._servicer import IronDomeServicer
+        from irondome.grpc_transport._servicer import PicoDomeServicer
 
         # Create a scan engine that raises an exception
         def failing_scan(**kwargs):
@@ -432,7 +432,7 @@ class TestServicer:
         engine = MagicMock()
         engine.scan = failing_scan
 
-        servicer = IronDomeServicer(
+        servicer = PicoDomeServicer(
             scan_engine=engine,
             start_time=time.time(),
             scan_count_ref=MagicMock(),
@@ -492,7 +492,7 @@ class TestCLIGRPC:
         from irondome.cli import main
 
         # This should parse without error
-        with patch("sys.argv", ["irondome", "daemon", "--help"]):
+        with patch("sys.argv", ["picodome", "daemon", "--help"]):
             with pytest.raises(SystemExit) as exc_info:
                 main(["daemon", "--help"])
             # --help exits with 0
@@ -546,12 +546,12 @@ class TestProtoFile:
         assert proto_path.exists(), f"Proto file not found at {proto_path}"
 
     def test_proto_file_has_service(self):
-        """The proto file should define IronDomeService."""
+        """The proto file should define PicoDomeService."""
         from pathlib import Path
 
         proto_path = Path(__file__).parent.parent / "src" / "irondome" / "grpc_transport" / "proto" / "irondome.proto"
         content = proto_path.read_text()
-        assert "service IronDomeService" in content
+        assert "service PicoDomeService" in content
         assert "rpc Scan" in content
         assert "rpc Health" in content
         assert "rpc GetPolicy" in content
@@ -581,9 +581,9 @@ class TestGRPCClientRetry:
 
     def test_client_scan_retry_exhausted(self):
         """scan() should raise ConnectionError after max retries."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient(max_retries=2, retry_delay=0.01)
+        client = PicoDomeGRPCClient(max_retries=2, retry_delay=0.01)
 
         with patch.object(client, "_ensure_channel"):
             with patch.object(client, "_do_scan", side_effect=ConnectionError("refused")):
@@ -592,9 +592,9 @@ class TestGRPCClientRetry:
 
     def test_client_scan_retry_succeeds_on_second(self):
         """scan() should return result if second attempt succeeds."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient, ScanResult
+        from irondome.grpc_transport.client import PicoDomeGRPCClient, ScanResult
 
-        client = IronDomeGRPCClient(max_retries=3, retry_delay=0.01)
+        client = PicoDomeGRPCClient(max_retries=3, retry_delay=0.01)
         good_result = ScanResult(verdict="ALLOW", exit_code=0)
 
         with patch.object(client, "_ensure_channel"):
@@ -604,26 +604,26 @@ class TestGRPCClientRetry:
 
     def test_client_ensure_channel_called_lazily(self):
         """Channel should not be created until first RPC call."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
         assert client._channel is None
         assert client._stub is None
 
     def test_client_ensure_channel_with_grpc_unavailable(self):
         """_ensure_channel should raise ImportError when grpcio not installed."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
         with patch("irondome.grpc_transport.client.is_grpc_available", return_value=False):
             with pytest.raises(ImportError, match="grpcio"):
                 client._ensure_channel()
 
     def test_client_ensure_channel_insecure(self):
         """_ensure_channel should create insecure channel when no mTLS."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient(mtls_config=None)
+        client = PicoDomeGRPCClient(mtls_config=None)
         mock_channel = MagicMock()
         mock_stub = MagicMock()
         mock_grpc = MagicMock()
@@ -634,7 +634,7 @@ class TestGRPCClientRetry:
                 with patch.dict(
                     "sys.modules",
                     {
-                        "irondome.grpc_transport.proto.irondome_pb2_grpc": MagicMock(IronDomeServiceStub=mock_stub),
+                        "irondome.grpc_transport.proto.irondome_pb2_grpc": MagicMock(PicoDomeServiceStub=mock_stub),
                     },
                 ):
                     client._ensure_channel()
@@ -642,9 +642,9 @@ class TestGRPCClientRetry:
 
     def test_client_ensure_channel_secure(self):
         """_ensure_channel should create secure channel with mTLS config."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient(mtls_config=MagicMock())
+        client = PicoDomeGRPCClient(mtls_config=MagicMock())
         mock_channel = MagicMock()
         mock_creds = MagicMock()
         mock_stub = MagicMock()
@@ -657,7 +657,7 @@ class TestGRPCClientRetry:
                     with patch.dict(
                         "sys.modules",
                         {
-                            "irondome.grpc_transport.proto.irondome_pb2_grpc": MagicMock(IronDomeServiceStub=mock_stub),
+                            "irondome.grpc_transport.proto.irondome_pb2_grpc": MagicMock(PicoDomeServiceStub=mock_stub),
                         },
                     ):
                         client._ensure_channel()
@@ -665,81 +665,81 @@ class TestGRPCClientRetry:
 
     def test_client_create_credentials_dev_mode(self):
         """_create_client_credentials should return None in dev mode."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
         from irondome.mtls.context import MTLSConfig
 
         # Create a real MTLSConfig in dev mode
         config = MTLSConfig(dev_mode=True)
-        client = IronDomeGRPCClient(mtls_config=config)
+        client = PicoDomeGRPCClient(mtls_config=config)
         result = client._create_client_credentials(config)
         assert result is None
 
     def test_client_create_credentials_no_mtls(self):
         """_create_client_credentials should return None when mtls_config is None."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient(mtls_config=None)
+        client = PicoDomeGRPCClient(mtls_config=None)
         result = client._create_client_credentials(None)
         assert result is None
 
     def test_client_create_credentials_not_mtls_config_instance(self):
         """_create_client_credentials should warn on non-MTLSConfig."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
         result = client._create_client_credentials("not_a_config")
         assert result is None
 
     def test_client_create_credentials_missing_paths(self):
         """_create_client_credentials should return None when cert/key paths missing."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
         from irondome.mtls.context import MTLSConfig
 
         # MTLSConfig with dev_mode=False but no cert/key
         config = MTLSConfig(dev_mode=False, cert_path="", key_path="")
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
         result = client._create_client_credentials(config)
         assert result is None
 
     def test_client_close_idempotent(self):
         """Close should be safe to call multiple times."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
         client.close()
         client.close()  # Should not raise
 
     def test_client_context_manager_closes(self):
         """Context manager should close channel on exit."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        with IronDomeGRPCClient() as client:
+        with PicoDomeGRPCClient() as client:
             pass
         assert client._channel is None
 
     def test_client_health_without_grpc(self):
         """health() should raise when grpcio not installed."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
         with patch("irondome.grpc_transport.client.is_grpc_available", return_value=False):
             with pytest.raises(ImportError):
                 client.health()
 
     def test_client_get_policy_without_grpc(self):
         """get_policy() should raise when grpcio not installed."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
         with patch("irondome.grpc_transport.client.is_grpc_available", return_value=False):
             with pytest.raises(ImportError):
                 client.get_policy("test-policy")
 
     def test_client_query_audit_without_grpc(self):
         """query_audit() should raise when grpcio not installed."""
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
         with patch("irondome.grpc_transport.client.is_grpc_available", return_value=False):
             with pytest.raises(ImportError):
                 client.query_audit()
@@ -748,9 +748,9 @@ class TestGRPCClientRetry:
         """scan_async should delegate to synchronous scan."""
         import asyncio
 
-        from irondome.grpc_transport.client import IronDomeGRPCClient, ScanResult
+        from irondome.grpc_transport.client import PicoDomeGRPCClient, ScanResult
 
-        client = IronDomeGRPCClient()
+        client = PicoDomeGRPCClient()
         good_result = ScanResult(verdict="ALLOW")
 
         with patch.object(client, "scan", return_value=good_result):

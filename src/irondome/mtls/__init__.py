@@ -1,4 +1,4 @@
-"""mTLS transport security for the Iron Dome daemon.
+"""mTLS transport security for the PicoDome daemon.
 
 Mutual TLS (mTLS) ensures both the client and server authenticate
 with X.509 certificates. Required for production deployments where

@@ -1,7 +1,7 @@
 """
 Deterministic guard stack — enforcement, verification, and fingerprinting.
 
-Iron Dome's core thesis: same command + same policy = same output, every time.
+PicoDome's core thesis: same command + same policy = same output, every time.
 
 This module provides the guard stack that enforces and verifies that guarantee:
 - DeterministicGuard: validates invariants at scan time
@@ -16,7 +16,7 @@ Architecture:
     │  Runs scan twice, asserts SHA-256 match │
     ├─────────────────────────────────────────┤
     │  Layer 3: Diff                          │
-    │  irondome diff a.json b.json            │
+    │  picodome diff a.json b.json            │
     │  Compare two saved scans field-by-field │
     ├─────────────────────────────────────────┤
     │  Layer 2: Guard (runtime)               │

@@ -2,15 +2,15 @@
 
 ## Overview
 
-Iron Dome is a deterministic runtime sandbox and behavioral analysis tool for supply-chain security. It executes commands under kernel-level **syscall policy** (L3) and then profiles the behavior (L4) to detect malicious activity that static analysis misses.
+PicoDome is a deterministic runtime sandbox and behavioral analysis tool for supply-chain security. It executes commands under kernel-level **syscall policy** (L3) and then profiles the behavior (L4) to detect malicious activity that static analysis misses.
 
-> **Important scope note:** Iron Dome's seccomp-bpf backend is a **syscall policy harness**, not a full containment boundary. It filters syscalls at the kernel level (real enforcement), but does not provide namespace/mount/filesystem isolation, `prctl(PR_SET_NO_NEW_PRIVS)`, privilege dropping, or `setrlimit`. For safe execution of untrusted packages, compose with user namespaces, `bubblewrap`, or `gVisor`.
+> **Important scope note:** PicoDome's seccomp-bpf backend is a **syscall policy harness**, not a full containment boundary. It filters syscalls at the kernel level (real enforcement), but does not provide namespace/mount/filesystem isolation, `prctl(PR_SET_NO_NEW_PRIVS)`, privilege dropping, or `setrlimit`. For safe execution of untrusted packages, compose with user namespaces, `bubblewrap`, or `gVisor`.
 
 ## Trust Boundaries
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Iron Dome Architecture                    │
+│                     PicoDome Architecture                    │
 │                                                              │
 │  ┌──────────┐    ┌──────────────┐    ┌──────────────────┐  │
 │  │  CLI/API  │───▶│  L3 Sandbox  │───▶│  L4 Behavioral   │  │
@@ -53,7 +53,7 @@ The seccomp-bpf backend provides real kernel-level syscall filtering, but it is 
 - **Default-deny kills silently**: Processes killed by `SIGSYS` (seccomp violation) produce no diagnostic. Use `SCMP_ACT_ERRNO(EPERM)` for non-fatal denials to get actionable error messages.
 - **Safe set omits common syscalls**: `_SAFE_SYSCALLS` does not include `clone`, `clone3`, `fork`, `vfork`, `wait4`, or `socket`. Default-deny policies will kill `npm install`, `pip install`, and most package managers on their first `clone3` call.
 
-**For full containment**, compose IronDome with:
+**For full containment**, compose PicoDome with:
 - User namespaces + `bubblewrap` for filesystem/PID/network isolation
 - `gVisor` for kernel-level sandboxing
 - Container runtimes (Docker/Podman) for mount/PID isolation
@@ -71,7 +71,7 @@ The seccomp-bpf backend provides real kernel-level syscall filtering, but it is 
 - subprocess: Pattern analysis fallback (no kernel enforcement)
 - Default policy: deny-by-default with explicit allows
 
-**Residual risk:** The seccomp-bpf backend filters syscalls but does not contain the process. A sandboxed process with allowed file I/O syscalls can access host files. Kernel vulnerabilities in seccomp-bpf implementation are outside Iron Dome's control.
+**Residual risk:** The seccomp-bpf backend filters syscalls but does not contain the process. A sandboxed process with allowed file I/O syscalls can access host files. Kernel vulnerabilities in seccomp-bpf implementation are outside PicoDome's control.
 
 ### 2. L4 Behavioral Analysis Bypass
 
@@ -116,17 +116,17 @@ The seccomp-bpf backend provides real kernel-level syscall filtering, but it is 
 - JSON format is human-readable and auditable
 - Custom baselines require explicit `--baseline` flag
 
-**Residual risk:** Supply-chain attack on Iron Dome itself. Mitigated by Sigstore signing and SLSA provenance.
+**Residual risk:** Supply-chain attack on PicoDome itself. Mitigated by Sigstore signing and SLSA provenance.
 
 ## Non-Goals
 
-Iron Dome is **not**:
+PicoDome is **not**:
 - A full container runtime (use Docker/Podman for full isolation)
 - A malware sandbox (use Cuckoo/CAPE for malware analysis)
 - A network firewall (use iptables/nftables for network policy)
 - A replacement for static analysis (use PicoSentry for static scanning)
 
-Iron Dome **is**:
+PicoDome **is**:
 - A syscall policy harness for supply-chain verification
 - A behavioral profiler for post-execution analysis
 - A companion to PicoSentry (static scan → runtime sandbox)

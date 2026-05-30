@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a release evidence bundle for IronDome.
+"""Generate a release evidence bundle for PicoDome.
 
 Collects and packages all compliance evidence for a given release:
 - SBOM (CycloneDX JSON)
@@ -115,10 +115,10 @@ def generate_bundle_metadata(
     now = datetime.now(timezone.utc).isoformat()
 
     bundle = {
-        "apiVersion": "irondome.kirkforge.dev/v1",
+        "apiVersion": "picodome.kirkforge.dev/v1",
         "kind": "EvidenceBundle",
         "metadata": {
-            "name": f"irondome-{version}",
+            "name": f"picodome-{version}",
             "version": version,
             "generated": now,
             "generator": "generate_evidence_bundle.py",
@@ -151,7 +151,7 @@ def generate_bundle_metadata(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate IronDome release evidence bundle")
+    parser = argparse.ArgumentParser(description="Generate PicoDome release evidence bundle")
     parser.add_argument("--version", required=True, help="Release version")
     parser.add_argument("--output", "-o", default="evidence", help="Output directory")
     parser.add_argument("--skip-tests", action="store_true", help="Skip running tests")
@@ -161,7 +161,7 @@ def main() -> int:
     output_dir = REPO_ROOT / args.output
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"IronDome Evidence Bundle Generator — v{args.version}")
+    print(f"PicoDome Evidence Bundle Generator — v{args.version}")
     print(f"Output directory: {output_dir}")
     print()
 
@@ -219,7 +219,7 @@ def main() -> int:
 
     print()
     print("To package the bundle:")
-    print(f"  tar czf irondome-{args.version}-evidence.tar.gz -C {output_dir.parent} {output_dir.name}")
+    print(f"  tar czf picodome-{args.version}-evidence.tar.gz -C {output_dir.parent} {output_dir.name}")
 
     return 0
 

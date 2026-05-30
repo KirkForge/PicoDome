@@ -16,7 +16,7 @@ import logging
 import time
 from pathlib import Path
 
-from irondome.config import IronDomeConfig, load_config
+from irondome.config import PicoDomeConfig, load_config
 from irondome.l3.engine import sandbox_run
 from irondome.l3.models import SandboxResult
 from irondome.l4.engine import L4Engine, create_default_engine
@@ -233,7 +233,7 @@ def _default_sandbox_commands(project: ProjectInfo) -> list[list[str]]:
 def scan_workspace(
     root: Path,
     engine: L4Engine | None = None,
-    config: IronDomeConfig | None = None,
+    config: PicoDomeConfig | None = None,
     commands: dict[str, list[list[str]]] | None = None,
     fail_on: str | None = None,
     timeout: float = 30.0,
@@ -246,7 +246,7 @@ def scan_workspace(
     Args:
         root: Root directory of the workspace.
         engine: Pre-configured L4 engine (created if None).
-        config: IronDome configuration (loaded if None).
+        config: PicoDome configuration (loaded if None).
         commands: Optional mapping of project path → list of commands.
             If not provided, default commands are used based on project type.
         fail_on: Minimum severity to consider a failure.

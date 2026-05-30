@@ -1,6 +1,6 @@
 """Redis-backed scan job store — horizontal scale shared state.
 
-When running multiple IronDome replicas behind a load balancer,
+When running multiple PicoDome replicas behind a load balancer,
 in-memory job state is not shared. This Redis-backed store
 provides shared state accessible from all replicas.
 

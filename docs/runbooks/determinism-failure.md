@@ -5,21 +5,21 @@
 ## Symptoms
 
 - `--verify-determinism` flag reports hash mismatch
-- `irondome diff a.json b.json` reports different results
+- `picodome diff a.json b.json` reports different results
 - CI determinism gate fails
 
 ## Investigation Steps
 
 1. **Reproduce the failure:**
    ```bash
-   irondome sandbox --format json --deterministic-output --verify-determinism <command>
+   picodome sandbox --format json --deterministic-output --verify-determinism <command>
    ```
 
 2. **Compare two runs:**
    ```bash
-   irondome sandbox --format json --deterministic-output <command> > run_a.json
-   irondome sandbox --format json --deterministic-output <command> > run_b.json
-   irondome diff run_a.json run_b.json --verbose
+   picodome sandbox --format json --deterministic-output <command> > run_a.json
+   picodome sandbox --format json --deterministic-output <command> > run_b.json
+   picodome diff run_a.json run_b.json --verbose
    ```
 
 3. **Check for common causes:**
@@ -32,7 +32,7 @@
 
 4. **Run the determinism guard:**
    ```python
-   from irondome.guards import DeterministicGuard
+   from picodome.guards import DeterministicGuard
    guard = DeterministicGuard()
    violations = guard.check(result)
    for v in violations:

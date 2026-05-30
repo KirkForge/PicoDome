@@ -2,13 +2,13 @@
 
 ## Tenant model
 
-IronDome supports a **namespace-scoped** multi-tenant model where each tenant is identified by a tenant ID. Tenant isolation is enforced at the application layer in the `TenantAwareScanJobStore`.
+PicoDome supports a **namespace-scoped** multi-tenant model where each tenant is identified by a tenant ID. Tenant isolation is enforced at the application layer in the `TenantAwareScanJobStore`.
 
 ### Tenant scope levels
 
 | Level | Isolation boundary | Use case |
 |---|---|---|
-| **Namespace** | Kubernetes namespace | Each tenant gets their own IronDome deployment |
+| **Namespace** | Kubernetes namespace | Each tenant gets their own PicoDome deployment |
 | **Cluster** | Shared deployment, tenant header | Multiple tenants share one deployment, isolated by `X-Tenant` header |
 | **Organization** | Logical grouping across clusters | Enterprise accounts with multiple clusters |
 
@@ -35,7 +35,7 @@ The tenant ID is resolved in the following order:
 
 ## RBAC matrix
 
-IronDome has three built-in roles:
+PicoDome has three built-in roles:
 
 ### Role definitions
 
@@ -84,7 +84,7 @@ rules:
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get"]
-    resourceNames: ["irondome-tokens", "irondome-tls"]
+    resourceNames: ["picodome-tokens", "picodome-tls"]
 ```
 
 For the admission controller, the service account needs no special RBAC permissions — it only receives webhook calls from the Kubernetes API server.
@@ -95,9 +95,9 @@ Tokens are mapped to roles via the `IRONDOME_API_TOKENS` environment variable or
 
 ```
 # Format: token:role
-irondome-admin-xxx:admin
-irondome-submit-xxx:submitter
-irondome-view-xxx:viewer
+picodome-admin-xxx:admin
+picodome-submit-xxx:submitter
+picodome-view-xxx:viewer
 ```
 
 Or via Kubernetes Secret:
@@ -106,7 +106,7 @@ Or via Kubernetes Secret:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: irondome-tokens
+  name: picodome-tokens
 data:
   api-tokens: <base64-encoded token list>
 ```
@@ -132,16 +132,16 @@ The test suite (`tests/test_tenant_isolation.py`) includes property tests that v
 
 ## Kubernetes namespace isolation
 
-For strict isolation, deploy separate IronDome instances per tenant namespace:
+For strict isolation, deploy separate PicoDome instances per tenant namespace:
 
 ```yaml
 # Tenant A
-helm install irondome-tenant-a deploy/helm/irondome/ \
+helm install picodome-tenant-a deploy/helm/picodome/ \
   --namespace tenant-a --set auth.createSecret=true
 
 # Tenant B
-helm install irondome-tenant-b deploy/helm/irondome/ \
+helm install picodome-tenant-b deploy/helm/picodome/ \
   --namespace tenant-b --set auth.createSecret=true
 ```
 
-With `NetworkPolicy` enabled, tenants cannot access each other's IronDome instances.
+With `NetworkPolicy` enabled, tenants cannot access each other's PicoDome instances.

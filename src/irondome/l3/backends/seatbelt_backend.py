@@ -1,7 +1,7 @@
 """Seatbelt sandbox backend (macOS only).
 
 Uses macOS sandbox-exec with dynamically generated seatbelt profiles.
-Translates Iron Dome Policy to the Seatbelt profile DSL.
+Translates PicoDome Policy to the Seatbelt profile DSL.
 """
 
 from __future__ import annotations
@@ -196,7 +196,7 @@ class SeatbeltBackend(SandboxBackend):
         command: list[str],
         cwd: str | None = None,
     ) -> str:
-        """Generate a macOS sandbox-exec profile from Iron Dome Policy."""
+        """Generate a macOS sandbox-exec profile from PicoDome Policy."""
         lines = ["(version 1)"]
 
         # Default action

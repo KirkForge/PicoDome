@@ -26,7 +26,7 @@ jobs:
         run: |
           if [ ! -f action.yml ] && [ ! -f action.yaml ]; then
             echo "No action.yml or action.yaml found — skipping action tests"
-            echo "This is expected if IronDome is used as a CLI tool, not a GitHub Action"
+            echo "This is expected if PicoDome is used as a CLI tool, not a GitHub Action"
             exit 0
           fi
 
@@ -61,23 +61,23 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install IronDome
+      - name: Install PicoDome
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Test IronDome CLI (sandbox)
+      - name: Test PicoDome CLI (sandbox)
         run: |
-          python -m irondome sandbox --format json echo "action-test"
+          python -m picodome sandbox --format json echo "action-test"
 
-      - name: Test IronDome CLI (pipeline)
+      - name: Test PicoDome CLI (pipeline)
         run: |
-          python -m irondome pipeline --format json echo "action-test"
+          python -m picodome pipeline --format json echo "action-test"
 
-      - name: Test IronDome CLI (determinism)
+      - name: Test PicoDome CLI (determinism)
         run: |
-          python -m irondome sandbox --deterministic-output --format json echo "action-det" > /tmp/run1.json
-          python -m irondome sandbox --deterministic-output --format json echo "action-det" > /tmp/run2.json
+          python -m picodome sandbox --deterministic-output --format json echo "action-det" > /tmp/run1.json
+          python -m picodome sandbox --deterministic-output --format json echo "action-det" > /tmp/run2.json
           HASH1=$(sha256sum /tmp/run1.json | cut -d' ' -f1)
           HASH2=$(sha256sum /tmp/run2.json | cut -d' ' -f1)
           echo "Run 1: $HASH1"
@@ -88,8 +88,8 @@ jobs:
           fi
           echo "✓ Determinism verified in action test"
 
-      - name: Test IronDome CLI (exit codes)
+      - name: Test PicoDome CLI (exit codes)
         run: |
           # ALLOW verdict should exit 0
-          python -m irondome sandbox echo "allowed" || echo "sandbox exit code: $?"
+          python -m picodome sandbox echo "allowed" || echo "sandbox exit code: $?"
           echo "✓ Action integration test passed"

@@ -59,7 +59,7 @@ def format_github(
 def _l3_github(result: SandboxResult, sarif_path: str) -> str:
     """Format L3 sandbox result as GitHub markdown summary."""
     lines = []
-    lines.append("## 🛡️ Iron Dome — L3 Sandbox Results\n")
+    lines.append("## 🛡️ PicoDome — L3 Sandbox Results\n")
 
     # Summary
     verdict = result.overall_verdict.value
@@ -92,7 +92,7 @@ def _l3_github(result: SandboxResult, sarif_path: str) -> str:
 def _l4_github(result: AnalysisResult, sarif_path: str) -> str:
     """Format L4 analysis result as GitHub markdown summary."""
     lines = []
-    lines.append("## 🛡️ Iron Dome — L4 Behavioral Analysis\n")
+    lines.append("## 🛡️ PicoDome — L4 Behavioral Analysis\n")
 
     # Summary
     verdict = result.overall_verdict.value

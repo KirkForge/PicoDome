@@ -6,7 +6,7 @@ What does this PR change, and why?
 
 - [ ] `pip install -e ".[dev]"`
 - [ ] `python -m pytest -v`
-- [ ] `python -m irondome sandbox echo ci-test`
+- [ ] `python -m picodome sandbox echo ci-test`
 
 ## Checklist
 

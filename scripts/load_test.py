@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Iron Dome load testing baseline.
+"""PicoDome load testing baseline.
 
 Benchmarks sandbox throughput, latency, and resource usage under
 various profiles and command types. Results are saved as JSON for
@@ -96,7 +96,7 @@ def benchmark_scan(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Iron Dome load testing")
+    parser = argparse.ArgumentParser(description="PicoDome load testing")
     parser.add_argument("--iterations", "-n", type=int, default=10, help="Iterations per benchmark")
     parser.add_argument("--timeout", "-t", type=float, default=30.0, help="Timeout in seconds")
     parser.add_argument("--output", "-o", type=str, default="", help="Output JSON file")
@@ -118,7 +118,7 @@ def main() -> None:
         "benchmarks": {},
     }
 
-    print(f"Iron Dome Load Test — v{__version__}")
+    print(f"PicoDome Load Test — v{__version__}")
     print(f"Iterations: {args.iterations}, Timeout: {args.timeout}s")
     print()
 

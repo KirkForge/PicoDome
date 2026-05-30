@@ -1,6 +1,6 @@
 """Redis-backed token bucket rate limiter — horizontal scale shared state.
 
-When running multiple IronDome replicas, in-memory rate limit state
+When running multiple PicoDome replicas, in-memory rate limit state
 is not shared. This Redis-backed limiter uses atomic Lua scripts
 to ensure consistent rate limiting across all replicas.
 

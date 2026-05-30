@@ -1,4 +1,4 @@
-"""SARIF 2.1.0 formatter for Iron Dome results.
+"""SARIF 2.1.0 formatter for PicoDome results.
 
 Deterministic: same input = same SARIF output. Keys are sorted.
 Uses __version__ from package instead of hardcoded version.
@@ -72,8 +72,8 @@ def _l3_sarif(result: SandboxResult) -> str:
                 "results": results,
                 "tool": {
                     "driver": {
-                        "informationUri": "https://github.com/KirkForge/IronDome",
-                        "name": "IronDome",
+                        "informationUri": "https://github.com/KirkForge/PicoDome",
+                        "name": "PicoDome",
                         "rules": list(seen_rules.values()),
                         "version": __version__,
                     }
@@ -116,8 +116,8 @@ def _l4_sarif(result: AnalysisResult) -> str:
                 "results": results,
                 "tool": {
                     "driver": {
-                        "informationUri": "https://github.com/KirkForge/IronDome",
-                        "name": "IronDome",
+                        "informationUri": "https://github.com/KirkForge/PicoDome",
+                        "name": "PicoDome",
                         "version": __version__,
                     }
                 },
@@ -129,7 +129,7 @@ def _l4_sarif(result: AnalysisResult) -> str:
 
 
 def _severity_to_sarif(severity: str) -> str:
-    """Map Iron Dome severity to SARIF level."""
+    """Map PicoDome severity to SARIF level."""
     mapping = {
         "CRITICAL": "error",
         "HIGH": "error",

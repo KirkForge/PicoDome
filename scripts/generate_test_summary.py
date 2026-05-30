@@ -101,7 +101,7 @@ def parse_coverage_json(path: str | None) -> dict | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate IronDome test summary")
+    parser = argparse.ArgumentParser(description="Generate PicoDome test summary")
     parser.add_argument("--junitxml", required=True, help="Path to JUnit XML")
     parser.add_argument("--coverage-json", default=None, help="Path to coverage JSON")
     parser.add_argument("--python-version", default=None, help="Python version string")
@@ -112,7 +112,7 @@ def main() -> int:
     coverage = parse_coverage_json(args.coverage_json)
 
     summary = {
-        "apiVersion": "irondome.kirkforge.dev/v1",
+        "apiVersion": "picodome.kirkforge.dev/v1",
         "kind": "TestSummary",
         "metadata": {
             "generated": datetime.now(timezone.utc).isoformat(),

@@ -1,7 +1,7 @@
-"""Iron Dome Daemon — HTTP API server for sandbox-as-a-service.
+"""PicoDome Daemon — HTTP API server for sandbox-as-a-service.
 
 Uses Python's built-in ``http.server`` for zero-dependency deployment.
-No Flask, no FastAPI — Iron Dome stays dependency-free at runtime.
+No Flask, no FastAPI — PicoDome stays dependency-free at runtime.
 
 Endpoints:
 
@@ -127,8 +127,8 @@ class ScanJobStore:
 # ─── HTTP handler ────────────────────────────────────────────────────────────
 
 
-class IronDomeHandler(BaseHTTPRequestHandler):
-    """HTTP request handler for the Iron Dome daemon."""
+class PicoDomeHandler(BaseHTTPRequestHandler):
+    """HTTP request handler for the PicoDome daemon."""
 
     # ── Request size limit ──────────────────────────────────────────────
 
@@ -258,7 +258,7 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         """Generate or retrieve a request ID for traceability.
 
         Uses X-Request-ID header if provided by the client,
-        otherwise generates a unique ID (irondome-<uuid>).
+        otherwise generates a unique ID (picodome-<uuid>).
         """
         existing_id = self.headers.get("X-Request-ID", "")
         if existing_id and len(existing_id) <= 128:
@@ -671,24 +671,24 @@ class IronDomeHandler(BaseHTTPRequestHandler):
         avg_ms = self._scan_total_ms / max(self._scan_count, 1)
 
         lines = [
-            "# HELP irondome_scans_total Total number of scans executed",
-            "# TYPE irondome_scans_total counter",
+            "# HELP picodome_scans_total Total number of scans executed",
+            "# TYPE picodome_scans_total counter",
             f"irondome_scans_total {self._scan_count}",
             "",
-            "# HELP irondome_scan_duration_ms_avg Average scan duration in ms",
-            "# TYPE irondome_scan_duration_ms_avg gauge",
+            "# HELP picodome_scan_duration_ms_avg Average scan duration in ms",
+            "# TYPE picodome_scan_duration_ms_avg gauge",
             f"irondome_scan_duration_ms_avg {avg_ms}",
             "",
-            "# HELP irondome_alerts_total Total number of alerts generated",
-            "# TYPE irondome_alerts_total counter",
+            "# HELP picodome_alerts_total Total number of alerts generated",
+            "# TYPE picodome_alerts_total counter",
             f"irondome_alerts_total {self._alert_count}",
             "",
-            "# HELP irondome_uptime_seconds Daemon uptime in seconds",
-            "# TYPE irondome_uptime_seconds gauge",
+            "# HELP picodome_uptime_seconds Daemon uptime in seconds",
+            "# TYPE picodome_uptime_seconds gauge",
             f"irondome_uptime_seconds {uptime}",
             "",
-            "# HELP irondome_version IronDome version info",
-            "# TYPE irondome_version gauge",
+            "# HELP picodome_version PicoDome version info",
+            "# TYPE picodome_version gauge",
             f'irondome_version{{version="{__version__}"}} 1',
         ]
 
@@ -1033,12 +1033,12 @@ class IronDomeHandler(BaseHTTPRequestHandler):
 # ─── Daemon class ────────────────────────────────────────────────────────────
 
 
-class IronDomeDaemon:
-    """Iron Dome daemon — HTTP API server for sandbox-as-a-service.
+class PicoDomeDaemon:
+    """PicoDome daemon — HTTP API server for sandbox-as-a-service.
 
     Usage::
 
-        daemon = IronDomeDaemon(host="0.0.0.0", port=8443)
+        daemon = PicoDomeDaemon(host="0.0.0.0", port=8443)
         daemon.start()   # blocking
         # or
         daemon.start(background=True)
@@ -1089,7 +1089,7 @@ class IronDomeDaemon:
             from irondome.daemon.sqlite_store import SQLiteScanJobStore
 
             db_path = os.environ.get("IRONDOME_SQLITE_PATH")
-            IronDomeHandler.job_store = SQLiteScanJobStore(
+            PicoDomeHandler.job_store = SQLiteScanJobStore(
                 db_path=_Path(db_path) if db_path else None,
             )
             logger.info("Using SQLite job store backend")
@@ -1097,7 +1097,7 @@ class IronDomeDaemon:
             from irondome.daemon.store import PersistentScanJobStore
 
             store_dir = _Path(self._job_store_dir) if self._job_store_dir else None
-            IronDomeHandler.job_store = PersistentScanJobStore(store_dir=store_dir)
+            PicoDomeHandler.job_store = PersistentScanJobStore(store_dir=store_dir)
             logger.info("Using JSONL job store backend")
 
         # Set up rate limiter from environment
@@ -1105,7 +1105,7 @@ class IronDomeDaemon:
 
         global_rps = float(os.environ.get("IRONDOME_GLOBAL_RPS", "25.0"))
         rate_per_second = float(os.environ.get("IRONDOME_RATE_PER_SECOND", "2.0"))
-        IronDomeHandler.rate_limiter = TokenBucketLimiter(
+        PicoDomeHandler.rate_limiter = TokenBucketLimiter(
             RateLimitConfig(
                 rate_per_second=rate_per_second,
                 global_rps=global_rps,
@@ -1176,7 +1176,7 @@ class IronDomeDaemon:
 
     def start(self, background: bool = False) -> None:
         """Start the daemon HTTP server."""
-        server = HTTPServer((self._host, self._port), IronDomeHandler)
+        server = HTTPServer((self._host, self._port), PicoDomeHandler)
         self._server = server
 
         # Audit
@@ -1197,13 +1197,13 @@ class IronDomeDaemon:
         except Exception:
             pass
 
-        logger.info("Iron Dome daemon starting on %s:%d", self._host, self._port)
+        logger.info("PicoDome daemon starting on %s:%d", self._host, self._port)
 
         # If metrics port is separate, start a metrics-only listener
         if self._metrics_port and self._metrics_port != self._port:
             metrics_handler = type(
                 "MetricsHandler",
-                (IronDomeHandler,),
+                (PicoDomeHandler,),
                 {"_metrics_only": True},
             )
             self._metrics_server = HTTPServer((self._host, self._metrics_port), metrics_handler)
@@ -1263,7 +1263,7 @@ class IronDomeDaemon:
         except Exception:
             pass
 
-        logger.info("Iron Dome daemon stopped")
+        logger.info("PicoDome daemon stopped")
 
     def install_signal_handlers(self) -> None:
         """Install SIGTERM and SIGINT handlers for graceful shutdown.
@@ -1273,7 +1273,7 @@ class IronDomeDaemon:
 
         Usage::
 
-            daemon = IronDomeDaemon()
+            daemon = PicoDomeDaemon()
             daemon.install_signal_handlers()
             daemon.start()  # blocks; SIGTERM triggers graceful shutdown
         """
@@ -1301,10 +1301,10 @@ def create_app(
     store_backend: str | None = None,
     tokens: str | None = None,
     background: bool = False,
-) -> IronDomeDaemon:
-    """Factory function to create an IronDomeDaemon instance.
+) -> PicoDomeDaemon:
+    """Factory function to create an PicoDomeDaemon instance.
 
-    Convenience wrapper around ``IronDomeDaemon`` constructor for
+    Convenience wrapper around ``PicoDomeDaemon`` constructor for
     programmatic use (testing, WSGI adapters, orchestration).
 
     Args:
@@ -1317,12 +1317,12 @@ def create_app(
         background: If true, start the daemon in a background thread.
 
     Returns:
-        Configured ``IronDomeDaemon`` instance (started if *background* is True).
+        Configured ``PicoDomeDaemon`` instance (started if *background* is True).
     """
     if tokens:
         os.environ["IRONDOME_API_TOKENS"] = tokens
 
-    daemon = IronDomeDaemon(
+    daemon = PicoDomeDaemon(
         host=host,
         port=port,
         metrics_port=metrics_port,

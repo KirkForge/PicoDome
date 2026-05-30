@@ -1,4 +1,4 @@
-"""IronDome gRPC Client — connects to an IronDome gRPC server.
+"""PicoDome gRPC Client — connects to an PicoDome gRPC server.
 
 Provides both synchronous and asynchronous scan methods, with
 timeout and retry logic, and TLS/mTLS support.
@@ -68,19 +68,19 @@ class ScanResult:
         )
 
 
-class IronDomeGRPCClient:
-    """gRPC client for IronDome — connects to an IronDome gRPC server.
+class PicoDomeGRPCClient:
+    """gRPC client for PicoDome — connects to an PicoDome gRPC server.
 
     Usage::
 
-        client = IronDomeGRPCClient(target="localhost:50051")
+        client = PicoDomeGRPCClient(target="localhost:50051")
         result = client.scan(command=["echo", "hello"])
 
     Or with TLS::
 
         from irondome.mtls import MTLSConfig
         config = MTLSConfig(cert_path="client.crt", key_path="client.key", ca_path="ca.crt")
-        client = IronDomeGRPCClient(target="localhost:50051", mtls_config=config)
+        client = PicoDomeGRPCClient(target="localhost:50051", mtls_config=config)
 
     If grpcio is not installed, calling scan() will raise ImportError.
     Check ``is_grpc_available()`` before instantiating.
@@ -125,7 +125,7 @@ class IronDomeGRPCClient:
         try:
             from irondome.grpc_transport.proto import irondome_pb2_grpc as pb2_grpc
 
-            self._stub = pb2_grpc.IronDomeServiceStub(self._channel)
+            self._stub = pb2_grpc.PicoDomeServiceStub(self._channel)
         except ImportError:
             logger.warning("Compiled protobuf stubs not found, using manual stub")
             self._stub = None
@@ -239,7 +239,7 @@ class IronDomeGRPCClient:
                 cwd=cwd or "",
             )
             if self._stub is None:
-                self._stub = pb2_grpc.IronDomeServiceStub(self._channel)
+                self._stub = pb2_grpc.PicoDomeServiceStub(self._channel)
 
             response = self._stub.Scan(request, timeout=timeout)
 
@@ -282,7 +282,7 @@ class IronDomeGRPCClient:
         # Use generic unary-unary call
         try:
             response_data = self._channel.unary_unary(
-                "/irondome.IronDomeService/Scan",
+                "/irondome.PicoDomeService/Scan",
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )(request_data, timeout=timeout)
@@ -319,7 +319,7 @@ class IronDomeGRPCClient:
 
             request = pb2.HealthCheckRequest()
             if self._stub is None:
-                self._stub = pb2_grpc.IronDomeServiceStub(self._channel)
+                self._stub = pb2_grpc.PicoDomeServiceStub(self._channel)
             response = self._stub.Health(request, timeout=5.0)
 
             return {
@@ -334,7 +334,7 @@ class IronDomeGRPCClient:
 
             try:
                 response_data = self._channel.unary_unary(
-                    "/irondome.IronDomeService/Health",
+                    "/irondome.PicoDomeService/Health",
                     request_serializer=lambda x: x,
                     response_deserializer=lambda x: x,
                 )(b"", timeout=5.0)
@@ -353,7 +353,7 @@ class IronDomeGRPCClient:
 
             request = pb2.PolicyGetRequest(name=name, version=version or 0)
             if self._stub is None:
-                self._stub = pb2_grpc.IronDomeServiceStub(self._channel)
+                self._stub = pb2_grpc.PicoDomeServiceStub(self._channel)
             response = self._stub.GetPolicy(request, timeout=10.0)
 
             return {
@@ -367,7 +367,7 @@ class IronDomeGRPCClient:
             request_data = json.dumps({"name": name, "version": version or 0}).encode("utf-8")
             try:
                 response_data = self._channel.unary_unary(
-                    "/irondome.IronDomeService/GetPolicy",
+                    "/irondome.PicoDomeService/GetPolicy",
                     request_serializer=lambda x: x,
                     response_deserializer=lambda x: x,
                 )(request_data, timeout=10.0)
@@ -401,7 +401,7 @@ class IronDomeGRPCClient:
                 limit=limit,
             )
             if self._stub is None:
-                self._stub = pb2_grpc.IronDomeServiceStub(self._channel)
+                self._stub = pb2_grpc.PicoDomeServiceStub(self._channel)
             response = self._stub.QueryAudit(request, timeout=10.0)
 
             return {
@@ -423,7 +423,7 @@ class IronDomeGRPCClient:
             ).encode("utf-8")
             try:
                 response_data = self._channel.unary_unary(
-                    "/irondome.IronDomeService/QueryAudit",
+                    "/irondome.PicoDomeService/QueryAudit",
                     request_serializer=lambda x: x,
                     response_deserializer=lambda x: x,
                 )(request_data, timeout=10.0)
@@ -442,7 +442,7 @@ class IronDomeGRPCClient:
             self._channel = None
             self._stub = None
 
-    def __enter__(self) -> IronDomeGRPCClient:
+    def __enter__(self) -> PicoDomeGRPCClient:
         return self
 
     def __exit__(self, *args) -> None:

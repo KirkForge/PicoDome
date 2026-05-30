@@ -1,6 +1,6 @@
 # SCAAT — Supply Chain Attacks and Threats Attestation
 
-**Project:** IronDome v0.5.0  
+**Project:** PicoDome v0.5.0  
 **Date:** 2026-05-22  
 **Format:** [SCAAT v1.0](https://github.com/ossf/scaat)  
 **Attested by:** KirkForge  
@@ -9,7 +9,7 @@
 
 ## Overview
 
-IronDome attests to detecting **17 rule types** across **L3 sandbox enforcement** and **L4 behavioral analysis**, covering supply-chain attack vectors in npm/Python ecosystems. This document maps each rule to the attack vector it addresses, the MITRE ATT&CK technique, the supply-chain vector, and the detection method.
+PicoDome attests to detecting **17 rule types** across **L3 sandbox enforcement** and **L4 behavioral analysis**, covering supply-chain attack vectors in npm/Python ecosystems. This document maps each rule to the attack vector it addresses, the MITRE ATT&CK technique, the supply-chain vector, and the detection method.
 
 ---
 
@@ -329,7 +329,7 @@ Sub-rules:
 
 ## Attestation Statement
 
-IronDome v0.5.0 attests to detecting the supply-chain attack vectors listed above with the stated severity levels. L3 sandbox enforcement is deterministic (same command + same policy = same events, every time) on the subprocess backend. L4 behavioral analysis is deterministic (same profile + same baselines = same findings, every time). The seccomp-bpf and seatbelt backends provide real kernel-level enforcement; the subprocess backend provides post-hoc detection only.
+PicoDome v0.5.0 attests to detecting the supply-chain attack vectors listed above with the stated severity levels. L3 sandbox enforcement is deterministic (same command + same policy = same events, every time) on the subprocess backend. L4 behavioral analysis is deterministic (same profile + same baselines = same findings, every time). The seccomp-bpf and seatbelt backends provide real kernel-level enforcement; the subprocess backend provides post-hoc detection only.
 
 All detections are behavioral and deterministic. No network calls during analysis. Same inputs + same policy/baselines = same output, every time.
 
@@ -338,6 +338,6 @@ This attestation is regenerated for each release. The SCAAT format (v1.0) maps r
 ```
 Signed: KirkForge
 Date:   2026-05-22
-Version: irondome@0.5.0
+Version: picodome@0.5.0
 Hash:   sha256 of this file committed to the repo
 ```

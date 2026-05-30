@@ -73,8 +73,8 @@ def _l3_cyclonedx(result: SandboxResult) -> str:
                 }
             ],
             "source": {
-                "name": "IronDome",
-                "url": "https://github.com/KirkForge/IronDome",
+                "name": "PicoDome",
+                "url": "https://github.com/KirkForge/PicoDome",
             },
         }
         vulns.append(vuln)
@@ -91,7 +91,7 @@ def _l3_cyclonedx(result: SandboxResult) -> str:
             "timestamp": det_timestamp,
             "tools": [
                 {
-                    "name": "IronDome",
+                    "name": "PicoDome",
                     "vendor": "KirkForge",
                     "version": __version__,
                 }
@@ -134,8 +134,8 @@ def _l4_cyclonedx(result: AnalysisResult) -> str:
                 }
             ],
             "source": {
-                "name": "IronDome",
-                "url": "https://github.com/KirkForge/IronDome",
+                "name": "PicoDome",
+                "url": "https://github.com/KirkForge/PicoDome",
             },
         }
 
@@ -156,7 +156,7 @@ def _l4_cyclonedx(result: AnalysisResult) -> str:
             "timestamp": det_timestamp,
             "tools": [
                 {
-                    "name": "IronDome",
+                    "name": "PicoDome",
                     "vendor": "KirkForge",
                     "version": __version__,
                 }
@@ -174,7 +174,7 @@ def _l4_cyclonedx(result: AnalysisResult) -> str:
 
 
 def _severity_from_verdict(verdict: str) -> str:
-    """Map Iron Dome verdict to CycloneDX severity."""
+    """Map PicoDome verdict to CycloneDX severity."""
     mapping = {
         "ALLOW": "info",
         "DENY": "high",

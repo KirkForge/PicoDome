@@ -1,4 +1,4 @@
-"""Iron Dome structured error codes.
+"""PicoDome structured error codes.
 
 Every API error response includes a machine-readable error code plus a
 human-readable message.  This makes programmatic error handling reliable
@@ -34,7 +34,7 @@ class ErrorCode:
 
 
 class ErrorCodes:
-    """Central registry of all IronDome API error codes."""
+    """Central registry of all PicoDome API error codes."""
 
     # ── 400 Bad Request ────────────────────────────────────────────────
     INVALID_JSON = ErrorCode(400, "INVALID_JSON", "Invalid JSON body")

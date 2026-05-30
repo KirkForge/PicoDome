@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/KirkForge/PicoDome/schemas/picodome-pipeline-result.schema.json",
+  "title": "PicoDome Pipeline Result",
+  "description": "JSON Schema for PicoDome combined L3+L4 pipeline output",
+  "type": "object",
+  "required": ["sandbox", "analysis"],
+  "properties": {
+    "sandbox": {
+      "description": "L3 sandbox execution result",
+      "type": "object",
+      "required": ["command", "events", "exit_code", "overall_verdict", "policy_name"],
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Command that was sandboxed"
+        },
+        "events": {
+          "type": "array",
+          "description": "L3 sandbox events",
+          "items": {
+            "type": "object",
+            "required": ["detail", "operation", "path", "rule_id", "verdict"],
+            "properties": {
+              "detail": { "type": "string" },
+              "operation": { "type": "string" },
+              "path": { "type": "string" },
+              "rule_id": { "type": "string" },
+              "verdict": {
+                "type": "string",
+                "enum": ["ALLOW", "DENY", "KILL"]
+              },
+              "address": { "type": "string" },
+              "timestamp_ms": { "type": "integer" }
+            }
+          }
+        },
+        "exit_code": { "type": "integer" },
+        "overall_verdict": {
+          "type": "string",
+          "enum": ["ALLOW", "DENY", "KILL"]
+        },
+        "policy_name": { "type": "string" },
+        "duration_ms": { "type": "integer" },
+        "run_id": { "type": "string" },
+        "timestamp": { "type": "string" }
+      }
+    },
+    "analysis": {
+      "description": "L4 behavioral analysis result",
+      "type": "object",
+      "required": ["target", "findings", "overall_verdict", "stats"],
+      "properties": {
+        "target": { "type": "string" },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["rule_id", "severity", "message"],
+            "properties": {
+              "rule_id": { "type": "string" },
+              "severity": {
+                "type": "string",
+                "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+              },
+              "message": { "type": "string" },
+              "location": { "type": "string" },
+              "evidence": { "type": "object" },
+              "finding_id": { "type": "string" }
+            }
+          }
+        },
+        "overall_verdict": {
+          "type": "string",
+          "enum": ["CLEAN", "SUSPICIOUS", "MALICIOUS"]
+        },
+        "drift_results": { "type": "array" },
+        "profile": { "type": "object" },
+        "stats": { "type": "object" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

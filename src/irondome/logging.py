@@ -1,9 +1,9 @@
 """
-IronDome structured logging — JSON formatter for SIEM integration.
+PicoDome structured logging — JSON formatter for SIEM integration.
 
 Provides two formatters:
-- IronDomeTextFormatter: Human-readable text (default)
-- IronDomeJSONFormatter: Structured JSON for SIEM/log aggregation
+- PicoDomeTextFormatter: Human-readable text (default)
+- PicoDomeJSONFormatter: Structured JSON for SIEM/log aggregation
 
 Controlled by --log-format and --verbose CLI flags.
 """
@@ -22,7 +22,7 @@ except ImportError:
     __version__ = "0.1.0"
 
 
-class IronDomeJSONFormatter(logging.Formatter):
+class PicoDomeJSONFormatter(logging.Formatter):
     """
     Structured JSON formatter for SIEM/log aggregation systems.
 
@@ -74,7 +74,7 @@ class IronDomeJSONFormatter(logging.Formatter):
             return f"{record.created:.3f}"
 
 
-class IronDomeTextFormatter(logging.Formatter):
+class PicoDomeTextFormatter(logging.Formatter):
     """
     Human-readable text formatter for console output.
 
@@ -125,7 +125,7 @@ def setup_logging(
     verbose: bool = False,
 ) -> None:
     """
-    Configure IronDome logging.
+    Configure PicoDome logging.
 
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
@@ -133,7 +133,7 @@ def setup_logging(
         use_color: Whether to use ANSI color codes in text output.
         verbose: Whether to include logger name in text output.
     """
-    root_logger = logging.getLogger("irondome")
+    root_logger = logging.getLogger("picodome")
 
     # Clear existing handlers
     root_logger.handlers.clear()
@@ -149,9 +149,9 @@ def setup_logging(
     # Set formatter
     formatter: logging.Formatter
     if log_format == "json":
-        formatter = IronDomeJSONFormatter(include_version=True)
+        formatter = PicoDomeJSONFormatter(include_version=True)
     else:
-        formatter = IronDomeTextFormatter(use_color=use_color, verbose=verbose)
+        formatter = PicoDomeTextFormatter(use_color=use_color, verbose=verbose)
 
     handler.setFormatter(formatter)
     root_logger.addHandler(handler)

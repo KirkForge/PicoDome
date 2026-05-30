@@ -1,4 +1,4 @@
-"""Iron Dome Cluster — multi-node daemon support with shared state.
+"""PicoDome Cluster — multi-node daemon support with shared state.
 
 Provides cluster node registry, distributed scan assignment,
 heartbeat-based health checks, and state synchronization.

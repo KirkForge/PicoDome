@@ -1,5 +1,5 @@
 """
-IronDome configuration — .irondome.yml file loader.
+PicoDome configuration — .irondome.yml file loader.
 
 Config file is optional. CLI flags override config file values.
 Search order: target_dir/.irondome.yml → target_dir/.irondome.yaml
@@ -50,7 +50,7 @@ VALID_FORMATS = frozenset({"json", "sarif", "table"})
 VALID_LOG_FORMATS = frozenset({"text", "json"})
 
 
-class IronDomeConfig:
+class PicoDomeConfig:
     """
     Configuration loaded from .irondome.yml or CLI flags.
 
@@ -90,7 +90,7 @@ class IronDomeConfig:
         # Logging
         self.log_format: str = "text"
 
-    def merge_from_cli(self, args: Any) -> IronDomeConfig:
+    def merge_from_cli(self, args: Any) -> PicoDomeConfig:
         """Merge CLI args into this config. CLI flags override config file values.
 
         Uses attribute presence detection to determine if a CLI flag was
@@ -100,9 +100,9 @@ class IronDomeConfig:
             args: argparse Namespace with CLI arguments.
 
         Returns:
-            New IronDomeConfig with merged values.
+            New PicoDomeConfig with merged values.
         """
-        merged = IronDomeConfig()
+        merged = PicoDomeConfig()
 
         # Copy config file values first
         merged.format = self.format
@@ -236,7 +236,7 @@ _ENV_TO_ATTR = {
 }
 
 
-def apply_env_overrides(config: IronDomeConfig) -> IronDomeConfig:
+def apply_env_overrides(config: PicoDomeConfig) -> PicoDomeConfig:
     """Apply IRONDOME_* environment variable overrides to config.
 
     Boolean values: "true", "1", "yes" → True; "false", "0", "no" → False.
@@ -276,7 +276,7 @@ def apply_env_overrides(config: IronDomeConfig) -> IronDomeConfig:
     return config
 
 
-def load_config(target_dir: Path) -> IronDomeConfig:
+def load_config(target_dir: Path) -> PicoDomeConfig:
     """Load configuration from target directory.
 
     Searches for .irondome.yml or .irondome.yaml in the target directory.
@@ -285,7 +285,7 @@ def load_config(target_dir: Path) -> IronDomeConfig:
 
     Deterministic: same directory = same config (or default).
     """
-    config = IronDomeConfig()
+    config = PicoDomeConfig()
 
     config_path = _find_config(target_dir)
     if config_path is None:

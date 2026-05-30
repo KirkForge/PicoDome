@@ -1,16 +1,16 @@
 openapi: "3.0.3"
 info:
-  title: Iron Dome API
+  title: PicoDome API
   description: |
-    Iron Dome — Deterministic runtime sandbox and behavioral analysis engine
+    PicoDome — Deterministic runtime sandbox and behavioral analysis engine
     for supply-chain security.
 
     ## Authentication
     All endpoints except `/health` and `/ready` require a Bearer token via the
     `Authorization` header. Tokens are configured via `IRONDOME_API_TOKENS`
-    or `~/.irondome/api-tokens`.
+    or `~/.picodome/api-tokens`.
 
-    Token format: `irondome-<role>-<secret>` (e.g., `irondome-admin-abc123`)
+    Token format: `picodome-<role>-<secret>` (e.g., `picodome-admin-abc123`)
 
     Roles: `admin` (all permissions), `reader` (read-only), `submitter` (scan+read)
 
@@ -47,7 +47,7 @@ info:
   version: "0.5.0"
   contact:
     name: KirkForge
-    url: https://github.com/KirkForge/IronDome
+    url: https://github.com/KirkForge/PicoDome
 
 servers:
   - url: http://localhost:8443
@@ -331,7 +331,7 @@ components:
       type: http
       scheme: bearer
       description: |
-        Bearer token authentication. Token format: `irondome-<role>-<secret>`
+        Bearer token authentication. Token format: `picodome-<role>-<secret>`
 
   schemas:
     HealthResponse:
@@ -664,13 +664,13 @@ components:
           example: true
         cert_path:
           type: string
-          example: "/etc/irondome/tls/server.crt"
+          example: "/etc/picodome/tls/server.crt"
         key_path:
           type: string
-          example: "/etc/irondome/tls/server.key"
+          example: "/etc/picodome/tls/server.key"
         ca_path:
           type: string
-          example: "/etc/irondome/tls/ca.crt"
+          example: "/etc/picodome/tls/ca.crt"
         cert_exists:
           type: boolean
         key_exists:

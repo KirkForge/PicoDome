@@ -1,4 +1,4 @@
-"""IronDome gRPC Transport — optional high-throughput transport for daemon mode.
+"""PicoDome gRPC Transport — optional high-throughput transport for daemon mode.
 
 This module provides gRPC client and server implementations as an alternative
 to the built-in HTTP daemon. gRPC is OPTIONAL — if ``grpcio`` is not installed,
@@ -42,20 +42,20 @@ def is_grpc_available() -> bool:
 
 __all__ = [
     "is_grpc_available",
-    "IronDomeGRPCServer",
-    "IronDomeGRPCClient",
+    "PicoDomeGRPCServer",
+    "PicoDomeGRPCClient",
 ]
 
 # Lazy imports — only resolve when accessed
 
 
 def __getattr__(name: str):
-    if name == "IronDomeGRPCServer":
-        from irondome.grpc_transport.server import IronDomeGRPCServer
+    if name == "PicoDomeGRPCServer":
+        from irondome.grpc_transport.server import PicoDomeGRPCServer
 
-        return IronDomeGRPCServer
-    if name == "IronDomeGRPCClient":
-        from irondome.grpc_transport.client import IronDomeGRPCClient
+        return PicoDomeGRPCServer
+    if name == "PicoDomeGRPCClient":
+        from irondome.grpc_transport.client import PicoDomeGRPCClient
 
-        return IronDomeGRPCClient
+        return PicoDomeGRPCClient
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

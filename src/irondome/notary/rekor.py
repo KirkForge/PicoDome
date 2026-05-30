@@ -1,7 +1,7 @@
 """Rekor transparency log notary integration.
 
 Submits audit entries to a Rekor transparency log for external, tamper-evident
-verification. Falls back gracefully when offline — IronDome must never crash
+verification. Falls back gracefully when offline — PicoDome must never crash
 or block because an external service is unavailable.
 
 Key design:
@@ -256,7 +256,7 @@ class RekorNotary(AuditNotary):
     Rekor is unavailable.
 
     All HTTP calls are timeout-bounded (default 10s). Network errors are
-    caught and logged — IronDome never crashes because Rekor is down.
+    caught and logged — PicoDome never crashes because Rekor is down.
     """
 
     def __init__(
@@ -522,7 +522,7 @@ _default_notary: AuditNotary | None = None
 def get_default_notary() -> AuditNotary:
     """Get the global default notary (lazy init, defaults to NullNotary).
 
-    The default is ``NullNotary`` because IronDome must work offline.
+    The default is ``NullNotary`` because PicoDome must work offline.
     Users who want Rekor integration should call ``set_default_notary()``
     with a ``RekorNotary`` instance.
     """

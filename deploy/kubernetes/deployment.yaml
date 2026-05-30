@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: irondome
+  name: picodome
   labels:
-    app: irondome
+    app: picodome
     version: v0.5.0
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: irondome
+      app: picodome
   template:
     metadata:
       labels:
-        app: irondome
+        app: picodome
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8443"
         prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: irondome
+      serviceAccountName: picodome
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -28,8 +28,8 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: irondome
-          image: kirkforge/irondome:v0.5.0
+        - name: picodome
+          image: kirkforge/picodome:v0.5.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -43,7 +43,7 @@ spec:
             - name: IRONDOME_API_TOKENS
               valueFrom:
                 secretKeyRef:
-                  name: irondome-tokens
+                  name: picodome-tokens
                   key: api-tokens
             - name: IRONDOME_ENTERPRISE_MODE
               value: "1"
@@ -58,7 +58,7 @@ spec:
               mountPath: /tls
               readOnly: true
             - name: data
-              mountPath: /home/irondome/.irondome
+              mountPath: /home/picodome/.picodome
           resources:
             requests:
               cpu: 100m
@@ -91,17 +91,17 @@ spec:
       volumes:
         - name: tls
           secret:
-            secretName: irondome-tls
+            secretName: picodome-tls
         - name: data
           persistentVolumeClaim:
-            claimName: irondome-data
+            claimName: picodome-data
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: irondome
+  name: picodome
   labels:
-    app: irondome
+    app: picodome
 spec:
   type: ClusterIP
   ports:
@@ -110,12 +110,12 @@ spec:
       targetPort: http
       protocol: TCP
   selector:
-    app: irondome
+    app: picodome
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: irondome-data
+  name: picodome-data
 spec:
   accessModes:
     - ReadWriteOnce
@@ -127,24 +127,24 @@ spec:
 # Do NOT store real tokens in this manifest.
 #
 # Example:
-#   kubectl create secret generic irondome-tokens \
-#     --from-literal=api-tokens='irondome-admin-$(openssl rand -hex 32)'
+#   kubectl create secret generic picodome-tokens \
+#     --from-literal=api-tokens='picodome-admin-$(openssl rand -hex 32)'
 #
 apiVersion: v1
 kind: Secret
 metadata:
-  name: irondome-tokens
+  name: picodome-tokens
 type: Opaque
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: irondome
+  name: picodome
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: irondome
+  name: picodome
 rules:
   - apiGroups: [""]
     resources: ["configmaps"]
@@ -152,29 +152,29 @@ rules:
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get"]
-    resourceNames: ["irondome-tokens", "irondome-tls"]
+    resourceNames: ["picodome-tokens", "picodome-tls"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: irondome
+  name: picodome
 subjects:
   - kind: ServiceAccount
-    name: irondome
+    name: picodome
 roleRef:
   kind: Role
-  name: irondome
+  name: picodome
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: irondome-network-policy
+  name: picodome-network-policy
   namespace: default
 spec:
   podSelector:
     matchLabels:
-      app: irondome
+      app: picodome
   policyTypes:
     - Ingress
     - Egress

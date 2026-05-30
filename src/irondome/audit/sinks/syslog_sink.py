@@ -10,7 +10,7 @@ RFC 5424 format::
 
 Example::
 
-  <134>1 2026-05-22T17:00:00Z irondome irondome audit 12345 [event_type scan_start] actor=test detail="scan started"
+  <134>1 2026-05-22T17:00:00Z picodome picodome audit 12345 [event_type scan_start] actor=test detail="scan started"
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ import time
 from irondome.audit.logger import AuditEvent
 from irondome.audit.sinks.base import AuditSink, SinkConfig
 
-logger = logging.getLogger("irondome.audit.sink.syslog")
+logger = logging.getLogger("picodome.audit.sink.syslog")
 
 # RFC 5424 facility codes
 FACILITY_USER = 1  # user-level messages
@@ -65,7 +65,7 @@ _EVENT_SEVERITY: dict[str, int] = {
 
 _DEFAULT_SYSLOG_HOST = "127.0.0.1"
 _DEFAULT_SYSLOG_PORT = 514
-_DEFAULT_APP_NAME = "irondome"
+_DEFAULT_APP_NAME = "picodome"
 
 
 class SyslogSink(AuditSink):
@@ -154,7 +154,7 @@ class SyslogSink(AuditSink):
         timestamp = event.timestamp or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         hostname = socket.gethostname()
         procid = event.event_id[:36]  # truncate to reasonable length
-        msgid = f"irondome.{event.event_type.value}"
+        msgid = f"picodome.{event.event_type.value}"
 
         # Structured data: event metadata as key=value pairs
         sd_pairs = [

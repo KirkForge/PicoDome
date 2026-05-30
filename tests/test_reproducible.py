@@ -33,7 +33,7 @@ def sample_requirements(tmp_path):
     """Create a sample requirements.txt with hash-pinned dependencies."""
     req_file = tmp_path / "requirements.txt"
     req_file.write_text(
-        "# IronDome pinned requirements\n"
+        "# PicoDome pinned requirements\n"
         "setuptools>=68.0 --hash=sha256:a:b\n"
         "wheel==0.42.0 --hash=sha256:abc123def456\n"
         "pyyaml>=6.0 --hash=sha256:xyz789\n"

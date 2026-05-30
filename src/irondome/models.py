@@ -1,4 +1,4 @@
-"""Shared models for Iron Dome L3 + L4 pipeline.
+"""Shared models for PicoDome L3 + L4 pipeline.
 
 Deterministic by default: Finding.finding_id defaults to "" (empty string),
 not uuid4. SandboxResult.run_id and .timestamp also default to "".

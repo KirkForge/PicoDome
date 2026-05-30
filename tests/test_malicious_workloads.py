@@ -1,6 +1,6 @@
-"""Malicious workload test corpus for IronDome sandbox validation.
+"""Malicious workload test corpus for PicoDome sandbox validation.
 
-These tests verify that IronDome correctly detects and denies
+These tests verify that PicoDome correctly detects and denies
 common malicious behaviors that supply-chain attacks employ.
 
 Each test case represents a class of malicious workload behavior.

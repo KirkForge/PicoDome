@@ -1,4 +1,4 @@
-# Iron Dome Changelog
+# PicoDome Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`create_app()` factory** in `daemon/server.py` — programmatic daemon creation for testing and orchestration
 - **`generate_test_summary.py`** — machine-readable test evidence (total, passed, failed, skipped, duration, coverage, slow tests)
 - **Test summary step in CI** — every CI run uploads `test-summary-py{version}.json` artifact with 30-day retention
-- **Evidence bundle in release workflow** — `evidence` job generates and attaches `irondome-evidence-bundle.tar.gz` to GitHub releases
+- **Evidence bundle in release workflow** — `evidence` job generates and attaches `picodome-evidence-bundle.tar.gz` to GitHub releases
 - **Enterprise pilot limitations** — `docs/ENTERPRISE_PILOT_LIMITATIONS.md` with scale limits, tenancy assumptions, Redis requirements, deployment modes, unsupported compliance claims, graduation criteria
 - **Third-party security review plan** — `docs/security/THIRD_PARTY_REVIEW.md` with scope, methodology, timeline, budget, vendor requirements
 
@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Status** — Active development → Enterprise Beta — controlled pilot ready
 
 ### Fixed
-- **Collection error** — `irondome.daemon.__init__` imported non-existent `create_app`; 4 test modules could not be collected (`test_audit_coverage`, `test_redis_store`, `test_sqlite_store`, `test_sqlite_integration`)
+- **Collection error** — `picodome.daemon.__init__` imported non-existent `create_app`; 4 test modules could not be collected (`test_audit_coverage`, `test_redis_store`, `test_sqlite_store`, `test_sqlite_integration`)
 - **Packaging hygiene** — `MANIFEST.in` now has `global-exclude __pycache__` and `global-exclude *.pyc`; verified clean wheel/sdist builds
 - **Local cache cleanup** — removed all `__pycache__/` directories and `.pyc` files from the repository
 
@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Request ID middleware** — every daemon response includes `X-Request-ID` header for distributed traceability; clients may provide their own via `X-Request-ID` request header
 - **CORS headers** — all daemon responses include CORS headers (`Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers`); configurable via `IRONDOME_CORS_ORIGINS` env var (default: `*`)
 - **CORS preflight** — `OPTIONS` requests are handled automatically with proper CORS headers
-- **Graceful shutdown** — `IronDomeDaemon.install_signal_handlers()` registers SIGTERM, SIGINT, and SIGHUP handlers for clean shutdown; in-flight requests are drained before stopping
+- **Graceful shutdown** — `PicoDomeDaemon.install_signal_handlers()` registers SIGTERM, SIGINT, and SIGHUP handlers for clean shutdown; in-flight requests are drained before stopping
 - **Security response headers** — `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Cache-Control: no-store` on all daemon responses
 - **Version bump** — package version updated from 0.3.0 to 0.5.0 to reflect completed Phase 2 and Phase 3 enterprise work
 
@@ -47,18 +47,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **gRPC transport** (PR-21) — optional high-throughput transport for daemon mode
-  - `src/irondome/grpc_transport/` package with server, client, servicer, and proto
-  - `irondome.proto` — protobuf schema with Scan, Health, GetPolicy, QueryAudit RPCs
-  - `IronDomeGRPCServer` — wraps existing scan engine, serves on configurable port (default 50051)
-  - `IronDomeGRPCClient` — sync/async scan methods, TLS/mTLS support, retry logic
-  - `irondome daemon --transport grpc` — start daemon with gRPC transport
-  - `irondome scan-grpc <target>` — scan via gRPC client
+  - `src/picodome/grpc_transport/` package with server, client, servicer, and proto
+  - `picodome.proto` — protobuf schema with Scan, Health, GetPolicy, QueryAudit RPCs
+  - `PicoDomeGRPCServer` — wraps existing scan engine, serves on configurable port (default 50051)
+  - `PicoDomeGRPCClient` — sync/async scan methods, TLS/mTLS support, retry logic
+  - `picodome daemon --transport grpc` — start daemon with gRPC transport
+  - `picodome scan-grpc <target>` — scan via gRPC client
   - Dependency injection so module degrades gracefully without grpcio
   - All gRPC calls audit-logged
   - 37 tests (module availability, server, client, servicer, scan engine, CLI, proto)
 
 ### Changed
-- **SOC 2 Type I readiness assessment** — comprehensive mapping of Trust Services Criteria (CC6.1–CC8.1, A1.1, C1.1, PI1.1, PI1.3) to IronDome controls
+- **SOC 2 Type I readiness assessment** — comprehensive mapping of Trust Services Criteria (CC6.1–CC8.1, A1.1, C1.1, PI1.1, PI1.3) to PicoDome controls
 - **SOC 2 evidence matrix** — detailed mapping of controls to source code, tests, and documentation with gap analysis
 - **Structured audit logging** — hash-chained append-only JSON-lines log with 14 event types, query API, rotation
 - **Policy versioning** — author, timestamp, change description, content hashing, diff, rollback, integrity verification
@@ -112,7 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive safe syscall whitelist for binary execution
   - Falls back to subprocess on seccomp_init failure
 - **SeatbeltBackend**: Real macOS sandbox-exec with generated profiles
-  - Translates Iron Dome Policy to seatbelt profile DSL
+  - Translates PicoDome Policy to seatbelt profile DSL
   - Supports file, network, process, and DNS rule targets
   - Falls back to subprocess when not on macOS
 - **SubprocessBackend**: Added 10 suspicious pattern detectors (L3-SUS-001 through L3-SUS-010)
@@ -131,7 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Initial Release
 - L3 Execution Sandbox: subprocess backend, policy engine, 3 backends (shells)
 - L4 Behavioral Analysis: profiler, differ, 5 detector rules, 5 baselines
-- CLI: `irondome sandbox|analyze|pipeline|rules`
+- CLI: `picodome sandbox|analyze|pipeline|rules`
 - Formatters: JSON, SARIF 2.1.0, table
 - 28 tests, CI workflow with determinism gate
 ## [0.5.2] - 2026-05-29

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ─── Reproducible Build Script for IronDome ─────────────────────────────────
+# ─── Reproducible Build Script for PicoDome ─────────────────────────────────
 #
 # This script performs a bit-for-bit reproducible build by:
 # 1. Setting SOURCE_DATE_EPOCH for deterministic timestamps
@@ -44,7 +44,7 @@ IRONDOME_OFFLINE="${IRONDOME_OFFLINE:-1}"
 IRONDOME_REQUIRE_HASHES="${IRONDOME_REQUIRE_HASHES:-1}"
 
 echo "═══════════════════════════════════════════════════════════════════"
-echo "  IronDome Reproducible Build"
+echo "  PicoDome Reproducible Build"
 echo "═══════════════════════════════════════════════════════════════════"
 echo "  SOURCE_DATE_EPOCH : ${EPOCH}"
 echo "  PYTHONHASHSEED    : ${PYTHONHASHSEED}"

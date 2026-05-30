@@ -1,6 +1,6 @@
 """Pod security validator for the admission controller.
 
-Validates pod specs against IronDome security policies:
+Validates pod specs against PicoDome security policies:
   - No privileged containers
   - No runAsRoot without explicit override
   - Security context required

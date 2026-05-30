@@ -1,4 +1,4 @@
-"""Service Level Objectives (SLOs) for Iron Dome daemon mode.
+"""Service Level Objectives (SLOs) for PicoDome daemon mode.
 
 Defines measurable SLOs for availability, latency, and throughput.
 Provides measurement, tracking, and reporting of SLO compliance.

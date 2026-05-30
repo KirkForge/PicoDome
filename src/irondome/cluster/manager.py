@@ -1,4 +1,4 @@
-"""Iron Dome Cluster Manager — multi-node daemon support with shared state.
+"""PicoDome Cluster Manager — multi-node daemon support with shared state.
 
 Cluster architecture:
 - ClusterNode: represents a node in the cluster (id, address, status, load).
@@ -53,7 +53,7 @@ class NodeStatus(str, Enum):
 
 @dataclass
 class ClusterNode:
-    """Represents a node in the Iron Dome cluster.
+    """Represents a node in the PicoDome cluster.
 
     Deterministic: comparison is by (load, node_id) for consistent
     least-loaded assignment.

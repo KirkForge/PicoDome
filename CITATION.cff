@@ -1,21 +1,15 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "Iron Dome"
+title: "PicoDome"
 version: 0.5.0
-date-released: 2026-05-28
+date-released: 2026-05-30
 authors:
   - given-names: Henrik
     family-names: Kirk
     name: "Henrik Kirk"
-  - given-names: GLM
-    family-names: "5.1"
-    name: "GLM-5.1"
-  - given-names: PicoClaw
-    family-names: "🦞"
-    name: "PicoClaw"
-license: PolyForm-Noncommercial-1.0.0
-url: "https://github.com/KirkForge/IronDome"
-repository-code: "https://github.com/KirkForge/IronDome"
+license: BUSL-1.1
+url: "https://github.com/KirkForge/PicoDome"
+repository-code: "https://github.com/KirkForge/PicoDome"
 keywords:
   - sandbox
   - seccomp
@@ -23,13 +17,16 @@ keywords:
   - supply-chain
   - security
   - deterministic
-  - irondome
+  - picodome
+  - llm-defense
+  - injection-protection
 abstract: >-
-  Iron Dome is a deterministic runtime sandbox and behavioral analysis engine
-  for supply-chain security. It couples real kernel-level sandboxing (seccomp-bpf
+  PicoDome is a deterministic runtime sandbox and behavioral analysis engine
+  for supply-chain security, designed to protect machines (especially LLMs)
+  from injection attacks. It couples real kernel-level sandboxing (seccomp-bpf
   on Linux, seatbelt on macOS) with multi-signal behavioral detection — timing
   anomalies, data exfiltration, entropy spikes, honeypot access, and baseline
-  drift — to catch threats that static scanners miss. Iron Dome is the L3/L4
+  drift — to catch threats that static scanners miss. PicoDome is the L3/L4
   runtime companion to PicoSentry (L2 static scanner), completing a layered
   defense-in-depth pipeline from install to execution.
 references:
@@ -39,4 +36,4 @@ references:
     url: "https://github.com/KirkForge/PicoSentry"
     description: >-
       L2 deterministic offline npm/pnpm supply-chain scanner — the static
-      analysis companion that runs before Iron Dome's runtime sandboxing.
+      analysis companion that runs before PicoDome's runtime sandboxing.

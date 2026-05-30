@@ -1,4 +1,4 @@
-"""Tests for daemon HTTP handler paths — covers the IronDomeHandler API surface."""
+"""Tests for daemon HTTP handler paths — covers the PicoDomeHandler API surface."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import pytest
 import irondome.audit.logger as audit_logger_mod
 from irondome.audit import AuditLogger
 from irondome.auth import RBAC, TokenAuth
-from irondome.daemon.server import IronDomeDaemon, IronDomeHandler, create_app
+from irondome.daemon.server import PicoDomeDaemon, PicoDomeHandler, create_app
 from irondome.ratelimit import RateLimitConfig, TokenBucketLimiter
 
 
@@ -23,7 +23,7 @@ def reset_audit_singleton():
 
 
 def _make_handler(tmp_path, token=None, rate_config=None):
-    """Create a mock-ready IronDomeHandler with auth and rate limiting."""
+    """Create a mock-ready PicoDomeHandler with auth and rate limiting."""
     audit_dir = tmp_path / "audit"
     test_audit = AuditLogger(log_dir=audit_dir, max_bytes=1024 * 1024)
     audit_logger_mod._audit_logger = test_audit
@@ -41,17 +41,17 @@ def _make_handler(tmp_path, token=None, rate_config=None):
 
     limiter = TokenBucketLimiter(config=rate_config)
 
-    IronDomeHandler.rbac = rbac
-    IronDomeHandler.auth = auth
-    IronDomeHandler.rate_limiter = limiter
-    IronDomeHandler.job_store = MagicMock()
+    PicoDomeHandler.rbac = rbac
+    PicoDomeHandler.auth = auth
+    PicoDomeHandler.rate_limiter = limiter
+    PicoDomeHandler.job_store = MagicMock()
 
     return test_audit
 
 
 def _new_handler():
-    """Create a bare IronDomeHandler with mocked I/O."""
-    handler = IronDomeHandler.__new__(IronDomeHandler)
+    """Create a bare PicoDomeHandler with mocked I/O."""
+    handler = PicoDomeHandler.__new__(PicoDomeHandler)
     handler.headers = {}
     handler._send_json = MagicMock()
     handler._send_error = MagicMock()
@@ -248,7 +248,7 @@ class TestHandlerCommonHeaders:
 class TestCreateApp:
     def test_create_app_returns_daemon(self):
         daemon = create_app(host="127.0.0.1", port=0)
-        assert isinstance(daemon, IronDomeDaemon)
+        assert isinstance(daemon, PicoDomeDaemon)
         assert daemon._host == "127.0.0.1"
 
     def test_create_app_with_port(self):
@@ -261,27 +261,27 @@ class TestCreateApp:
             assert os.environ.get("IRONDOME_API_TOKENS") == "test-token-abc123456789012345678901234567890"
 
 
-# ─── IronDomeDaemon lifecycle ───────────────────────────────────────
+# ─── PicoDomeDaemon lifecycle ───────────────────────────────────────
 
 
 class TestDaemonLifecycle:
     def test_init_defaults(self):
         with patch.dict(os.environ, {}, clear=False):
-            daemon = IronDomeDaemon()
+            daemon = PicoDomeDaemon()
             assert daemon._host == "127.0.0.1"
             assert daemon._port == 8443
 
     def test_init_custom(self):
-        daemon = IronDomeDaemon(host="0.0.0.0", port=9999)
+        daemon = PicoDomeDaemon(host="0.0.0.0", port=9999)
         assert daemon._host == "0.0.0.0"
         assert daemon._port == 9999
 
     def test_init_metrics_port(self):
-        daemon = IronDomeDaemon(metrics_port=9090)
+        daemon = PicoDomeDaemon(metrics_port=9090)
         assert daemon._metrics_port == 9090
 
     def test_stop_is_idempotent(self):
-        daemon = IronDomeDaemon()
+        daemon = PicoDomeDaemon()
         daemon._server = None
         daemon._metrics_server = None
         daemon._sinks = []

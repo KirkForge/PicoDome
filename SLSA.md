@@ -1,6 +1,6 @@
 # SLSA — Supply-chain Levels for Software Artifacts
 
-**Project:** IronDome v0.5.0  
+**Project:** PicoDome v0.5.0  
 **Target Level:** SLSA Build Level 3 (L3)  
 **Date:** 2026-05-22  
 
@@ -8,7 +8,7 @@
 
 ## Current Status
 
-IronDome is working toward **SLSA Build L3** compliance. Current security measures:
+PicoDome is working toward **SLSA Build L3** compliance. Current security measures:
 
 | SLSA Requirement | Status | Implementation |
 |-----------------|--------|---------------|
@@ -47,9 +47,9 @@ git tag v0.5.0 → push → CI triggers:
 
 ```bash
 python -m sigstore verify identity \
-  --cert-identity "https://github.com/KirkForge/IronDome/.github/workflows/release.yml@refs/tags/v0.5.0" \
+  --cert-identity "https://github.com/KirkForge/PicoDome/.github/workflows/release.yml@refs/tags/v0.5.0" \
   --cert-oidc-issuer "https://token.actions.githubusercontent.com" \
-  irondome-0.5.0-py3-none-any.whl
+  picodome-0.5.0-py3-none-any.whl
 ```
 
 ### SLSA L3 (Active)
@@ -58,22 +58,22 @@ SLSA L3 provenance is generated and verified on every tagged release. Verificati
 
 ```bash
 slsa-verifier verify-artifact \
-  --source-uri github.com/KirkForge/IronDome \
+  --source-uri github.com/KirkForge/PicoDome \
   --source-tag v0.5.0 \
-  irondome-0.5.0-py3-none-any.whl
+  picodome-0.5.0-py3-none-any.whl
 ```
 
-### Determinism Verification (IronDome-specific)
+### Determinism Verification (PicoDome-specific)
 
-In addition to SLSA provenance, IronDome verifies that the *tool itself* produces deterministic output:
+In addition to SLSA provenance, PicoDome verifies that the *tool itself* produces deterministic output:
 
 ```bash
-# Verify IronDome produces identical output on identical inputs
-irondome sandbox python3 -c "print('hello')" --verify-determinism
+# Verify PicoDome produces identical output on identical inputs
+picodome sandbox python3 -c "print('hello')" --verify-determinism
 # Expected: "✓ DETERMINISM VERIFIED — results are deterministic"
 
 # Compare two saved result files
-irondome diff result_a.json result_b.json
+picodome diff result_a.json result_b.json
 # Expected: "✓ Results are IDENTICAL — determinism verified"
 ```
 
@@ -89,14 +89,14 @@ This is a stronger guarantee than SLSA alone: not only can you verify *where* th
 4. ✅ **Determinism gate** in CI (verify-determinism step)
 5. **Offline mirror** for pip dependencies (hermetic builds)
 6. **Reproducible builds** via pinned dependency hashes and SOURCE_DATE_EPOCH
-7. **Verification CLI** shipped with the package (`irondome verify --slsa`)
+7. **Verification CLI** shipped with the package (`picodome verify --slsa`)
 
 ---
 
 ## Attestation
 
 ```
-Project:  KirkForge/IronDome
+Project:  KirkForge/PicoDome
 Version:  v0.5.0
 Build:    GitHub Actions (release.yml)
 Signer:   Sigstore (OIDC via GitHub Actions)

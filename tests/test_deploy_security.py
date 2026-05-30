@@ -186,7 +186,7 @@ class TestHelmValues:
             enterprise:
               enabled: false
         """)
-        helm_dir = tmp_path / "irondome"
+        helm_dir = tmp_path / "picodome"
         helm_dir.mkdir(parents=True)
         _write_tmp_file(helm_dir, "values.yaml", content)
 
@@ -202,7 +202,7 @@ class TestHelmValues:
             mtls:
               enabled: false
         """)
-        helm_dir = tmp_path / "irondome"
+        helm_dir = tmp_path / "picodome"
         helm_dir.mkdir(parents=True)
         _write_tmp_file(helm_dir, "values.yaml", content)
 
@@ -218,7 +218,7 @@ class TestHelmValues:
             mtls:
               devMode: true
         """)
-        helm_dir = tmp_path / "irondome"
+        helm_dir = tmp_path / "picodome"
         helm_dir.mkdir(parents=True)
         _write_tmp_file(helm_dir, "values.yaml", content)
 
@@ -235,7 +235,7 @@ class TestHelmValues:
             metrics:
               separatePort: false
         """)
-        helm_dir = tmp_path / "irondome"
+        helm_dir = tmp_path / "picodome"
         helm_dir.mkdir(parents=True)
         _write_tmp_file(helm_dir, "values.yaml", content)
 
@@ -260,7 +260,7 @@ class TestHelmTemplates:
               - name: IRONDOME_DEV_MODE
                 value: "1"
         """)
-        helm_dir = tmp_path / "irondome"
+        helm_dir = tmp_path / "picodome"
         templates_dir = helm_dir / "templates"
         templates_dir.mkdir(parents=True)
         _write_tmp_file(templates_dir, "deployment.yaml", content)
@@ -278,7 +278,7 @@ class TestHelmTemplates:
             securityContext:
               allowPrivilegeEscalation: true
         """)
-        helm_dir = tmp_path / "irondome"
+        helm_dir = tmp_path / "picodome"
         templates_dir = helm_dir / "templates"
         templates_dir.mkdir(parents=True)
         _write_tmp_file(templates_dir, "deployment.yaml", content)
@@ -302,7 +302,7 @@ class TestDockerfile:
         content = textwrap.dedent("""\
             FROM python:3.12-slim
             COPY . /app
-            CMD ["python", "-m", "irondome"]
+            CMD ["python", "-m", "picodome"]
         """)
         _write_tmp_file(tmp_path, "Dockerfile", content)
 
@@ -318,7 +318,7 @@ class TestDockerfile:
         content = textwrap.dedent("""\
             FROM python:3.12-slim
             USER root
-            CMD ["python", "-m", "irondome"]
+            CMD ["python", "-m", "picodome"]
         """)
         _write_tmp_file(tmp_path, "Dockerfile", content)
 
@@ -335,7 +335,7 @@ class TestDockerfile:
             FROM python:3.12-slim
             COPY . /app
             USER irondome
-            CMD ["python", "-m", "irondome"]
+            CMD ["python", "-m", "picodome"]
         """)
         _write_tmp_file(tmp_path, "Dockerfile", content)
 
@@ -354,7 +354,7 @@ class TestSourceHardcodedSecrets:
     """Tests for check_source_hardcoded_secrets."""
 
     def test_hardcoded_password_detected(self, tmp_path: Path) -> None:
-        src_dir = tmp_path / "irondome"
+        src_dir = tmp_path / "picodome"
         src_dir.mkdir(parents=True)
         (src_dir / "__init__.py").write_text("")
         (src_dir / "bad.py").write_text('DEFAULT_PASSWORD = "supersecret12345"\n')
@@ -365,7 +365,7 @@ class TestSourceHardcodedSecrets:
         assert any(f.check == "hardcoded-secret-source" for f in findings)
 
     def test_env_var_not_flagged(self, tmp_path: Path) -> None:
-        src_dir = tmp_path / "irondome"
+        src_dir = tmp_path / "picodome"
         src_dir.mkdir(parents=True)
         (src_dir / "__init__.py").write_text("")
         (src_dir / "good.py").write_text('token = os.environ.get("IRONDOME_API_TOKENS", "")\n')
@@ -376,7 +376,7 @@ class TestSourceHardcodedSecrets:
         assert not any(f.check == "hardcoded-secret-source" for f in findings)
 
     def test_docstring_example_not_flagged(self, tmp_path: Path) -> None:
-        src_dir = tmp_path / "irondome"
+        src_dir = tmp_path / "picodome"
         src_dir.mkdir(parents=True)
         (src_dir / "__init__.py").write_text("")
         (src_dir / "example.py").write_text('"""Example: secret="my-signing-secret"\n"""\n')

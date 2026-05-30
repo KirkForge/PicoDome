@@ -1,4 +1,4 @@
-"""JSON formatter for Iron Dome results.
+"""JSON formatter for PicoDome results.
 
 Deterministic by default: keys are sorted, and in deterministic mode timing
 fields and random IDs are omitted from the output.

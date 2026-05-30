@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────
-# verify_release.sh — Verify IronDome release artifacts
+# verify_release.sh — Verify PicoDome release artifacts
 #
 # Downloads release assets from GitHub, verifies:
 #   1. Sigstore signatures (.sigstore bundles)
@@ -10,14 +10,14 @@
 # Usage:
 #   ./scripts/verify_release.sh <version> [repo]
 #   ./scripts/verify_release.sh 0.3.0
-#   ./scripts/verify_release.sh 0.3.0 KirkForge/IronDome
+#   ./scripts/verify_release.sh 0.3.0 KirkForge/PicoDome
 #
 # Requires: sha256sum, python3, pip (sigstore package)
 # ──────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 VERSION="${1:?Usage: verify_release.sh <version> [repo]}"
-REPO="${2:-KirkForge/IronDome}"
+REPO="${2:-KirkForge/PicoDome}"
 GITHUB_URL="https://github.com/${REPO}"
 RELEASE_URL="${GITHUB_URL}/releases/download/v${VERSION}"
 
@@ -37,7 +37,7 @@ fail() { echo -e "  ${RED}✗ $1${NC}"; ((FAIL++)) || true; }
 info() { echo -e "  ${YELLOW}→ $1${NC}"; }
 
 echo ""
-echo "IronDome Release Verification"
+echo "PicoDome Release Verification"
 echo "  Version: ${VERSION}"
 echo "  Repo:    ${REPO}"
 echo "  TempDir: ${TMPDIR}"
@@ -46,8 +46,8 @@ echo ""
 # ── Download Release Assets ──────────────────────────────────────
 info "Downloading release assets..."
 
-WHEEL="irondome-${VERSION}-py3-none-any.whl"
-SDIST="irondome-${VERSION}.tar.gz"
+WHEEL="picodome-${VERSION}-py3-none-any.whl"
+SDIST="picodome-${VERSION}.tar.gz"
 
 for ASSET in "${WHEEL}" "${SDIST}" "checksums-sha256.txt"; do
     if curl -fsSL "${RELEASE_URL}/${ASSET}" -o "${TMPDIR}/${ASSET}" 2>/dev/null; then
@@ -125,7 +125,7 @@ echo ""
 echo "Verifying SLSA provenance..."
 
 # Check for SLSA provenance in the release assets
-PROVENANCE_FILE="irondome-${VERSION}.intoto.jsonl"
+PROVENANCE_FILE="picodome-${VERSION}.intoto.jsonl"
 if curl -fsSL "${RELEASE_URL}/${PROVENANCE_FILE}" -o "${TMPDIR}/${PROVENANCE_FILE}" 2>/dev/null; then
     pass "SLSA provenance downloaded: ${PROVENANCE_FILE}"
     info "Provenance file saved to ${TMPDIR}/${PROVENANCE_FILE}"

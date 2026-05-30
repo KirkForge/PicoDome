@@ -1,4 +1,4 @@
-"""Shared fixtures for Iron Dome tests."""
+"""Shared fixtures for PicoDome tests."""
 
 import json
 import tempfile

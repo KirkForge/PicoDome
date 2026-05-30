@@ -33,7 +33,7 @@ class _TestHandler:
         return None
 
     def _resolve_tenant(self, token: str | None) -> TenantId:
-        """Same logic as IronDomeHandler._resolve_tenant."""
+        """Same logic as PicoDomeHandler._resolve_tenant."""
         from irondome.tenant import get_tenant_registry
 
         registry = get_tenant_registry()
@@ -134,10 +134,10 @@ class TestTenantsEndpoint:
 
     def test_list_tenants_endpoint_exists(self):
         """Verify the tenants endpoint is registered in the daemon routes."""
-        from irondome.daemon.server import IronDomeHandler
+        from irondome.daemon.server import PicoDomeHandler
 
         # Just verify the method exists
-        assert hasattr(IronDomeHandler, "_handle_list_tenants")
+        assert hasattr(PicoDomeHandler, "_handle_list_tenants")
 
     def test_tenants_endpoint_response_format(self):
         """Test the response format of the list tenants handler."""

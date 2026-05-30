@@ -16,7 +16,7 @@
 
 1. **Run full pipeline:**
    ```bash
-   irondome pipeline --format json --verbose <command> > pipeline_result.json
+   picodome pipeline --format json --verbose <command> > pipeline_result.json
    ```
 
 2. **Examine findings:**
@@ -32,8 +32,8 @@
 
 3. **Compare against baseline:**
    ```bash
-   irondome sandbox --format json npm install > baseline.json
-   irondome analyze --input baseline.json
+   picodome sandbox --format json npm install > baseline.json
+   picodome analyze --input baseline.json
    ```
    Check if the observed behavior matches a shipped baseline.
 
@@ -46,7 +46,7 @@
 
 ## Mitigation
 
-- **Severity overrides:** Use `.irondome.yml` config to adjust severity:
+- **Severity overrides:** Use `.picodome.yml` config to adjust severity:
   ```yaml
   severity_overrides:
     L4-TIME: low
@@ -55,7 +55,7 @@
 
 - **Custom baselines:** Create a baseline for the specific command pattern:
   ```bash
-  irondome sandbox --format json <command> > custom_baseline.json
+  picodome sandbox --format json <command> > custom_baseline.json
   ```
 
 - **Policy tuning:** Adjust the L3 policy to be more restrictive for known-safe operations.

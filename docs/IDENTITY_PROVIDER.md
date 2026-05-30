@@ -1,12 +1,12 @@
 # Enterprise Identity Provider Integration
 
-IronDome supports mapping enterprise identity provider (IdP) groups to internal RBAC roles. This enables Single Sign-On (SSO) with Okta, Azure AD, Ping Identity, and other OIDC/SAML providers through Kubernetes-native authentication.
+PicoDome supports mapping enterprise identity provider (IdP) groups to internal RBAC roles. This enables Single Sign-On (SSO) with Okta, Azure AD, Ping Identity, and other OIDC/SAML providers through Kubernetes-native authentication.
 
 ## Architecture
 
 ```
 ┌──────────┐     ┌─────────────────────┐     ┌──────────────┐
-│  IdP     │────▶│  Kubernetes API     │────▶│  IronDome    │
+│  IdP     │────▶│  Kubernetes API     │────▶│  PicoDome    │
 │ (OIDC/   │     │  Server (oidc-      │     │  Daemon      │
 │  SAML)   │     │  issuer flags)      │     │  (token auth)│
 └──────────┘     └─────────────────────┘     └──────────────┘
@@ -29,7 +29,7 @@ Configure the Kubernetes API server to trust your OIDC provider:
 ```bash
 # /etc/kubernetes/manifests/kube-apiserver.yaml
 --oidc-issuer-url=https://login.example.com
---oidc-client-id=irondome-k8s
+--oidc-client-id=picodome-k8s
 --oidc-username-claim=email
 --oidc-groups-claim=groups
 --oidc-ca-file=/etc/kubernetes/oidc-ca.pem
@@ -38,24 +38,24 @@ Configure the Kubernetes API server to trust your OIDC provider:
 ### Group-to-role mapping via ClusterRoleBinding
 
 ```yaml
-# Map IdP group "security-admins" to IronDome admin role
+# Map IdP group "security-admins" to PicoDome admin role
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: irondome-admin-binding
+  name: picodome-admin-binding
 subjects:
   - kind: Group
     name: security-admins  # OIDC group claim value
     apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: irondome-admin
+  name: picodome-admin
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: irondome-admin
+  name: picodome-admin
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -66,28 +66,28 @@ rules:
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get"]
-    resourceNames: ["irondome-tokens"]
+    resourceNames: ["picodome-tokens"]
 ---
-# Map IdP group "platform-engineers" to IronDome submitter role
+# Map IdP group "platform-engineers" to PicoDome submitter role
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: irondome-submitter-binding
-  namespace: irondome
+  name: picodome-submitter-binding
+  namespace: picodome
 subjects:
   - kind: Group
     name: platform-engineers
     apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
-  name: irondome-submitter
+  name: picodome-submitter
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: irondome-submitter
-  namespace: irondome
+  name: picodome-submitter
+  namespace: picodome
 rules:
   - apiGroups: [""]
     resources: ["pods"]
@@ -97,21 +97,21 @@ rules:
     verbs: ["get"]
 ```
 
-### IronDome API token generation from OIDC
+### PicoDome API token generation from OIDC
 
-For programmatic access, generate IronDome API tokens from OIDC:
+For programmatic access, generate PicoDome API tokens from OIDC:
 
 ```bash
 # Get OIDC token from IdP
 OIDC_TOKEN=$(curl -s https://login.example.com/oauth/token \
-  -d client_id=irondome-cli \
+  -d client_id=picodome-cli \
   -d client_secret="$CLIENT_SECRET" \
   -d grant_type=client_credentials \
-  -d scope="irondome:submit" | jq -r .access_token)
+  -d scope="picodome:submit" | jq -r .access_token)
 
-# Use OIDC token to authenticate with IronDome API
+# Use OIDC token to authenticate with PicoDome API
 curl -H "Authorization: Bearer $OIDC_TOKEN" \
-  https://irondome:8443/api/v1/scan \
+  https://picodome:8443/api/v1/scan \
   -d '{"command": ["npm", "install"], "policy": "strict"}'
 ```
 
@@ -143,9 +143,9 @@ data:
           redirectURI: https://dex.example.com/callback
           entityIssuer: https://dex.example.com
     staticClients:
-      - id: irondome-k8s
+      - id: picodome-k8s
         redirectURIs:
-          - https://irondome.example.com/callback
+          - https://picodome.example.com/callback
         secretEnv: DEX_CLIENT_SECRET
 ```
 
@@ -156,15 +156,15 @@ data:
 ```yaml
 # Kubernetes API server flags for Okta
 --oidc-issuer-url=https://dev-xxx.okta.com/oauth2/default
---oidc-client-id=irondome-k8s
+--oidc-client-id=picodome-k8s
 --oidc-username-claim=email
 --oidc-groups-claim=groups
 ```
 
 Okta group assignments:
-- `irondome-admins` → admin role
-- `irondome-submitters` → submitter role
-- `irondome-viewers` → viewer role
+- `picodome-admins` → admin role
+- `picodome-submitters` → submitter role
+- `picodome-viewers` → viewer role
 
 ### Azure AD (Entra ID)
 
@@ -177,7 +177,7 @@ Okta group assignments:
 ```
 
 Azure AD group mapping:
-- Create an App Registration for IronDome
+- Create an App Registration for PicoDome
 - Assign enterprise groups to app roles
 - Map app roles to Kubernetes ClusterRoleBindings
 
@@ -194,8 +194,8 @@ connectors:
       orgs:
         - name: KirkForge
           teams:
-            - irondome-admins
-            - irondome-operators
+            - picodome-admins
+            - picodome-operators
 ```
 
 ## Token rotation
@@ -204,12 +204,12 @@ When using IdP-managed tokens:
 
 1. **Short-lived tokens**: IdP tokens typically expire in 1 hour
 2. **Automatic refresh**: Client libraries handle token refresh
-3. **IronDome API tokens**: Long-lived tokens stored in Kubernetes Secrets; rotate via:
+3. **PicoDome API tokens**: Long-lived tokens stored in Kubernetes Secrets; rotate via:
    ```bash
-   kubectl create secret generic irondome-tokens \
+   kubectl create secret generic picodome-tokens \
      --from-literal=api-tokens="new-token:admin" \
      --dry-run=client -o yaml | kubectl apply -f -
-   kubectl rollout restart deployment irondome
+   kubectl rollout restart deployment picodome
    ```
 
 ## Audit integration

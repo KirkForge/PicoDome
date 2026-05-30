@@ -1,10 +1,10 @@
 """Webhook/callback notifications for scan events.
 
-Enterprise deployments need to integrate Iron Dome alerts into their
+Enterprise deployments need to integrate PicoDome alerts into their
 incident response pipelines (PagerDuty, Slack, Opsgenie, generic HTTP).
 
 When a scan produces findings at or above a configurable severity
-threshold, Iron Dome POSTs a JSON payload to registered webhook URLs.
+threshold, PicoDome POSTs a JSON payload to registered webhook URLs.
 
 Design:
 - Fire-and-forget with retry (3 attempts, exponential backoff)
@@ -266,9 +266,9 @@ class WebhookDispatcher:
                     data=payload_json.encode("utf-8"),
                     headers={
                         "Content-Type": "application/json",
-                        "X-IronDome-Event": "webhook",
-                        "X-IronDome-Signature": signature,
-                        "User-Agent": "IronDome-Webhook/1.0",
+                        "X-PicoDome-Event": "webhook",
+                        "X-PicoDome-Signature": signature,
+                        "User-Agent": "PicoDome-Webhook/1.0",
                     },
                     method="POST",
                 )

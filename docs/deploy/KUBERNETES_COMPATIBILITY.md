@@ -1,10 +1,10 @@
 # Kubernetes Compatibility Matrix
 
-IronDome is tested and supported on the following Kubernetes versions.
+PicoDome is tested and supported on the following Kubernetes versions.
 
 ## Supported versions
 
-| Kubernetes | IronDome Daemon | IronDome Admission Controller | Status |
+| Kubernetes | PicoDome Daemon | PicoDome Admission Controller | Status |
 |---|---|---|---|
 | 1.27 | ✅ | ✅ | Supported |
 | 1.28 | ✅ | ✅ | Supported |
@@ -15,9 +15,9 @@ IronDome is tested and supported on the following Kubernetes versions.
 
 ## Versioning policy
 
-- **N-2 support**: IronDome supports the 2 most recent Kubernetes minor versions plus the current release.
-- **Deprecated API versions**: IronDome uses `admissionregistration.k8s.io/v1` (stable since K8s 1.19). No `v1beta1` usage.
-- **API deprecation notice**: If Kubernetes removes an API version that IronDome depends on, we will announce migration guidance at least one release cycle before dropping support.
+- **N-2 support**: PicoDome supports the 2 most recent Kubernetes minor versions plus the current release.
+- **Deprecated API versions**: PicoDome uses `admissionregistration.k8s.io/v1` (stable since K8s 1.19). No `v1beta1` usage.
+- **API deprecation notice**: If Kubernetes removes an API version that PicoDome depends on, we will announce migration guidance at least one release cycle before dropping support.
 
 ## Required cluster add-ons
 
@@ -30,7 +30,7 @@ IronDome is tested and supported on the following Kubernetes versions.
 
 ## Admission controller API compatibility
 
-IronDome's admission webhook uses:
+PicoDome's admission webhook uses:
 
 - `admissionregistration.k8s.io/v1` — `ValidatingWebhookConfiguration`
 - `admissionReviewVersions: ["v1"]`
@@ -41,8 +41,8 @@ The webhook does **not** use any beta or alpha Kubernetes APIs.
 
 | Chart | Helm Version | K8s Version |
 |---|---|---|
-| irondome | ≥ 3.12 | ≥ 1.27 |
-| irondome-admission | ≥ 3.12 | ≥ 1.27 |
+| picodome | ≥ 3.12 | ≥ 1.27 |
+| picodome-admission | ≥ 3.12 | ≥ 1.27 |
 
 ## Breaking changes policy
 
@@ -52,4 +52,4 @@ The webhook does **not** use any beta or alpha Kubernetes APIs.
 
 ## Testing
 
-IronDome's CI tests against the Kubernetes versions listed above using `kind` (Kubernetes IN Docker) clusters. The admission controller integration test suite validates webhook registration, certificate provisioning, and pod validation across all supported versions.
+PicoDome's CI tests against the Kubernetes versions listed above using `kind` (Kubernetes IN Docker) clusters. The admission controller integration test suite validates webhook registration, certificate provisioning, and pod validation across all supported versions.

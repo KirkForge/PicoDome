@@ -13,7 +13,7 @@ import base64
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-CHART_DIR = REPO_ROOT / "deploy" / "helm" / "irondome-admission"
+CHART_DIR = REPO_ROOT / "deploy" / "helm" / "picodome-admission"
 
 
 class TestCertificateTemplate:

@@ -1,6 +1,6 @@
 # Secure deployment guide (starter)
 
-Iron Dome executes untrusted code under policy. Enterprise safety depends heavily on *how you deploy it*.
+PicoDome executes untrusted code under policy. Enterprise safety depends heavily on *how you deploy it*.
 
 This guide provides an opinionated “safe posture” for CI and build hosts.
 
@@ -18,7 +18,7 @@ This guide provides an opinionated “safe posture” for CI and build hosts.
 
 ### A1) User permissions
 
-- Create a dedicated user (no sudo) to run Iron Dome.
+- Create a dedicated user (no sudo) to run PicoDome.
 - Ensure workspace directories have least privilege.
 
 ### A2) Filesystem
@@ -36,7 +36,7 @@ This guide provides an opinionated “safe posture” for CI and build hosts.
 
 ## B) Backend selection
 
-Iron Dome auto-detects the strongest available backend.
+PicoDome auto-detects the strongest available backend.
 
 Recommended:
 - Linux: seccomp
@@ -83,7 +83,7 @@ Document the actual backend used in outputs and logs.
 
 ## F) Audit log forwarding
 
-Iron Dome ships three audit sink types:
+PicoDome ships three audit sink types:
 
 | Sink | Use case |
 |------|----------|

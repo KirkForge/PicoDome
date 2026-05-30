@@ -1,6 +1,6 @@
 """OpenTelemetry tracing hooks for distributed observability.
 
-Provides lightweight tracing integration points for Iron Dome's daemon
+Provides lightweight tracing integration points for PicoDome's daemon
 and scan pipeline. When the ``opentelemetry-api`` package is installed,
 traces and spans are emitted. When it's not available, all operations
 are no-ops with zero overhead.
@@ -14,7 +14,7 @@ Usage in daemon mode::
 
     tracer = get_tracer()
 
-    with tracer.start_as_current_span("irondome.scan") as span:
+    with tracer.start_as_current_span("picodome.scan") as span:
         span.set_attribute("irondome.command", " ".join(command))
         # ... execute scan ...
         span.set_attribute("irondome.verdict", verdict)
@@ -101,7 +101,7 @@ def get_tracer() -> _Tracer | _NoopTracer:
     global _tracer
     if isinstance(_tracer, _NoopTracer) and _tracing_enabled and _TRACING_AVAILABLE:
         _tracer = trace.get_tracer("irondome", "0.5.0")
-        logger.info("OpenTelemetry tracing enabled with tracer: irondome")
+        logger.info("OpenTelemetry tracing enabled with tracer: picodome")
     return _tracer
 
 
@@ -122,7 +122,7 @@ def is_tracing_enabled() -> bool:
 def trace_scan(command: list[str], backend: str = "", **attrs: Any):
     """Trace a sandbox scan operation.
 
-    Creates a span named ``irondome.scan`` with command and backend attributes.
+    Creates a span named ``picodome.scan`` with command and backend attributes.
 
     Args:
         command: The command being scanned.
@@ -130,7 +130,7 @@ def trace_scan(command: list[str], backend: str = "", **attrs: Any):
         **attrs: Additional span attributes.
     """
     tracer = get_tracer()
-    span = tracer.start_as_current_span("irondome.scan")
+    span = tracer.start_as_current_span("picodome.scan")
     try:
         if not isinstance(span, _NoopSpan):
             span.set_attribute("irondome.command", " ".join(command))
@@ -152,7 +152,7 @@ def trace_scan(command: list[str], backend: str = "", **attrs: Any):
 def trace_daemon_request(method: str, path: str, request_id: str = "", **attrs: Any):
     """Trace a daemon HTTP request.
 
-    Creates a span named ``irondome.daemon.request`` with method, path, and
+    Creates a span named ``picodome.daemon.request`` with method, path, and
     request ID attributes.
 
     Args:
@@ -162,7 +162,7 @@ def trace_daemon_request(method: str, path: str, request_id: str = "", **attrs: 
         **attrs: Additional span attributes.
     """
     tracer = get_tracer()
-    span = tracer.start_as_current_span("irondome.daemon.request")
+    span = tracer.start_as_current_span("picodome.daemon.request")
     try:
         if not isinstance(span, _NoopSpan):
             span.set_attribute("http.method", method)

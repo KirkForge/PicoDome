@@ -2,7 +2,7 @@
 
 ## Overview
 
-The IronDome admission controller requires a TLS certificate to serve the validating webhook. Kubernetes validates the webhook's CA bundle, so certificate rotation must update both the TLS secret and the webhook's `caBundle`.
+The PicoDome admission controller requires a TLS certificate to serve the validating webhook. Kubernetes validates the webhook's CA bundle, so certificate rotation must update both the TLS secret and the webhook's `caBundle`.
 
 With cert-manager, this process is largely automatic. This runbook covers both automated and manual rotation.
 
@@ -60,25 +60,25 @@ Without rolling updates, pods may serve stale certificates until manually restar
 
 ```bash
 # Check certificate status
-kubectl get certificate -n <namespace> irondome-admission-cert -o yaml
+kubectl get certificate -n <namespace> picodome-admission-cert -o yaml
 
 # Check notAfter date
-kubectl get secret irondome-admission-tls -n <namespace> -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -noout -enddate
+kubectl get secret picodome-admission-tls -n <namespace> -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -noout -enddate
 
 # Check renewal status
-kubectl describe certificate -n <namespace> irondome-admission-cert
+kubectl describe certificate -n <namespace> picodome-admission-cert
 ```
 
 ### Prometheus alert for certificate expiry
 
 ```yaml
-- alert: IronDomeAdmissionCertExpiringSoon
-  expr: cert_manager_certificate_expiration_timestamp_seconds{certificate="irondome-admission-cert"} - time() < 86400 * 14
+- alert: PicoDomeAdmissionCertExpiringSoon
+  expr: cert_manager_certificate_expiration_timestamp_seconds{certificate="picodome-admission-cert"} - time() < 86400 * 14
   for: 1h
   labels:
     severity: warning
   annotations:
-    summary: "IronDome admission certificate expires in less than 14 days"
+    summary: "PicoDome admission certificate expires in less than 14 days"
 ```
 
 ## Manual rotation
@@ -90,7 +90,7 @@ Use this procedure if cert-manager is not available or cert-manager rotation fai
 ```bash
 # Generate CA key and cert (first time only)
 openssl genrsa -out ca.key 4096
-openssl req -new -x509 -days 3650 -key ca.key -out ca.crt -subj "/CN=IronDome Admission CA"
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt -subj "/CN=PicoDome Admission CA"
 
 # Generate server key
 openssl genrsa -out server.key 2048
@@ -103,15 +103,15 @@ req_extensions = v3_req
 prompt = no
 
 [req_distinguished_name]
-CN = irondome-admission
+CN = picodome-admission
 
 [v3_req]
 subjectAltName = @alt_names
 
 [alt_names]
-DNS.1 = irondome-admission
-DNS.2 = irondome-admission.irondome.svc
-DNS.3 = irondome-admission.irondome.svc.cluster.local
+DNS.1 = picodome-admission
+DNS.2 = picodome-admission.picodome.svc
+DNS.3 = picodome-admission.picodome.svc.cluster.local
 EOF
 
 openssl req -new -key server.key -out server.csr -config san.cnf -extensions v3_req
@@ -124,7 +124,7 @@ openssl x509 -req -days 365 -in server.csr -CA ca.crt -CAkey ca.key \
 ### Step 2: Update TLS secret
 
 ```bash
-kubectl create secret tls irondome-admission-tls \
+kubectl create secret tls picodome-admission-tls \
   --namespace <namespace> \
   --cert=server.crt \
   --key=server.key \
@@ -136,7 +136,7 @@ kubectl create secret tls irondome-admission-tls \
 ```bash
 CA_BUNDLE=$(cat ca.crt | base64 | tr -d '\n')
 
-kubectl patch validatingwebhookconfiguration irondome-admission \
+kubectl patch validatingwebhookconfiguration picodome-admission \
   --type='json' \
   -p="[{"op":"replace","path":"/webhooks/0/clientConfig/caBundle","value":"${CA_BUNDLE}"}]"
 ```
@@ -144,7 +144,7 @@ kubectl patch validatingwebhookconfiguration irondome-admission \
 ### Step 4: Restart admission controller
 
 ```bash
-kubectl rollout restart deployment -n <namespace> irondome-admission
+kubectl rollout restart deployment -n <namespace> picodome-admission
 ```
 
 ### Step 5: Verify

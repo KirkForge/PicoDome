@@ -1,8 +1,8 @@
-"""Iron Dome Notary — external audit transparency log integration.
+"""PicoDome Notary — external audit transparency log integration.
 
 Provides an optional layer of external verification for audit log entries
 using Rekor (Sigstore's transparency log). When the notary is unavailable
-(e.g., air-gapped/offline environments), IronDome continues to operate
+(e.g., air-gapped/offline environments), PicoDome continues to operate
 normally — the notary never blocks or crashes the system.
 
 Architecture:

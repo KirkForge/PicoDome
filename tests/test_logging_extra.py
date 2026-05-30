@@ -6,8 +6,8 @@ import json
 import logging
 
 from irondome.logging import (
-    IronDomeJSONFormatter,
-    IronDomeTextFormatter,
+    PicoDomeJSONFormatter,
+    PicoDomeTextFormatter,
     get_log_context,
     setup_logging,
 )
@@ -15,7 +15,7 @@ from irondome.logging import (
 
 class TestJSONFormatter:
     def test_basic_format(self):
-        fmt = IronDomeJSONFormatter()
+        fmt = PicoDomeJSONFormatter()
         record = logging.LogRecord(
             name="irondome.test",
             level=logging.INFO,
@@ -33,19 +33,19 @@ class TestJSONFormatter:
         assert "timestamp" in data
 
     def test_includes_version(self):
-        fmt = IronDomeJSONFormatter(include_version=True)
+        fmt = PicoDomeJSONFormatter(include_version=True)
         record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
         data = json.loads(fmt.format(record))
         assert "irondome_version" in data
 
     def test_excludes_version(self):
-        fmt = IronDomeJSONFormatter(include_version=False)
+        fmt = PicoDomeJSONFormatter(include_version=False)
         record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
         data = json.loads(fmt.format(record))
         assert "irondome_version" not in data
 
     def test_extra_context(self):
-        fmt = IronDomeJSONFormatter()
+        fmt = PicoDomeJSONFormatter()
         record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
         record.irondome_context = {"command": ["echo"], "target": "pkg"}
         data = json.loads(fmt.format(record))
@@ -53,7 +53,7 @@ class TestJSONFormatter:
         assert data["target"] == "pkg"
 
     def test_exception_info(self):
-        fmt = IronDomeJSONFormatter()
+        fmt = PicoDomeJSONFormatter()
         try:
             raise ValueError("test error")
         except ValueError:
@@ -65,7 +65,7 @@ class TestJSONFormatter:
         assert "exception" in data
 
     def test_deterministic_key_order(self):
-        fmt = IronDomeJSONFormatter()
+        fmt = PicoDomeJSONFormatter()
         record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
         output = fmt.format(record)
         # Keys should be sorted (deterministic)
@@ -75,26 +75,26 @@ class TestJSONFormatter:
 
 class TestTextFormatter:
     def test_basic_format(self):
-        fmt = IronDomeTextFormatter(use_color=False)
+        fmt = PicoDomeTextFormatter(use_color=False)
         record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
         output = fmt.format(record)
         assert "msg" in output
         assert "INFO" in output
 
     def test_color_format(self):
-        fmt = IronDomeTextFormatter(use_color=True)
+        fmt = PicoDomeTextFormatter(use_color=True)
         record = logging.LogRecord("irondome.test", logging.WARNING, "", 0, "warning msg", (), None)
         output = fmt.format(record)
         assert "\033[" in output  # ANSI code present
 
     def test_no_color_format(self):
-        fmt = IronDomeTextFormatter(use_color=False)
+        fmt = PicoDomeTextFormatter(use_color=False)
         record = logging.LogRecord("irondome.test", logging.WARNING, "", 0, "msg", (), None)
         output = fmt.format(record)
         assert "\033[" not in output
 
     def test_verbose_format(self):
-        fmt = IronDomeTextFormatter(use_color=False, verbose=True)
+        fmt = PicoDomeTextFormatter(use_color=False, verbose=True)
         record = logging.LogRecord("irondome.test", logging.INFO, "", 0, "msg", (), None)
         output = fmt.format(record)
         assert "irondome.test" in output
@@ -103,19 +103,19 @@ class TestTextFormatter:
 class TestSetupLogging:
     def test_setup_text(self):
         setup_logging(level="DEBUG", log_format="text", use_color=False)
-        logger = logging.getLogger("irondome")
+        logger = logging.getLogger("picodome")
         assert logger.level == logging.DEBUG
 
     def test_setup_json(self):
         setup_logging(level="INFO", log_format="json")
-        logger = logging.getLogger("irondome")
+        logger = logging.getLogger("picodome")
         assert logger.level == logging.INFO
         assert len(logger.handlers) == 1
-        assert isinstance(logger.handlers[0].formatter, IronDomeJSONFormatter)
+        assert isinstance(logger.handlers[0].formatter, PicoDomeJSONFormatter)
 
     def test_propagate_disabled(self):
         setup_logging(level="WARNING")
-        logger = logging.getLogger("irondome")
+        logger = logging.getLogger("picodome")
         assert logger.propagate is False
 
 

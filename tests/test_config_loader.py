@@ -6,47 +6,47 @@ import os
 from unittest.mock import patch
 
 from irondome.config import (
-    IronDomeConfig,
+    PicoDomeConfig,
     _find_config,
     _validate_config_keys,
     apply_env_overrides,
     load_config,
 )
 
-# ─── IronDomeConfig defaults ────────────────────────────────────────
+# ─── PicoDomeConfig defaults ────────────────────────────────────────
 
 
 class TestConfigDefaults:
     def test_default_format(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         assert cfg.format == "table"
 
     def test_default_no_color(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         assert cfg.no_color is False
 
     def test_default_exit_code(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         assert cfg.exit_code is False
 
     def test_default_fail_on(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         assert cfg.fail_on is None
 
     def test_default_timeout(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         assert cfg.timeout == 30.0
 
     def test_default_token_budget(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         assert cfg.token_budget == 4096
 
     def test_default_deterministic_output(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         assert cfg.deterministic_output is False
 
     def test_default_log_format(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         assert cfg.log_format == "text"
 
 
@@ -203,21 +203,21 @@ class TestLoadConfigYAML:
 class TestEnvOverrides:
     def test_format_override(self):
         with patch.dict(os.environ, {"IRONDOME_FORMAT": "json"}):
-            cfg = apply_env_overrides(IronDomeConfig())
+            cfg = apply_env_overrides(PicoDomeConfig())
             assert cfg.format == "json"
 
     def test_timeout_override(self):
         with patch.dict(os.environ, {"IRONDOME_TIMEOUT": "90"}):
-            cfg = apply_env_overrides(IronDomeConfig())
+            cfg = apply_env_overrides(PicoDomeConfig())
             assert cfg.timeout == 90.0
 
     def test_no_color_override_true(self):
         with patch.dict(os.environ, {"IRONDOME_NO_COLOR": "1"}):
-            cfg = apply_env_overrides(IronDomeConfig())
+            cfg = apply_env_overrides(PicoDomeConfig())
             assert cfg.no_color is True
 
     def test_no_color_override_false(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         cfg.no_color = True
         with patch.dict(os.environ, {"IRONDOME_NO_COLOR": "0"}):
             cfg = apply_env_overrides(cfg)
@@ -225,42 +225,42 @@ class TestEnvOverrides:
 
     def test_token_budget_override(self):
         with patch.dict(os.environ, {"IRONDOME_TOKEN_BUDGET": "8192"}):
-            cfg = apply_env_overrides(IronDomeConfig())
+            cfg = apply_env_overrides(PicoDomeConfig())
             assert cfg.token_budget == 8192
 
     def test_fail_on_override(self):
         with patch.dict(os.environ, {"IRONDOME_FAIL_ON": "critical"}):
-            cfg = apply_env_overrides(IronDomeConfig())
+            cfg = apply_env_overrides(PicoDomeConfig())
             assert cfg.fail_on == "critical"
 
     def test_log_format_override(self):
         with patch.dict(os.environ, {"IRONDOME_LOG_FORMAT": "json"}):
-            cfg = apply_env_overrides(IronDomeConfig())
+            cfg = apply_env_overrides(PicoDomeConfig())
             assert cfg.log_format == "json"
 
     def test_deterministic_output_override(self):
         with patch.dict(os.environ, {"IRONDOME_DETERMINISTIC_OUTPUT": "true"}):
-            cfg = apply_env_overrides(IronDomeConfig())
+            cfg = apply_env_overrides(PicoDomeConfig())
             assert cfg.deterministic_output is True
 
     def test_empty_env_ignored(self):
         with patch.dict(os.environ, {"IRONDOME_FORMAT": ""}):
-            cfg = apply_env_overrides(IronDomeConfig())
+            cfg = apply_env_overrides(PicoDomeConfig())
             assert cfg.format == "table"  # stays default
 
     def test_invalid_numeric_ignored(self):
         with patch.dict(os.environ, {"IRONDOME_TIMEOUT": "not_a_number"}):
-            cfg = apply_env_overrides(IronDomeConfig())
+            cfg = apply_env_overrides(PicoDomeConfig())
             assert cfg.timeout == 30.0  # stays default
 
     def test_baseline_override(self):
         with patch.dict(os.environ, {"IRONDOME_BASELINE": "/tmp/baselines.json"}):
-            cfg = apply_env_overrides(IronDomeConfig())
+            cfg = apply_env_overrides(PicoDomeConfig())
             assert cfg.baseline == "/tmp/baselines.json"
 
     def test_policy_override(self):
         with patch.dict(os.environ, {"IRONDOME_POLICY": "/tmp/policy.json"}):
-            cfg = apply_env_overrides(IronDomeConfig())
+            cfg = apply_env_overrides(PicoDomeConfig())
             assert cfg.policy == "/tmp/policy.json"
 
 
@@ -293,28 +293,28 @@ class TestMergeFromCLI:
         return args
 
     def test_format_override(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         merged = cfg.merge_from_cli(self._make_args(format="json"))
         assert merged.format == "json"
 
     def test_no_color_override(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         merged = cfg.merge_from_cli(self._make_args(no_color=True))
         assert merged.no_color is True
 
     def test_fail_on_implies_exit_code(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         merged = cfg.merge_from_cli(self._make_args(fail_on="high"))
         assert merged.fail_on == "high"
         assert merged.exit_code is True
 
     def test_timeout_override(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         merged = cfg.merge_from_cli(self._make_args(timeout=45.0))
         assert merged.timeout == 45.0
 
     def test_config_file_values_preserved(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         cfg.format = "sarif"
         cfg.timeout = 120.0
         merged = cfg.merge_from_cli(self._make_args())
@@ -322,27 +322,27 @@ class TestMergeFromCLI:
         assert merged.timeout == 120.0
 
     def test_deterministic_output_override(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         merged = cfg.merge_from_cli(self._make_args(deterministic_output=True))
         assert merged.deterministic_output is True
 
     def test_log_format_override(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         merged = cfg.merge_from_cli(self._make_args(log_format="json"))
         assert merged.log_format == "json"
 
     def test_token_budget_override(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         merged = cfg.merge_from_cli(self._make_args(token_budget=8192))
         assert merged.token_budget == 8192
 
     def test_policy_override(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         merged = cfg.merge_from_cli(self._make_args(policy="/tmp/policy.json"))
         assert merged.policy == "/tmp/policy.json"
 
     def test_rules_override(self):
-        cfg = IronDomeConfig()
+        cfg = PicoDomeConfig()
         merged = cfg.merge_from_cli(self._make_args(rules=["L3-NET-001"]))
         assert merged.rules == ["L3-NET-001"]
 

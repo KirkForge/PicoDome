@@ -1,4 +1,4 @@
-"""Priority job queue for the Iron Dome daemon.
+"""Priority job queue for the PicoDome daemon.
 
 Bounded priority queue with FIFO ordering within each priority level.
 Supports concurrent producers/consumers with thread-safe operations.

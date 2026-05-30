@@ -2,7 +2,7 @@
 
 ## Severity: **Critical**
 
-The IronDome admission webhook is a `ValidatingWebhookConfiguration` that intercepts pod creation and update requests. If the webhook service becomes unavailable, the behavior depends on the configured `failurePolicy`.
+The PicoDome admission webhook is a `ValidatingWebhookConfiguration` that intercepts pod creation and update requests. If the webhook service becomes unavailable, the behavior depends on the configured `failurePolicy`.
 
 ## Failure policy tradeoffs
 
@@ -23,7 +23,7 @@ The IronDome admission webhook is a `ValidatingWebhookConfiguration` that interc
 ### Step 1: Check webhook configuration
 
 ```bash
-kubectl get validatingwebhookconfiguration irondome-admission -o yaml
+kubectl get validatingwebhookconfiguration picodome-admission -o yaml
 ```
 
 Verify:
@@ -34,7 +34,7 @@ Verify:
 ### Step 2: Check admission controller pods
 
 ```bash
-kubectl get pods -n <irondome-namespace> -l app.kubernetes.io/name=irondome-admission
+kubectl get pods -n <picodome-namespace> -l app.kubernetes.io/name=picodome-admission
 ```
 
 Look for:
@@ -46,7 +46,7 @@ Look for:
 ### Step 3: Check admission controller logs
 
 ```bash
-kubectl logs -n <irondome-namespace> -l app.kubernetes.io/name=irondome-admission --tail=100
+kubectl logs -n <picodome-namespace> -l app.kubernetes.io/name=picodome-admission --tail=100
 ```
 
 Common errors:
@@ -57,7 +57,7 @@ Common errors:
 ### Step 4: Check TLS certificate
 
 ```bash
-kubectl get secret -n <irondome-namespace> irondome-admission-tls -o yaml
+kubectl get secret -n <picodome-namespace> picodome-admission-tls -o yaml
 ```
 
 Verify `tls.crt` and `tls.key` are present and not empty.
@@ -66,7 +66,7 @@ Verify `tls.crt` and `tls.key` are present and not empty.
 
 ```bash
 kubectl run curl-test --image=curlimages/curl -it --rm -- \
-  curl -sk https://irondome-admission.<namespace>.svc:443/healthz
+  curl -sk https://picodome-admission.<namespace>.svc:443/healthz
 ```
 
 ## Remediation
@@ -77,45 +77,45 @@ If the webhook is blocking all pod creation and you need to restore cluster func
 
 1. **Delete the webhook configuration** (most aggressive):
    ```bash
-   kubectl delete validatingwebhookconfiguration irondome-admission
+   kubectl delete validatingwebhookconfiguration picodome-admission
    ```
    ⚠️ This removes all pod security validation until re-installed.
 
 2. **Switch to Ignore policy** (preserves config):
    ```bash
-   kubectl patch validatingwebhookconfiguration irondome-admission \
+   kubectl patch validatingwebhookconfiguration picodome-admission \
      --type='json' -p='[{"op":"replace","path":"/webhooks/0/failurePolicy","value":"Ignore"}]'
    ```
    ⚠️ Pods will be created without validation until the webhook recovers.
 
 3. **Exclude critical namespaces** (surgical):
    ```bash
-   kubectl patch validatingwebhookconfiguration irondome-admission \
-     --type='json' -p='[{"op":"replace","path":"/webhooks/0/namespaceSelector","value":{"matchExpressions":[{"key":"irondome-scan","operator":"In","values":["enabled"]}]}}]'
+   kubectl patch validatingwebhookconfiguration picodome-admission \
+     --type='json' -p='[{"op":"replace","path":"/webhooks/0/namespaceSelector","value":{"matchExpressions":[{"key":"picodome-scan","operator":"In","values":["enabled"]}]}}]'
    ```
-   Only namespaces with label `irondome-scan=enabled` will be validated.
+   Only namespaces with label `picodome-scan=enabled` will be validated.
 
 ### Fix: Restart admission controller
 
 ```bash
-kubectl rollout restart deployment -n <irondome-namespace> irondome-admission
+kubectl rollout restart deployment -n <picodome-namespace> picodome-admission
 ```
 
 ### Fix: Re-provision TLS certificate
 
 If cert-manager is installed:
 ```bash
-kubectl annotate certificate -n <irondome-namespace> irondome-admission-cert \
+kubectl annotate certificate -n <picodome-namespace> picodome-admission-cert \
   cert-manager.io/issue-incoming-request-
-kubectl annotate certificate -n <irondome-namespace> irondome-admission-cert \
+kubectl annotate certificate -n <picodome-namespace> picodome-admission-cert \
   cert-manager.io/issue-incoming-request=
 ```
 
 ### Fix: Re-install webhook via Helm
 
 ```bash
-helm upgrade irondome-admission deploy/helm/irondome-admission/ \
-  --namespace <irondome-namespace> --reuse-values
+helm upgrade picodome-admission deploy/helm/picodome-admission/ \
+  --namespace <picodome-namespace> --reuse-values
 ```
 
 ## Prevention
@@ -130,6 +130,6 @@ helm upgrade irondome-admission deploy/helm/irondome-admission/ \
 
 ## Escalation
 
-1. Check #irondome-alerts Slack channel
+1. Check #picodome-alerts Slack channel
 2. Page on-call if cluster-wide pod creation is blocked for > 5 minutes
 3. If break-glass applied, file incident and schedule policy re-enforcement

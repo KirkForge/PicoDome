@@ -2,15 +2,15 @@
 
 ## Overview
 
-IronDome's L3 sandbox provides **syscall policy enforcement** for running untrusted commands. This document describes the security boundaries, hardening options, and what IronDome does **not** protect against.
+PicoDome's L3 sandbox provides **syscall policy enforcement** for running untrusted commands. This document describes the security boundaries, hardening options, and what PicoDome does **not** protect against.
 
-> **Important:** IronDome's seccomp-bpf backend is a **syscall policy harness**, not a full containment boundary. It filters syscalls at the kernel level (real enforcement), but does not provide namespace/mount/filesystem isolation, privilege dropping, or resource limits. See §Seccomp limitations for details.
+> **Important:** PicoDome's seccomp-bpf backend is a **syscall policy harness**, not a full containment boundary. It filters syscalls at the kernel level (real enforcement), but does not provide namespace/mount/filesystem isolation, privilege dropping, or resource limits. See §Seccomp limitations for details.
 
 ## Security boundary
 
 ```
 ┌─────────────────────────────────────────────┐
-│              IronDome Sandbox                │
+│              PicoDome Sandbox                │
 │                                             │
 │  seccomp-bpf ──► Syscall policy (deny-by-default)   │
 │  seatbelt    ──► macOS sandbox-exec         │
@@ -41,30 +41,30 @@ The seccomp-bpf backend provides real kernel-level syscall filtering, but it has
 
 4. **No resource limits**: No `setrlimit` or `cgroups` integration. A fork bomb, memory bomb, or file descriptor exhaustion in the sandbox affects the host.
 
-5. **Default-deny kills silently**: Processes killed by `SIGSYS` (seccomp violation) produce no diagnostic. For actionable error messages, use `SCMP_ACT_ERRNO(EPERM)` for non-fatal denials. IronDome defines `SCMP_ACT_ERRNO_EPERM` as a constant for this purpose, but default-deny policies still use `KILL_PROCESS`.
+5. **Default-deny kills silently**: Processes killed by `SIGSYS` (seccomp violation) produce no diagnostic. For actionable error messages, use `SCMP_ACT_ERRNO(EPERM)` for non-fatal denials. PicoDome defines `SCMP_ACT_ERRNO_EPERM` as a constant for this purpose, but default-deny policies still use `KILL_PROCESS`.
 
 6. **Safe set omits process-spawning syscalls**: `_SAFE_SYSCALLS` does not include `clone`, `clone3`, `fork`, `vfork`, `wait4`, or `socket`. Default-deny policies will kill `npm install`, `pip install`, and most package managers on their first `clone3` call. Use `--allow-runtime node` or per-runtime profiles for these workloads.
 
 ### Composing with full containment
 
-For safe execution of truly untrusted packages, compose IronDome with:
+For safe execution of truly untrusted packages, compose PicoDome with:
 
 - **User namespaces + `bubblewrap`**: Filesystem, PID, and network isolation
 - **`gVisor`**: Kernel-level sandboxing with comprehensive syscall filtering
 - **Container runtimes (Docker/Podman)**: Mount and PID isolation with resource limits
 - **`setrlimit` / `cgroups`**: Memory, CPU, and file descriptor limits
 
-Example: IronDome + bubblewrap:
+Example: PicoDome + bubblewrap:
 ```bash
 bwrap --unshare-all --dev /dev --ro-bind /usr /usr --tmpfs /tmp \
-  -- irondome pipeline --allow-runtime node npm install some-package
+  -- picodome pipeline --allow-runtime node npm install some-package
 ```
 
 ## Hardening layers
 
 ### Layer 1: Seccomp profiles
 
-IronDome ships a default seccomp profile (`deploy/security/irondome-seccomp.json`) that:
+PicoDome ships a default seccomp profile (`deploy/security/picodome-seccomp.json`) that:
 
 - **Default action**: `SCMP_ACT_ERRNO` (deny-by-default)
 - **Allowed syscalls**: Only the minimum required for Python runtime, networking, and file I/O
@@ -77,16 +77,16 @@ spec:
   securityContext:
     seccompProfile:
       type: Localhost
-      localhostProfile: irondome/irondome-seccomp.json
+      localhostProfile: picodome/picodome-seccomp.json
 ```
 
 Install the profile on nodes via DaemonSet or node initialization scripts.
 
 ### Layer 2: AppArmor profiles
 
-IronDome ships an AppArmor profile (`deploy/security/irondome-apparmor.yaml`) that:
+PicoDome ships an AppArmor profile (`deploy/security/picodome-apparmor.yaml`) that:
 
-- Restricts file access to IronDome data directories
+- Restricts file access to PicoDome data directories
 - Allows only TCP/UDP networking
 - Denies dangerous capabilities (`sys_admin`, `sys_ptrace`, `net_admin`)
 - Denies ptrace (anti-debugging)
@@ -98,12 +98,12 @@ spec:
   securityContext:
     appArmorProfile:
       type: Localhost
-      localhostProfile: irondome
+      localhostProfile: picodome
 ```
 
 ### Layer 3: Network policies
 
-IronDome ships a strict network policy (`deploy/security/irondome-networkpolicy-strict.yaml`) that:
+PicoDome ships a strict network policy (`deploy/security/picodome-networkpolicy-strict.yaml`) that:
 
 - Restricts ingress to only kube-system and monitoring namespaces
 - Restricts egress to DNS (53), HTTPS (443), and same-namespace
@@ -127,7 +127,7 @@ securityContext:
 
 ## Threat assumptions
 
-IronDome's sandbox **assumes**:
+PicoDome's sandbox **assumes**:
 
 1. The host kernel is not compromised (seccomp is a kernel feature)
 2. The Kubernetes node is not compromised (node-level access bypasses container isolation)
@@ -135,14 +135,14 @@ IronDome's sandbox **assumes**:
 4. cert-manager or manual TLS rotation prevents MITM on the webhook
 5. The policy signing key is not compromised
 
-IronDome's sandbox **does not protect against**:
+PicoDome's sandbox **does not protect against**:
 
 1. Kernel exploits that bypass seccomp (0-days in the kernel)
 2. Node-level compromise (container escape via container runtime bugs)
 3. Side-channel attacks (Spectre/Meltdown class)
 4. Host filesystem access by processes with `open`/`write` in the safe set
 5. Resource exhaustion (fork bombs, memory bombs) without external `setrlimit`/`cgroups`
-6. Misconfigured cluster permissions (admin access to IronDome namespace)
+6. Misconfigured cluster permissions (admin access to PicoDome namespace)
 
 ## Recommended hardening checklist
 
@@ -166,7 +166,7 @@ For production deployment:
 
 ## External security validation
 
-IronDome recommends the following for enterprise deployments:
+PicoDome recommends the following for enterprise deployments:
 
 1. **External penetration test** of the admission webhook and sandbox
 2. **Red team exercise** targeting the L3 sandbox boundary
@@ -176,11 +176,11 @@ IronDome recommends the following for enterprise deployments:
 
 ## Filesystem restrictions
 
-IronDome containers run with `readOnlyRootFilesystem: true`. Writable paths are:
+PicoDome containers run with `readOnlyRootFilesystem: true`. Writable paths are:
 
 | Path | Purpose | Backed by |
 |---|---|---|
-| `/home/irondome/.irondome` | Scan results, audit logs | PVC |
+| `/home/picodome/.picodome` | Scan results, audit logs | PVC |
 | `/tmp` | Temporary files (if needed) | tmpfs (emptyDir) |
 | `/tls` | TLS certificates | Secret mount (readOnly) |
-| `/etc/irondome/keys` | Policy signing keys | Secret mount (readOnly) |
+| `/etc/picodome/keys` | Policy signing keys | Secret mount (readOnly) |

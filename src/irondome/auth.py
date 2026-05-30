@@ -1,4 +1,4 @@
-"""Iron Dome auth — constant-time token validation and hash-based RBAC.
+"""PicoDome auth — constant-time token validation and hash-based RBAC.
 
 Security properties:
   - Token comparison uses ``hmac.compare_digest`` to prevent timing attacks.

@@ -1,58 +1,68 @@
-# Iron Dome 🛡️
+# PicoDome 🛡️
 
-**Deterministic runtime sandbox and behavioral analysis for supply-chain security.**
+**Deterministic runtime sandbox and behavioral analysis for supply-chain security — protecting machines (especially LLMs) from injection attacks.**
 
-[![CI](https://github.com/KirkForge/IronDome/actions/workflows/ci.yml/badge.svg)](https://github.com/KirkForge/IronDome/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/irondome)](https://pypi.org/project/irondome/)
+[![CI](https://github.com/KirkForge/PicoDome/actions/workflows/ci.yml/badge.svg)](https://github.com/KirkForge/PicoDome/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/picodome)](https://pypi.org/project/picodome/)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-295%20passing-brightgreen)](https://github.com/KirkForge/IronDome)
+[![Tests](https://img.shields.io/badge/tests-1406%20passing-brightgreen)](https://github.com/KirkForge/PicoDome)
 [![Deterministic](https://img.shields.io/badge/deterministic-sha256%20verified-brightgreen)](SCAAT.md)
-[![SLSA L3](https://img.shields.io/badge/SLSA-L3-blueviolet)](SLSA.md)
 [![License: BUSL-1.1](https://img.shields.io/badge/license-BUSL--1.1-blue)](LICENSE)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support%20my%20hardware-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/KirkForge)
 
-<img src="docs/banner.png" alt="IronDome" width="100%">
+<img src="docs/banner.png" alt="PicoDome" width="100%">
 
-Iron Dome is a two-layer defense system for npm/Python supply chains. Companion to [PicoSentry](https://github.com/KirkForge/PicoSentry) — static scan → runtime sandbox.
+PicoDome is a two-layer defense system for npm/Python supply chains. Companion to [PicoSentry](https://github.com/KirkForge/PicoSentry) — static scan → runtime sandbox. It's designed to protect machines — especially LLMs — from injection attacks embedded in dependencies.
 
 - **L3 Execution Sandbox** — Run any command under kernel-level policy. Real seccomp-bpf (Linux), Seatbelt/sandbox-exec (macOS), or universal subprocess backend.
 - **L4 Behavioral Analysis** — Post-execution profiling. Detect exfiltration, timing anomalies, honeypot touches, entropy spikes, and baseline drift.
 
-## Why Iron Dome?
+## Why PicoDome?
 
-Static scanners (PicoSentry, Socket.dev, Snyk) inspect code. Iron Dome **executes** it safely, catching what static analysis misses: dependency confusion with dynamic payloads, post-install data exfiltration, obfuscated eval chains, and supply-chain worms.
+Static scanners (PicoSentry, Socket.dev, Snyk) inspect code before it runs. PicoDome **executes** it safely, catching what static analysis misses: dependency confusion with dynamic payloads, post-install data exfiltration, obfuscated eval chains, and supply-chain worms. Especially critical for LLM tool-use pipelines where a malicious dependency can inject prompts, exfiltrate context, or hijack agent behavior.
+
+## Pico Security Series
+
+| Product | Layer | What It Does |
+|---------|-------|--------------|
+| [PicoSentry](https://github.com/KirkForge/PicoSentry) | L2 | Static supply-chain scanner (21 rules, 1390 tests) |
+| **PicoDome** | L3+L4 | Runtime sandbox + behavioral analysis |
+| PicoWatch | L5 | LLM defense (in development) |
+| PicoShogun | — | Command centre / dashboard |
 
 ## Quick Start
 
 ```bash
-pip install irondome
+pip install picodome
 
 # L3: Sandbox a command
-irondome sandbox python3 -c "print('hello')"
+picodome sandbox python3 -c "print('hello')"
 
 # L3+L4: Full pipeline
-irondome pipeline npm install some-package
+picodome pipeline npm install some-package
 
 # Analyze existing sandbox output
-irondome sandbox --format json npm test > sandbox.json
-irondome analyze --input sandbox.json
+picodome sandbox --format json npm test > sandbox.json
+picodome analyze --input sandbox.json
 
 # List detector rules
-irondome rules
+picodome rules
 
 # Verify determinism (run twice, compare SHA-256)
-irondome sandbox --verify-determinism echo test
+picodome sandbox --verify-determinism echo test
 
 # Compare two saved results
-irondome diff result_a.json result_b.json
+picodome diff result_a.json result_b.json
 
 # Workspace scanning (monorepos)
-irondome pipeline --workspace /path/to/monorepo
+picodome pipeline --workspace /path/to/monorepo
 ```
+
+> The `irondome` CLI alias still works for backward compatibility.
 
 ## L3 Backends
 
-Iron Dome auto-detects the best available backend:
+PicoDome auto-detects the best available backend:
 
 | Backend | Platform | Mechanism | Isolation Level | Enforcement |
 |---------|----------|-----------|-----------------|-------------|
@@ -60,24 +70,16 @@ Iron Dome auto-detects the best available backend:
 | **seatbelt** | macOS | sandbox-exec with generated profile DSL | os_policy_enforced | hard |
 | **subprocess** | Universal | Process isolation with post-hoc pattern analysis | observational_only | best_effort |
 
-**Important**: The subprocess backend is **observational only** — it detects suspicious patterns in
-output but does not prevent syscalls. It is not a true sandbox.
+**Important**: The subprocess backend is **observational only** — it detects suspicious patterns in output but does not prevent syscalls. It is not a true sandbox.
 
-**Important**: The seccomp-bpf backend is a **syscall policy harness**, not a full containment boundary.
-It filters syscalls at the kernel level (real enforcement), but does not provide namespace/mount/filesystem
-isolation, `prctl(PR_SET_NO_NEW_PRIVS)`, privilege dropping, or `setrlimit`. For safe execution of
-untrusted packages, compose with user namespaces, `bubblewrap`, or `gVisor`. Default-deny policies will
-kill processes on missing syscalls (e.g. `clone3`, `wait4`) — use `--allow-runtime node` or the
-per-runtime profiles for common package managers, or use default-allow with explicit deny rules.
+**Important**: The seccomp-bpf backend is a **syscall policy harness**, not a full containment boundary. It filters syscalls at the kernel level (real enforcement), but does not provide namespace/mount/filesystem isolation, `prctl(PR_SET_NO_NEW_PRIVS)`, privilege dropping, or `setrlimit`. For safe execution of untrusted packages, compose with user namespaces, `bubblewrap`, or `gVisor`. Default-deny policies will kill processes on missing syscalls (e.g. `clone3`, `wait4`) — use `--allow-runtime node` or the per-runtime profiles for common package managers, or use default-allow with explicit deny rules.
 
-Use `--backend seccomp-bpf` (or `IRONDOME_SANDBOX_BACKEND=seccomp-bpf`) to require a specific
-backend. If the requested backend is unavailable, Iron Dome **fails closed** by default. Use
-`--allow-degraded` (or `IRONDOME_ALLOW_DEGRADED=1`) to opt into subprocess fallback explicitly.
+Use `--backend seccomp-bpf` (or `PICODOME_SANDBOX_BACKEND=seccomp-bpf`) to require a specific backend. If the requested backend is unavailable, PicoDome **fails closed** by default. Use `--allow-degraded` (or `PICODOME_ALLOW_DEGRADED=1`) to opt into subprocess fallback explicitly.
 
 ## L3 Suspicious Pattern Detectors
 
 | Rule | Detects |
-|------|---------|
+|------|----------|
 | L3-SUS-001 | Dynamic code execution (eval, exec, compile) |
 | L3-SUS-002 | Shell execution (subprocess, os.system, os.popen) |
 | L3-SUS-003 | Sensitive file access (/etc/passwd, /etc/shadow) |
@@ -131,7 +133,7 @@ Custom baselines can be loaded from JSON files.
 │  Runs scan twice, asserts SHA-256 match │
 ├─────────────────────────────────────────┤
 │  Layer 3: Diff                          │
-│  irondome diff a.json b.json            │
+│  picodome diff a.json b.json            │
 │  Compare two saved scans field-by-field │
 ├─────────────────────────────────────────┤
 │  Layer 2: Guard (runtime)               │
@@ -149,7 +151,7 @@ Custom baselines can be loaded from JSON files.
 
 ## Configuration
 
-Iron Dome reads `.irondome.yml` or `.irondome.yaml` from the target directory:
+PicoDome reads `.picodome.yml` or `.picodome.yaml` from the target directory:
 
 ```yaml
 version: 1
@@ -162,13 +164,13 @@ severity_overrides:
   L4-ENTROPY: info
 ```
 
-Environment variables (`IRONDOME_*`) override config, and CLI flags override everything.
+Environment variables (`PICODOME_*`) override config, and CLI flags override everything. The `IRONDOME_*` env vars still work for backward compatibility.
 
 ## Security
 
 - **Determinism vulnerability reporting**: See [SECURITY.md](SECURITY.md)
 - **Threat model**: See [docs/security/threat-model.md](docs/security/threat-model.md)
-- **Release integrity**: Sigstore-signed releases with SLSA L3 provenance. See [SLSA.md](SLSA.md)
+- **Release integrity**: Sigstore-signed releases. See [SLSA.md](SLSA.md)
 - **Zero hard runtime dependencies**: Only `pyyaml` (optional) and `libseccomp` (optional, system library)
 
 ## Documentation
@@ -177,6 +179,7 @@ Environment variables (`IRONDOME_*`) override config, and CLI flags override eve
 - [CONTRIBUTING.md](CONTRIBUTING.md) — Development guide and rule requirements
 - [SLSA.md](SLSA.md) — Supply-chain Levels attestation
 - [SCAAT.md](SCAAT.md) — Supply-chain attack vector mapping
+- [STATE.md](STATE.md) — Honest project status
 - [CHANGELOG.md](CHANGELOG.md) — Version history
 - [docs/runbooks/](docs/runbooks/) — Operational runbooks
 - [docs/security/](docs/security/) — Security documentation
@@ -185,8 +188,8 @@ Environment variables (`IRONDOME_*`) override config, and CLI flags override eve
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest -v              # 295 tests
-irondome sandbox echo ci-test   # Quick self-test
+python -m pytest -v              # 1406 tests
+picodome sandbox echo ci-test   # Quick self-test
 bash scripts/ci.sh              # Full CI: mypy, ruff, pytest, determinism
 ```
 

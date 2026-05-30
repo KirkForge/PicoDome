@@ -30,7 +30,7 @@ import pytest
 import irondome.audit.logger as audit_logger_mod
 from irondome.audit import AuditEventType, AuditLogger
 from irondome.auth import RBAC, TokenAuth
-from irondome.daemon.server import IronDomeHandler
+from irondome.daemon.server import PicoDomeHandler
 from irondome.ratelimit import RateLimitConfig, TokenBucketLimiter
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -89,8 +89,8 @@ class TestAuditEventTypeCoverage:
         AuditEventType.BASELINE_CREATE: "irondome.baseline_hardening",
         AuditEventType.BASELINE_UPDATE: "irondome.baseline_hardening",
         AuditEventType.BASELINE_DELETE: "irondome.baseline_hardening",
-        AuditEventType.DAEMON_START: "irondome.daemon.server.IronDomeDaemon.start",
-        AuditEventType.DAEMON_STOP: "irondome.daemon.server.IronDomeDaemon.stop",
+        AuditEventType.DAEMON_START: "irondome.daemon.server.PicoDomeDaemon.start",
+        AuditEventType.DAEMON_STOP: "irondome.daemon.server.PicoDomeDaemon.stop",
         AuditEventType.AUTH_SUCCESS: "irondome.daemon.server._require_auth",
         AuditEventType.AUTH_FAILURE: "irondome.daemon.server._require_auth / _require_permission",
         AuditEventType.COMMAND_DENIED: "irondome.daemon.server._handle_submit_scan",
@@ -214,7 +214,7 @@ class TestDaemonAuditEmission:
     """
 
     def _setup_handler(self, audit_dir, tokens=None, rate_config=None):
-        """Create a test-ready IronDomeHandler with isolated audit.
+        """Create a test-ready PicoDomeHandler with isolated audit.
 
         Returns (handler_kwargs, audit_logger) so tests can construct
         handlers manually.
@@ -237,10 +237,10 @@ class TestDaemonAuditEmission:
         limiter = TokenBucketLimiter(config=rate_config)
 
         # Patch handler class attributes
-        IronDomeHandler.rbac = rbac
-        IronDomeHandler.auth = auth
-        IronDomeHandler.rate_limiter = limiter
-        IronDomeHandler.job_store = MagicMock()
+        PicoDomeHandler.rbac = rbac
+        PicoDomeHandler.auth = auth
+        PicoDomeHandler.rate_limiter = limiter
+        PicoDomeHandler.job_store = MagicMock()
 
         return test_audit
 
@@ -250,7 +250,7 @@ class TestDaemonAuditEmission:
         token = "irondome-admin-" + "a" * 50
         audit = self._setup_handler(audit_dir, tokens=token)
 
-        handler = IronDomeHandler.__new__(IronDomeHandler)
+        handler = PicoDomeHandler.__new__(PicoDomeHandler)
         handler.headers = {"Authorization": f"Bearer {token}"}
         handler._send_json = MagicMock()
         handler._send_error = MagicMock()
@@ -272,7 +272,7 @@ class TestDaemonAuditEmission:
         token = "irondome-admin-" + "a" * 50
         audit = self._setup_handler(audit_dir, tokens=token)
 
-        handler = IronDomeHandler.__new__(IronDomeHandler)
+        handler = PicoDomeHandler.__new__(PicoDomeHandler)
         handler.headers = {}  # No Authorization header
         handler._send_json = MagicMock()
         handler._send_error = MagicMock()
@@ -293,7 +293,7 @@ class TestDaemonAuditEmission:
         token = "irondome-admin-" + "a" * 50
         audit = self._setup_handler(audit_dir, tokens=token)
 
-        handler = IronDomeHandler.__new__(IronDomeHandler)
+        handler = PicoDomeHandler.__new__(PicoDomeHandler)
         handler.headers = {"Authorization": "Bearer wrong-token"}
         handler._send_json = MagicMock()
         handler._send_error = MagicMock()
@@ -313,7 +313,7 @@ class TestDaemonAuditEmission:
         token = "irondome-admin-" + "a" * 50
         audit = self._setup_handler(audit_dir, tokens=token, rate_config=rate_config)
 
-        handler = IronDomeHandler.__new__(IronDomeHandler)
+        handler = PicoDomeHandler.__new__(PicoDomeHandler)
         handler.headers = {"Authorization": f"Bearer {token}"}
         handler._send_json = MagicMock()
         handler._send_error = MagicMock()
@@ -341,7 +341,7 @@ class TestDaemonAuditEmission:
         audit = self._setup_handler(audit_dir, tokens=token)
 
         # Test _validateCommand directly first
-        handler = IronDomeHandler.__new__(IronDomeHandler)
+        handler = PicoDomeHandler.__new__(PicoDomeHandler)
         error = handler._validate_command(["bash", "-c", "echo pwned"])
         assert error is not None, "bash should be denied"
 
@@ -373,7 +373,7 @@ class TestDaemonAuditEmission:
         reader_token = "irondome-reader-abc1234567890abcdefghijklmnopqr"
         audit = self._setup_handler(audit_dir, tokens=reader_token)
 
-        handler = IronDomeHandler.__new__(IronDomeHandler)
+        handler = PicoDomeHandler.__new__(PicoDomeHandler)
         handler.headers = {"Authorization": f"Bearer {reader_token}"}
         handler._send_json = MagicMock()
         handler._send_error = MagicMock()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Iron Dome — Deployment Security Checker.
+"""PicoDome — Deployment Security Checker.
 
 Validates that deployment manifests and configuration don't contain
 insecure defaults that would be dangerous in production.
@@ -30,7 +30,7 @@ from typing import NamedTuple
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEPLOY_DIR = REPO_ROOT / "deploy"
-HELM_DIR = DEPLOY_DIR / "helm" / "irondome"
+HELM_DIR = DEPLOY_DIR / "helm" / "picodome"
 K8S_DIR = DEPLOY_DIR / "kubernetes"
 SRC_DIR = REPO_ROOT / "src"
 
@@ -432,7 +432,7 @@ def check_dockerfile(findings: list[Finding]) -> None:
             )
 
         # No USER directive at all
-        if "USER irondome" not in "".join(lines) and "USER nobody" not in "".join(lines):
+        if "USER picodome" not in "".join(lines) and "USER nobody" not in "".join(lines):
             # Check there's at least a non-root USER
             pass  # Handled below
 
@@ -619,7 +619,7 @@ def check_gitignore_secrets(findings: list[Finding]) -> None:
 def main(args: list[str] | None = None) -> int:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Iron Dome deployment security checker")
+    parser = argparse.ArgumentParser(description="PicoDome deployment security checker")
     parser.add_argument("--strict", action="store_true", help="Treat all findings as errors")
     parser.add_argument("--quiet", action="store_true", help="Only show CRITICAL and HIGH findings")
     parsed = parser.parse_args(args)
@@ -640,7 +640,7 @@ def main(args: list[str] | None = None) -> int:
     findings.sort(key=lambda f: (severity_order.get(f.severity, 99), f.check, f.file))
 
     # Display results
-    print("\n🔒 Iron Dome — Deployment Security Check\n")
+    print("\n🔒 PicoDome — Deployment Security Check\n")
     print("=" * 70)
 
     if not findings:

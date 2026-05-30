@@ -1,4 +1,4 @@
-"""License enforcement for Iron Dome.
+"""License enforcement for PicoDome.
 
 Personal use is free. Commercial use requires a Shogun license.
 See LICENSE for details.
@@ -240,7 +240,7 @@ def require_commercial(feature: str = "") -> bool:
     logger.warning(
         "Shogun command center license required for%s. "
         "Running in personal use mode — no command center access. "
-        "See https://github.com/KirkForge/Shogun for commercial licensing.",
+        "See https://github.com/KirkForge/PicoShogun for commercial licensing.",
         feature_msg,
     )
     return False

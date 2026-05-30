@@ -1,4 +1,4 @@
-"""Table formatter for Iron Dome results — human-readable terminal output.
+"""Table formatter for PicoDome results — human-readable terminal output.
 
 Uses dome-themed severity labels (like PicoSentry's claw-pinch branding):
   CRITICAL/HIGH → HARD PINCH 🛡️

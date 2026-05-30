@@ -1,4 +1,4 @@
-"""Tests for Iron Dome cluster module — multi-node daemon support with shared state.
+"""Tests for PicoDome cluster module — multi-node daemon support with shared state.
 
 Tests cover:
 - ClusterNode creation, serialization, and comparison

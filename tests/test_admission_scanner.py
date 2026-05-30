@@ -25,7 +25,7 @@ from irondome.admission.scanner import SEVERITY_LEVELS, ImageScanner
 
 
 class MockScanHandler(BaseHTTPRequestHandler):
-    """Mock IronDome daemon that returns scan results."""
+    """Mock PicoDome daemon that returns scan results."""
 
     verdict = "CLEAN"
     findings = []
@@ -50,7 +50,7 @@ class MockScanHandler(BaseHTTPRequestHandler):
 
 @pytest.fixture
 def mock_daemon():
-    """Start a mock IronDome daemon."""
+    """Start a mock PicoDome daemon."""
     server = HTTPServer(("127.0.0.1", 0), MockScanHandler)
     port = server.server_address[1]
     thread = threading.Thread(target=server.serve_forever, daemon=True)

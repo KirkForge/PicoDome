@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package irondome;
 
-// IronDome gRPC Service — high-throughput transport for sandbox-as-a-service.
+// PicoDome gRPC Service — high-throughput transport for sandbox-as-a-service.
 // This is the protobuf schema for the gRPC transport layer.
-// gRPC is OPTIONAL; IronDome works perfectly without it.
+// gRPC is OPTIONAL; PicoDome works perfectly without it.
 
 // ─── Messages ───────────────────────────────────────────────────────────────
 
@@ -74,7 +74,7 @@ message AuditQueryResponse {
 
 // ─── Service ─────────────────────────────────────────────────────────────────
 
-service IronDomeService {
+service PicoDomeService {
   // Submit a sandbox scan job and wait for result
   rpc Scan(ScanRequest) returns (ScanResponse);
   // Health check

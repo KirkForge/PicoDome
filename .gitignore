@@ -36,7 +36,7 @@ coverage.xml
 Thumbs.db
 
 # IronDome runtime
-.irondome/
+.picodome/
 *.log
 
 # Packaging

@@ -1,4 +1,4 @@
-"""Iron Dome CLI — deterministic runtime sandbox and behavioral analysis.
+"""PicoDome CLI — deterministic runtime sandbox and behavioral analysis.
 
 Supports multiple output formats, deterministic mode, verification,
 and a full guard stack for CI/CD pipelines.
@@ -42,8 +42,8 @@ _BAD_VERDICTS = {"DENY", "KILL", "MALICIOUS", "SUSPICIOUS"}
 def main(argv: list[str] | None = None) -> int:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        prog="irondome",
-        description="Iron Dome — deterministic runtime sandbox and behavioral analysis",
+        prog="picodome",
+        description="PicoDome — deterministic runtime sandbox and behavioral analysis",
     )
     parser.add_argument("--version", action="version", version=f"irondome {__version__}")
 
@@ -127,7 +127,7 @@ def main(argv: list[str] | None = None) -> int:
     rules_parser.add_argument("--json", action="store_true", help="Output as JSON")
 
     # ── daemon ────────────────────────────────────────────────────────
-    daemon_parser = sub.add_parser("daemon", help="Start Iron Dome daemon (HTTP API server)")
+    daemon_parser = sub.add_parser("daemon", help="Start PicoDome daemon (HTTP API server)")
     daemon_parser.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
     daemon_parser.add_argument("--port", type=int, default=8443, help="Bind port (default: 8443)")
     daemon_parser.add_argument("--background", action="store_true", help="Run in background")
@@ -292,7 +292,7 @@ def main(argv: list[str] | None = None) -> int:
     sign_genkey.add_argument("--output", type=Path, help="Write key to file (otherwise stdout)")
 
     # ── init ──────────────────────────────────────────────────────────
-    init_parser = sub.add_parser("init", help="Initialize Iron Dome configuration")
+    init_parser = sub.add_parser("init", help="Initialize PicoDome configuration")
     init_parser.add_argument("target", nargs="?", default=".", help="Target directory (default: current)")
 
     args = parser.parse_args(argv)
@@ -601,13 +601,13 @@ def _cmd_diff(args) -> int:
 
 
 def _cmd_init(args) -> int:
-    """Initialize Iron Dome configuration."""
+    """Initialize PicoDome configuration."""
     target = Path(args.target).resolve()
     config_dir = target / ".irondome"
     config_file = config_dir / "policy.json"
 
     if config_file.exists():
-        print(f"Iron Dome config already exists: {config_file}")
+        print(f"PicoDome config already exists: {config_file}")
         return 0
 
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -634,16 +634,16 @@ def _cmd_init(args) -> int:
     }
 
     config_file.write_text(json.dumps(default_config, indent=2, sort_keys=True) + "\n")
-    print(f"Created Iron Dome config: {config_file}")
+    print(f"Created PicoDome config: {config_file}")
     return 0
 
 
 def _cmd_daemon(args) -> int:
-    """Start the Iron Dome daemon."""
+    """Start the PicoDome daemon."""
     transport = getattr(args, "transport", "http")
 
     if transport == "grpc":
-        from irondome.grpc_transport import IronDomeGRPCServer, is_grpc_available
+        from irondome.grpc_transport import PicoDomeGRPCServer, is_grpc_available
 
         if not is_grpc_available():
             print("Error: grpcio is not installed. Install with: pip install grpcio", file=sys.stderr)
@@ -663,13 +663,13 @@ def _cmd_daemon(args) -> int:
         except Exception:
             pass
 
-        server = IronDomeGRPCServer(
+        server = PicoDomeGRPCServer(
             host=host,
             port=grpc_port,
             mtls_config=mtls_config,
         )
         try:
-            print(f"Starting Iron Dome gRPC daemon on {host}:{grpc_port}")
+            print(f"Starting PicoDome gRPC daemon on {host}:{grpc_port}")
             server.start()
             return 0
         except KeyboardInterrupt:
@@ -680,12 +680,12 @@ def _cmd_daemon(args) -> int:
             return 1
     else:
         # HTTP daemon (default)
-        from irondome.daemon import IronDomeDaemon
+        from irondome.daemon import PicoDomeDaemon
 
         store_backend = getattr(args, "store_backend", None) or "jsonl"
         metrics_port = getattr(args, "metrics_port", None)
 
-        daemon = IronDomeDaemon(
+        daemon = PicoDomeDaemon(
             host=args.host,
             port=args.port,
             metrics_port=metrics_port,
@@ -699,7 +699,7 @@ def _cmd_daemon(args) -> int:
         try:
             daemon.start(background=args.background)
             if args.background:
-                print(f"Iron Dome daemon started on {args.host}:{args.port}")
+                print(f"PicoDome daemon started on {args.host}:{args.port}")
             return 0
         except KeyboardInterrupt:
             daemon.stop()
@@ -717,7 +717,7 @@ def _cmd_scan_grpc(args) -> int:
         print("Error: grpcio is not installed. Install with: pip install grpcio", file=sys.stderr)
         return 1
 
-    from irondome.grpc_transport.client import IronDomeGRPCClient
+    from irondome.grpc_transport.client import PicoDomeGRPCClient
 
     command = args.target
     if not command:
@@ -740,7 +740,7 @@ def _cmd_scan_grpc(args) -> int:
             print(f"Error configuring mTLS: {e}", file=sys.stderr)
             return 1
 
-    client = IronDomeGRPCClient(
+    client = PicoDomeGRPCClient(
         target=args.address,
         mtls_config=mtls_config,
         timeout=args.timeout,
@@ -802,7 +802,7 @@ def _cmd_health(args) -> int:
         print(json.dumps(data, sort_keys=True, indent=2))
     else:
         icon = "✓" if all_healthy else "✗"
-        print(f"\n{icon} Iron Dome Health: {'HEALTHY' if all_healthy else 'UNHEALTHY'}\n")
+        print(f"\n{icon} PicoDome Health: {'HEALTHY' if all_healthy else 'UNHEALTHY'}\n")
         for c in checks:
             icon = "✓" if c.healthy else "✗"
             print(f"  {icon} {c.component}: {c.detail}")

@@ -1,6 +1,6 @@
 """API versioning and backward compatibility guarantees.
 
-Iron Dome's daemon API follows semantic versioning with explicit
+PicoDome's daemon API follows semantic versioning with explicit
 compatibility guarantees:
 
 - API v1 (current): Stable, backward-compatible since v0.4.0
@@ -89,8 +89,8 @@ class APIVersionNegotiator:
 
     Resolution order:
     1. URL path prefix (e.g., /api/v1/scan)
-    2. Accept header (e.g., Accept: application/vnd.irondome.v1+json)
-    3. Custom header (X-IronDome-API-Version: v1)
+    2. Accept header (e.g., Accept: application/vnd.picodome.v1+json)
+    3. Custom header (X-PicoDome-API-Version: v1)
     4. Default to current version
     """
 
@@ -132,11 +132,11 @@ class APIVersionNegotiator:
 
     def _extract_from_accept(self, accept: str) -> str | None:
         """Extract version from Accept header."""
-        if "vnd.irondome" in accept:
+        if "vnd.picodome" in accept:
             for part in accept.split(","):
                 part = part.strip()
-                if "vnd.irondome." in part:
-                    start = part.index("vnd.irondome.") + len("vnd.irondome.")
+                if "vnd.picodome." in part:
+                    start = part.index("vnd.picodome.") + len("vnd.picodome.")
                     end = part.index("+", start) if "+" in part[start:] else len(part)
                     return part[start:end].lower()
         return None
