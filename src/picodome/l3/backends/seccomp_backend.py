@@ -252,15 +252,31 @@ class SeccompBackend(SandboxBackend):
         return "moderate"
 
     def is_available(self) -> bool:
+        """Check if seccomp-bpf is available and both permissive and fail-closed
+        filters can be created.
+
+        Some containers allow SCMP_ACT_ALLOW (permissive) but reject
+        SCMP_ACT_KILL_PROCESS (fail-closed), which means default-deny
+        policies would fail silently. Verify both.
+        """
         try:
             lib = ctypes.CDLL("libseccomp.so.2")
             lib.seccomp_init.argtypes = [ctypes.c_uint32]
             lib.seccomp_init.restype = ctypes.c_void_p
             lib.seccomp_release.argtypes = [ctypes.c_void_p]
-            ctx = lib.seccomp_init(SCMP_ACT_ALLOW)
-            if not ctx:
+
+            # Test permissive (ALLOW) filter
+            ctx_allow = lib.seccomp_init(SCMP_ACT_ALLOW)
+            if not ctx_allow:
                 return False
-            lib.seccomp_release(ctx)
+            lib.seccomp_release(ctx_allow)
+
+            # Test fail-closed (KILL_PROCESS) filter — this is what default-deny uses
+            ctx_kill = lib.seccomp_init(SCMP_ACT_KILL_PROCESS)
+            if not ctx_kill:
+                return False
+            lib.seccomp_release(ctx_kill)
+
             return True
         except Exception:
             return False

@@ -651,20 +651,25 @@ class PicoDomeHandler(BaseHTTPRequestHandler):
             backend = get_backend()
             # For enterprise mode, refuse ready if backend is observational only
             enterprise_mode = os.environ.get("PICODOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes")
+            is_degraded = backend.name == "subprocess"
+
             if enterprise_mode and backend.isolation_level == "observational_only":
                 self._send_error(
                     ErrorCodes.ENTERPRISE_ENFORCEMENT,
                     detail=f"Only '{backend.name}' backend available — install libseccomp2 (Linux) or use macOS",
                 )
                 return
-            self._send_json(
-                {
-                    "status": "ready",
-                    "backend": backend.name,
-                    "isolation_level": backend.isolation_level,
-                    "enforcement_guarantee": backend.enforcement_guarantee,
-                }
-            )
+
+            response = {
+                "status": "ready",
+                "backend": backend.name,
+                "isolation_level": backend.isolation_level,
+                "enforcement_guarantee": backend.enforcement_guarantee,
+            }
+            if is_degraded:
+                response["degraded"] = True
+                response["warning"] = "Running in observational-only mode — no real syscall enforcement"
+            self._send_json(response)
         except Exception as e:
             self._send_error(ErrorCodes.NOT_READY, detail=str(e))
 

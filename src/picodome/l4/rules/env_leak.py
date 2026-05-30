@@ -35,16 +35,6 @@ SENSITIVE_ENV_VARS = {
 }
 
 # Patterns indicating env var access or exfiltration in output
-_ENV_ACCESS_PATTERNS: list[tuple[str, str]] = [
-    (r"process\.env\[(['\"]).*?\1\]", "Node.js process.env bracket access"),
-    (r"process\.env\.\w+", "Node.js process.env dot access"),
-    (r"os\.environ\[(['\"]).*?\1\]", "Python os.environ bracket access"),
-    (r"os\.environ\.get\(\s*['\"]", "Python os.environ.get access"),
-    (r"os\.getenv\(\s*['\"]", "Python os.getenv access"),
-    (r"ENV\[['\"]", "Ruby ENV access"),
-    (r"System\.getenv\(\s*['\"]", "Java System.getenv access"),
-    (r"\$[{(]\w+[})]", "Shell variable expansion"),
-]
 
 
 def detect_env_leak(

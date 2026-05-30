@@ -665,6 +665,7 @@ class ClusterManager:
         self._running = False
         self._heartbeat_thread: threading.Thread | None = None
         self._health_check_thread: threading.Thread | None = None
+        self._stop_event: threading.Event = threading.Event()
 
     @property
     def node_id(self) -> str:
@@ -682,6 +683,7 @@ class ClusterManager:
 
     def start(self) -> None:
         """Start cluster mode: register self, begin heartbeat loop."""
+        self._stop_event.clear()
         if self._running:
             logger.warning("Cluster manager already running")
             return
@@ -738,6 +740,7 @@ class ClusterManager:
             return
 
         self._running = False
+        self._stop_event.set()
 
         # Set status to draining while we finish in-progress scans
         node = self._state.get_node(self._node_id)
@@ -936,7 +939,7 @@ class ClusterManager:
             except Exception as e:
                 logger.error("Heartbeat update failed: %s", e)
 
-            time.sleep(self._heartbeat_interval)
+            self._stop_event.wait(timeout=self._heartbeat_interval)
 
     def _health_check_loop(self) -> None:
         """Periodically check node health and handle failures.
@@ -950,7 +953,7 @@ class ClusterManager:
             except Exception as e:
                 logger.error("Health check failed: %s", e)
 
-            time.sleep(self._heartbeat_timeout)
+            self._stop_event.wait(timeout=self._heartbeat_timeout)
 
     def _check_node_health(self) -> None:
         """Check all nodes for heartbeat timeout and mark offline if needed."""

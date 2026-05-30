@@ -275,7 +275,11 @@ def sandbox_run(
         policy = default_policy()
 
     if backend is None:
-        be = get_backend()
+        if allow_degraded is not None:
+            # Use explicit allow_degraded rather than env var
+            be = _detect_backend(requested=None, allow_degraded=allow_degraded)
+        else:
+            be = get_backend()
     else:
         be = backend
 
