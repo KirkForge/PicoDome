@@ -6,11 +6,12 @@
 
 A deterministic runtime sandbox and behavioral analysis engine for supply-chain security. It runs code safely and detects malicious behavior that static scanners miss.
 
-- ✅ L3 sandbox: seccomp-bpf (Linux), seatbelt (macOS), subprocess (universal) — 1406+ tests
+- ✅ L3 sandbox: seccomp-bpf (Linux), seatbelt (macOS), subprocess (universal)
 - ✅ L4 behavioral analysis: 15 detector rules
 - ✅ 10 L3 suspicious pattern detectors
 - ✅ Deterministic output (SHA-256 reproducible, 4-layer guard stack)
-- ✅ CLI: sandbox, analyze, pipeline, rules, diff, verify-determinism
+- ✅ CLI: sandbox, analyze, pipeline, rules, diff, verify-determinism, sign-policy
+- ✅ `--allow-runtime {node,python}` CLI flag with auto-detection in pipeline
 - ✅ 6 output formats (table, JSON, SARIF, ML Context, GitHub, CycloneDX)
 - ✅ 5 shipped baselines (npm-install, python-pip-install, node-script, python-script, curl-wget)
 - ✅ Zero hard runtime dependencies (pyyaml and libseccomp optional)
@@ -68,25 +69,37 @@ A deterministic runtime sandbox and behavioral analysis engine for supply-chain 
 
 ## Test Status
 
-- **1406+ tests passing**, 12 skipped (sandbox-dependent tests, need `PICODOME_SANDBOX_TESTS=1`)
+- **1457 tests passing**, 12 skipped (sandbox-dependent tests, need `PICODOME_SANDBOX_TESTS=1`)
 - mypy strict: clean
 - ruff: clean
 
 ## Known Issues
 
-- GitHub Actions billing exhausted — CI will resume when billing resets
+- GitHub Actions billing exhausted — CI will resume when billing resets (June 1)
 - SLSA L3 provenance generated but hermetic builds not yet achieved
+- License gate accepts any well-formed `shogun-` key (placeholder until Shogun ships real verification)
 
-## Recent Changes (2026-05-30)
+## Security Fixes (2026-05-30)
+
+### Opus 4.8 review
+- **CRITICAL**: Added wait4/waitid/waitpid to seccomp _PROCESS_SYSCALLS and _SAFE_SYSCALLS — default-deny killed child-reaping, breaking npm/pip (exit 31, no diagnostic)
+- **CRITICAL**: Implemented `--allow-runtime {node,python}` CLI flag (was documented but missing from CLI)
+- Pipeline auto-detects runtime from argv[0] (npm/node → node policy, pip/python → python policy)
+- SIGSYS diagnostic now shows denied syscall categories and remediation suggestions
+- Daemon docstring example: `0.0.0.0` → `127.0.0.1`
+
+### GPT 5.5 review
+- Cluster shutdown hang: heartbeat/health threads use `stop_event.wait()` instead of `time.sleep()`, so `stop()` wakes them immediately
+- `SeccompBackend.is_available()` now tests both permissive and fail-closed filter creation (catches containers that allow SCMP_ACT_ALLOW but reject SCMP_ACT_KILL_PROCESS)
+- `sandbox_run(allow_degraded=True)` was silently ignored — now passes through to `_detect_backend()`
+- `/ready` endpoint now reports `degraded: true` when running on subprocess backend
+- Removed unused `import re` and `combined` variable from env_leak rule
+
+## Other Changes (2026-05-30)
 
 - Added 5 new L4 detector rules (PRIVESC, PERSIST, CRYPTO, CONTAINER, DEP) — 10 → 15 total
-- **Fixed critical blocker**: added wait4/waitid/waitpid to seccomp _PROCESS_SYSCALLS and _SAFE_SYSCALLS — child-reaping was denied under default-deny, killing npm/pip subprocesses
-- Added `--allow-runtime {node,python}` CLI flag — selects appropriate named policy
-- Pipeline command now auto-detects runtime (npm/node → node policy, pip/python → python policy)
-- Improved seccomp SIGSYS diagnostic — now shows denied syscall categories and remediation suggestions
-- Renamed all policy names from `iron-dome-*` to `picodome-*`
 - Added 5 new L4 detector rules (ENV, PROC, FS, NET, SC)
+- Renamed all policy names from `iron-dome-*` to `picodome-*`
 - Fixed CORS default from wildcard to deny-by-default
 - Fixed subprocess backend env inheritance from `os.environ.copy()` to explicit allowlist
-- Fixed daemon docstring example from `0.0.0.0` to `127.0.0.1`
 - Updated README L4 rule table with all 15 rules
