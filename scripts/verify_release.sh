@@ -9,8 +9,8 @@
 #
 # Usage:
 #   ./scripts/verify_release.sh <version> [repo]
-#   ./scripts/verify_release.sh 0.3.0
-#   ./scripts/verify_release.sh 0.3.0 KirkForge/PicoDome
+#   ./scripts/verify_release.sh 0.5.0
+#   ./scripts/verify_release.sh 0.5.0 KirkForge/PicoDome
 #
 # Requires: sha256sum, python3, pip (sigstore package)
 # ──────────────────────────────────────────────────────────────────

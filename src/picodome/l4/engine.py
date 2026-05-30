@@ -174,8 +174,8 @@ def create_default_engine() -> L4Engine:
     from picodome.l4.rules.container_escape import detect_container_escape
     from picodome.l4.rules.crypto_mining import detect_crypto_mining
     from picodome.l4.rules.dependency_confusion import detect_dependency_confusion
-    from picodome.l4.rules.env_leak import detect_env_leak
     from picodome.l4.rules.entropy import detect_entropy_anomalies
+    from picodome.l4.rules.env_leak import detect_env_leak
     from picodome.l4.rules.exfil import detect_exfiltration
     from picodome.l4.rules.filesystem import detect_filesystem_anomalies
     from picodome.l4.rules.honeypot import detect_honeypot_touches

@@ -97,7 +97,7 @@ Include in your report:
 Every PicoDome release is signed with Sigstore. Verify any release artifact:
 
 ```bash
-./scripts/verify_release.sh v0.3.0
+./scripts/verify_release.sh v0.5.0
 ```
 
 This confirms the artifact was built in CI by the `release.yml` workflow and has not been tampered with.

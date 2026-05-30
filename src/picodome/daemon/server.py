@@ -668,7 +668,7 @@ class PicoDomeHandler(BaseHTTPRequestHandler):
                 "backend": backend.name,
                 "isolation_level": backend.isolation_level,
                 "enforcement_guarantee": backend.enforcement_guarantee,
-            }
+            }  # type: dict[str, object]
             if is_degraded:
                 response["degraded"] = True
                 response["warning"] = "Running in observational-only mode — no real syscall enforcement"

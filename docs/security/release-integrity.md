@@ -12,7 +12,7 @@ pip install sigstore
 
 # Verify a wheel
 python -m sigstore verify identity \
-  --cert-identity "https://github.com/KirkForge/PicoDome/.github/workflows/release.yml@refs/tags/v0.3.0" \
+  --cert-identity "https://github.com/KirkForge/PicoDome/.github/workflows/release.yml@refs/tags/v0.5.0" \
   --cert-oidc-issuer "https://token.actions.githubusercontent.com" \
   picodome-0.5.0-py3-none-any.whl
 ```
@@ -25,7 +25,7 @@ SLSA provenance is generated on every tagged release using `slsa-github-generato
 # Verify SLSA provenance
 slsa-verifier verify-artifact \
   --source-uri github.com/KirkForge/PicoDome \
-  --source-tag v0.3.0 \
+  --source-tag v0.5.0 \
   picodome-0.5.0-py3-none-any.whl
 ```
 

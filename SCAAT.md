@@ -9,7 +9,7 @@
 
 ## Overview
 
-PicoDome attests to detecting **17 rule types** across **L3 sandbox enforcement** and **L4 behavioral analysis**, covering supply-chain attack vectors in npm/Python ecosystems. This document maps each rule to the attack vector it addresses, the MITRE ATT&CK technique, the supply-chain vector, and the detection method.
+PicoDome attests to detecting **27 rule types** across **L3 sandbox enforcement** and **L4 behavioral analysis**, covering supply-chain attack vectors in npm/Python ecosystems. This document maps each rule to the attack vector it addresses, the MITRE ATT&CK technique, the supply-chain vector, and the detection method.
 
 ---
 

@@ -37,6 +37,16 @@ These rules detect suspicious patterns in sandboxed command output when using th
 | L4-ENTROPY | High-entropy filenames, DGA domains | MEDIUM/HIGH |
 | L4-HONEY | Honeypot path access, priv-esc binaries | CRITICAL |
 | L4-BASE | Baseline drift from known-good profiles | CRITICAL/MEDIUM/INFO |
+| L4-ENV | .env access, env-dump commands, secret var exfil | HIGH/CRITICAL |
+| L4-PROC | Shell spawning, reverse shells, excessive spawns | HIGH/CRITICAL/MEDIUM |
+| L4-FS | Protected path writes, path traversal, critical deletes | CRITICAL/HIGH/MEDIUM |
+| L4-NET | Suspicious ports, DNS tunneling, suspicious TLDs | HIGH/MEDIUM |
+| L4-SC | Obfuscated payloads, remote code exec, DNS exfiltration | CRITICAL/HIGH |
+| L4-PRIVESC | Sudoers/shadow writes, setuid chmod, cap manipulation, cron abuse | CRITICAL/HIGH |
+| L4-PERSIST | Crontab/systemd/SSH persistence, launch agents, shell profiles | CRITICAL/HIGH/MEDIUM |
+| L4-CRYPTO | Mining pool connections, mining binaries, crypto config, resource abuse | CRITICAL/HIGH/MEDIUM |
+| L4-CONTAINER | Container escape probes, docker socket, cloud metadata, namespace escape | CRITICAL/HIGH/MEDIUM/INFO |
+| L4-DEP | Registry overrides, publish during install, suspicious URLs, config tampering | CRITICAL/HIGH/MEDIUM/LOW |
 
 ## Adding a New Rule
 
