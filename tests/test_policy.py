@@ -13,7 +13,7 @@ from picodome.l3.policy import default_policy, load_policy
 class TestPolicyPresets:
     def test_default_policy_structure(self):
         policy = default_policy()
-        assert policy.name == "iron-dome-default"
+        assert policy.name == "picodome-default"
         assert policy.version == "1.0"
         assert policy.default_action == SyscallAction.DENY
         assert len(policy.rules) >= 5  # At least the core rules
@@ -63,7 +63,7 @@ class TestPolicyPresets:
         # Verify JSON-serializable
         json_str = json.dumps(d)
         parsed = json.loads(json_str)
-        assert parsed["name"] == "iron-dome-default"
+        assert parsed["name"] == "picodome-default"
 
 
 class TestPolicyImportExport:
@@ -306,21 +306,21 @@ class TestPolicyBuiltins:
         from picodome.l3.policy import strict_policy
 
         policy = strict_policy()
-        assert policy.name == "iron-dome-strict"
+        assert policy.name == "picodome-strict"
         assert policy.default_action == SyscallAction.DENY
 
     def test_node_policy(self):
         from picodome.l3.policy import node_policy
 
         policy = node_policy()
-        assert policy.name == "iron-dome-node"
+        assert policy.name == "picodome-node"
         assert policy.default_action == SyscallAction.DENY
 
     def test_python_policy_builtin(self):
         from picodome.l3.policy import python_policy
 
         policy = python_policy()
-        assert policy.name == "iron-dome-python"
+        assert policy.name == "picodome-python"
         assert policy.default_action == SyscallAction.DENY
 
 
@@ -421,13 +421,13 @@ class TestLoadPolicy:
         from picodome.l3.policy import load_policy
 
         policy = load_policy(name="default")
-        assert policy.name == "iron-dome-default"
+        assert policy.name == "picodome-default"
 
     def test_load_policy_by_name_strict(self):
         from picodome.l3.policy import load_policy
 
         policy = load_policy(name="strict")
-        assert policy.name == "iron-dome-strict"
+        assert policy.name == "picodome-strict"
 
     def test_load_policy_invalid_name(self):
         from picodome.l3.policy import load_policy
@@ -439,4 +439,4 @@ class TestLoadPolicy:
         from picodome.l3.policy import load_policy
 
         policy = load_policy()
-        assert policy.name == "iron-dome-default"
+        assert policy.name == "picodome-default"

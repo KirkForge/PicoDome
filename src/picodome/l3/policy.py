@@ -290,7 +290,7 @@ def load_policy(
         rules_data = NAMED_POLICIES[name]
         default_action = SyscallAction.DENY if name == "strict" else SyscallAction.DENY
         return Policy(
-            name=f"iron-dome-{name}",
+            name=f"picodome-{name}",
             version="1.0",
             default_action=default_action,
             rules=_rules_from_list(rules_data),
@@ -318,7 +318,7 @@ def load_policy(
 def default_policy() -> Policy:
     """Return the built-in default policy."""
     return Policy(
-        name="iron-dome-default",
+        name="picodome-default",
         version="1.0",
         default_action=SyscallAction.DENY,
         rules=_rules_from_list(DEFAULT_RULES),
@@ -328,7 +328,7 @@ def default_policy() -> Policy:
 def strict_policy() -> Policy:
     """Return the strict deny-all policy."""
     return Policy(
-        name="iron-dome-strict",
+        name="picodome-strict",
         version="1.0",
         default_action=SyscallAction.DENY,
         rules=_rules_from_list(STRICT_RULES),
@@ -338,7 +338,7 @@ def strict_policy() -> Policy:
 def node_policy() -> Policy:
     """Return the Node.js-friendly policy."""
     return Policy(
-        name="iron-dome-node",
+        name="picodome-node",
         version="1.0",
         default_action=SyscallAction.DENY,
         rules=_rules_from_list(NODE_RULES),
@@ -348,7 +348,7 @@ def node_policy() -> Policy:
 def python_policy() -> Policy:
     """Return the Python-friendly policy."""
     return Policy(
-        name="iron-dome-python",
+        name="picodome-python",
         version="1.0",
         default_action=SyscallAction.DENY,
         rules=_rules_from_list(PYTHON_RULES),

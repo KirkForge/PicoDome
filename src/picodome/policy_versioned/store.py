@@ -79,7 +79,7 @@ class VersionedPolicyStore:
     Directory structure::
 
         ~/.picodome/policies/
-        ├── iron-dome-default/
+        ├── picodome-default/
         │   ├── v1.json
         │   ├── v2.json
         │   └── latest -> v2.json  (symlink or metadata)

@@ -613,7 +613,7 @@ def _cmd_init(args) -> int:
     config_dir.mkdir(parents=True, exist_ok=True)
 
     default_config = {
-        "name": "iron-dome-default",
+        "name": "picodome-default",
         "version": "1.0",
         "default_action": "deny",
         "rules": [

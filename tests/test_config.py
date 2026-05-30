@@ -13,7 +13,7 @@ from picodome.l3.policy import _policy_from_dict, default_policy, load_policy
 class TestDefaultPolicy:
     def test_default_policy_loads(self):
         policy = default_policy()
-        assert policy.name == "iron-dome-default"
+        assert policy.name == "picodome-default"
         assert policy.version == "1.0"
         assert policy.default_action == SyscallAction.DENY
 
@@ -68,7 +68,7 @@ class TestLoadPolicy:
 
     def test_load_from_none_returns_default(self):
         policy = load_policy(None)
-        assert policy.name == "iron-dome-default"
+        assert policy.name == "picodome-default"
 
     def test_load_missing_file_raises(self):
         with pytest.raises(FileNotFoundError):
@@ -174,7 +174,7 @@ class TestPolicyFromDict:
 class TestPolicyToDict:
     def test_roundtrip(self, default_policy):
         d = default_policy.to_dict()
-        assert d["name"] == "iron-dome-default"
+        assert d["name"] == "picodome-default"
         assert isinstance(d["rules"], list)
         for rule in d["rules"]:
             assert "rule_id" in rule

@@ -171,9 +171,19 @@ class L4Engine:
 def create_default_engine() -> L4Engine:
     """Create L4Engine with all built-in detector rules registered."""
     from picodome.l4.rules.baseline_drift import detect_baseline_drift
+    from picodome.l4.rules.container_escape import detect_container_escape
+    from picodome.l4.rules.crypto_mining import detect_crypto_mining
+    from picodome.l4.rules.dependency_confusion import detect_dependency_confusion
+    from picodome.l4.rules.env_leak import detect_env_leak
     from picodome.l4.rules.entropy import detect_entropy_anomalies
     from picodome.l4.rules.exfil import detect_exfiltration
+    from picodome.l4.rules.filesystem import detect_filesystem_anomalies
     from picodome.l4.rules.honeypot import detect_honeypot_touches
+    from picodome.l4.rules.network import detect_network_anomalies
+    from picodome.l4.rules.persistence import detect_persistence
+    from picodome.l4.rules.privilege_escalation import detect_privilege_escalation
+    from picodome.l4.rules.process_anomaly import detect_process_anomalies
+    from picodome.l4.rules.supply_chain import detect_supply_chain_patterns
     from picodome.l4.rules.timing import detect_timing_anomalies
 
     engine = L4Engine()
@@ -182,6 +192,16 @@ def create_default_engine() -> L4Engine:
     engine.register("L4-ENTROPY", detect_entropy_anomalies)
     engine.register("L4-HONEY", detect_honeypot_touches)
     engine.register("L4-BASE", detect_baseline_drift)
+    engine.register("L4-ENV", detect_env_leak)
+    engine.register("L4-PROC", detect_process_anomalies)
+    engine.register("L4-FS", detect_filesystem_anomalies)
+    engine.register("L4-NET", detect_network_anomalies)
+    engine.register("L4-SC", detect_supply_chain_patterns)
+    engine.register("L4-PRIVESC", detect_privilege_escalation)
+    engine.register("L4-PERSIST", detect_persistence)
+    engine.register("L4-CRYPTO", detect_crypto_mining)
+    engine.register("L4-CONTAINER", detect_container_escape)
+    engine.register("L4-DEP", detect_dependency_confusion)
     return engine
 
 

@@ -50,7 +50,7 @@ def format_pipeline_json(
     output = {
         "l3_sandbox": sandbox.to_dict(deterministic=deterministic),
         "l4_analysis": analysis.to_dict(deterministic=deterministic),
-        "pipeline": "iron-dome",
+        "pipeline": "picodome",
         "version": __version__,
     }
     return json.dumps(output, indent=indent, default=str, sort_keys=True)

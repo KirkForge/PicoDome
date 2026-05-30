@@ -76,9 +76,26 @@ class SubprocessBackend(SandboxBackend):
         effective_timeout = timeout or 30.0
 
         try:
-            run_env = os.environ.copy()
-            if env:
-                run_env.update(env)
+            # Secure-default: use explicit env allowlist, not full process env inheritance.
+            # Only pass through known-safe vars; caller can add more via the env parameter.
+            if env is not None:
+                # Caller provided full env — use as-is (caller is responsible)
+                run_env = dict(env)
+            else:
+                # Default: minimal safe env, not os.environ.copy()
+                run_env = {
+                    k: v
+                    for k, v in os.environ.items()
+                    if k
+                    in (
+                        'PATH', 'HOME', 'USER', 'LANG', 'LC_ALL', 'LC_CTYPE',
+                        'TERM', 'TMPDIR', 'TEMP', 'TMP',
+                        'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH',
+                        'PYTHONPATH', 'PYTHONHOME', 'PYTHONIOENCODING',
+                        'NODE_PATH', 'NPM_CONFIG_PREFIX',
+                        'PICODOME_SANDBOX_BACKEND', 'PICODOME_ALLOW_DEGRADED',
+                    )
+                }
 
             proc = subprocess.Popen(
                 command,

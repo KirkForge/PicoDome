@@ -166,12 +166,12 @@ class TestPolicyVerificationInLoadPolicy:
     def test_load_named_policy_ignores_verification(self):
         """Named policies (built-in) don't need signature verification."""
         policy = load_policy(name="strict", verify_signature=True)
-        assert policy.name == "iron-dome-strict"
+        assert policy.name == "picodome-strict"
 
     def test_default_policy_ignores_verification(self):
         """Default policy doesn't need signature verification."""
         policy = load_policy(verify_signature=True)
-        assert policy.name == "iron-dome-default"
+        assert policy.name == "picodome-default"
 
 
 class TestHelmPolicySigning:

@@ -67,6 +67,7 @@ CORS_ALLOW_METHODS = "GET, POST, OPTIONS"
 CORS_ALLOW_HEADERS = "Content-Type, Authorization, X-Tenant, X-Request-ID"
 CORS_MAX_AGE = "86400"  # 24 hours
 _CORS_ALLOW_ORIGINS_LIST = [o.strip() for o in CORS_ALLOW_ORIGINS.split(",") if o.strip()]
+_CORS_DENY_BY_DEFAULT = not _CORS_ALLOW_ORIGINS_LIST and CORS_ALLOW_ORIGINS != "*"
 _ENTERPRISE_MODE = os.environ.get("PICODOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes")
 
 # F2: In enterprise mode, reject wildcard CORS origin
@@ -271,18 +272,20 @@ class PicoDomeHandler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Cache-Control", "no-store")
-        # CORS headers
-        # F2: When no explicit origins configured or wildcard in enterprise,
-        # reflect the request origin instead of sending wildcard.
+        # CORS headers — deny-by-default.
+        # Without PICODOME_CORS_ORIGINS set, no origins are allowed.
+        # Set PICODOME_CORS_ORIGINS=http://localhost:3000 or =* to enable.
         request_origin = self.headers.get("Origin", "")
-        if not _CORS_ALLOW_ORIGINS_LIST or CORS_ALLOW_ORIGINS == "*":
-            # No origins configured or wildcard — reflect request origin
+        if _CORS_DENY_BY_DEFAULT:
+            # No origins configured — deny all CORS
+            self.send_header("Access-Control-Allow-Origin", "null")
+        elif CORS_ALLOW_ORIGINS == "*":
+            # Wildcard — allow any origin (not recommended for production)
             if request_origin:
                 self.send_header("Access-Control-Allow-Origin", request_origin)
                 self.send_header("Vary", "Origin")
             else:
-                # No Origin header — send self-referencing origin
-                self.send_header("Access-Control-Allow-Origin", "null")
+                self.send_header("Access-Control-Allow-Origin", "*")
         elif request_origin in _CORS_ALLOW_ORIGINS_LIST:
             # Specific origins configured — only allow known origins
             self.send_header("Access-Control-Allow-Origin", request_origin)

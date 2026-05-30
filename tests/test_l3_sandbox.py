@@ -13,7 +13,7 @@ from picodome.l3.policy import default_policy
 class TestPolicy:
     def test_default_policy_loads(self):
         policy = default_policy()
-        assert policy.name == "iron-dome-default"
+        assert policy.name == "picodome-default"
         assert policy.default_action == SyscallAction.DENY
         assert len(policy.rules) > 0
 

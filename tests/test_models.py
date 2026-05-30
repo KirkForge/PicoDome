@@ -673,7 +673,7 @@ class TestPolicy:
 
     def test_to_dict(self, default_policy):
         d = default_policy.to_dict()
-        assert d["name"] == "iron-dome-default"
+        assert d["name"] == "picodome-default"
         assert d["version"] == "1.0"
         assert d["default_action"] == "deny"
         assert len(d["rules"]) > 0
