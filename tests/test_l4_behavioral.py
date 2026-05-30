@@ -18,13 +18,13 @@ from picodome.l4.profiler import profile_from_sandbox_result
 
 class TestProfiler:
     def test_profile_from_clean_result(self):
-        result = sandbox_run(["echo", "hello"])
+        result = sandbox_run(["echo", "hello"], allow_degraded=True)
         profile = profile_from_sandbox_result(result)
         assert profile.package is not None
         assert profile.exit_code == 0
 
     def test_profile_has_no_network_on_clean_cmd(self):
-        result = sandbox_run(["echo", "clean"])
+        result = sandbox_run(["echo", "clean"], allow_degraded=True)
         profile = profile_from_sandbox_result(result)
         assert len(profile.network_calls) == 0
 
@@ -186,7 +186,7 @@ class TestEndToEnd:
     def test_l3_to_l4_pipeline(self):
         """Full L3+L4 pipeline: sandbox a command, then analyze behavior."""
         # L3: run a safe command
-        sandbox = sandbox_run(["echo", "pipeline_test"])
+        sandbox = sandbox_run(["echo", "pipeline_test"], allow_degraded=True)
         assert sandbox.overall_verdict.value == "ALLOW"
 
         # L4: profile and analyze
@@ -205,7 +205,8 @@ class TestEndToEnd:
                 "python3",
                 "-c",
                 "print('connect 192.168.1.100:1337'); print('reading /etc/passwd'); print('eval(compile(bad))')",
-            ]
+            ],
+            allow_degraded=True,
         )
         profile = profile_from_sandbox_result(sandbox)
         result = create_default_engine().analyze(profile)

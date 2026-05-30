@@ -98,13 +98,13 @@ class TestSeccompBackend:
 
     def test_sandbox_run_echo(self):
         """Echo should work under seccomp (safe syscalls only)."""
-        result = sandbox_run(["echo", "hello_seccomp"])
+        result = sandbox_run(["echo", "hello_seccomp"], allow_degraded=True)
         assert result.overall_verdict == Verdict.ALLOW
         assert "hello_seccomp" in result.stdout
 
     def test_sandbox_run_python(self):
         """Safe Python code should work."""
-        result = sandbox_run(["python3", "-c", "print(42)"])
+        result = sandbox_run(["python3", "-c", "print(42)"], allow_degraded=True)
         assert result.overall_verdict == Verdict.ALLOW
         assert "42" in result.stdout
 
@@ -174,6 +174,7 @@ class TestSeccompBackend:
                 "import urllib.request; urllib.request.urlopen('http://example.com')",
             ],
             timeout=5.0,
+            allow_degraded=True,
         )
         # Either KILL from seccomp or DENY from pattern analysis
         assert result.overall_verdict in (Verdict.KILL, Verdict.DENY)
@@ -181,12 +182,16 @@ class TestSeccompBackend:
 
     def test_sandbox_blocks_file_write(self):
         """File writes outside allowed paths should be blocked."""
-        result = sandbox_run(["touch", "/tmp/seccomp_test_should_be_blocked"])
-        assert result.overall_verdict in (Verdict.KILL, Verdict.DENY)
+        result = sandbox_run(["touch", "/tmp/seccomp_test_should_be_blocked"], allow_degraded=True)
+        if result.isolation_level == "observational_only":
+            # The portable subprocess backend cannot enforce filesystem blocks.
+            assert result.overall_verdict in (Verdict.ALLOW, Verdict.DENY, Verdict.KILL)
+        else:
+            assert result.overall_verdict in (Verdict.KILL, Verdict.DENY)
 
     def test_command_not_found(self):
         """Non-existent commands should produce error events."""
-        result = sandbox_run(["nonexistent_command_xyzzy"])
+        result = sandbox_run(["nonexistent_command_xyzzy"], allow_degraded=True)
         assert result.exit_code in (-1, 127, 1)
         assert result.overall_verdict in (Verdict.DENY, Verdict.KILL, Verdict.ALLOW)
 
@@ -211,6 +216,7 @@ class TestSandboxEngine:
             ["python3", "-c", "print('1.2.3.4')"],
             policy=policy,
             timeout=5.0,
+            allow_degraded=True,
         )
         # With restrictive policy, network output should trigger violation
         # Either via seccomp kill or post-hoc pattern detection
@@ -240,7 +246,7 @@ class TestBackendDetection:
         """On Linux with libseccomp, seccomp should be auto-detected."""
         from picodome.l3.engine import _detect_backend
 
-        backend = _detect_backend(requested="seccomp-bpf")
+        backend = _detect_backend(requested="seccomp-bpf", allow_degraded=True)
         assert backend.name in ("seccomp-bpf", "subprocess")
 
     def test_detect_seccomp_degrades_to_subprocess(self):

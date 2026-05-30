@@ -644,14 +644,17 @@ class PicoDomeHandler(BaseHTTPRequestHandler):
         self._send_json(health_data)
 
     def _handle_ready(self) -> None:
-        # Check that sandbox backend works
+        # Check that sandbox backend works. In community/default mode the
+        # readiness probe may degrade to the observational subprocess backend
+        # so orchestration health checks still receive a concrete JSON status.
+        # Enterprise mode remains fail-closed and rejects observational-only
+        # backends.
         try:
-            from picodome.l3.engine import get_backend
+            from picodome.l3.engine import _detect_backend
 
-            backend = get_backend()
-            # For enterprise mode, refuse ready if backend is observational only
             enterprise_mode = os.environ.get("PICODOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes")
-            is_degraded = backend.name == "subprocess"
+            backend = _detect_backend(allow_degraded=not enterprise_mode)
+            is_degraded = backend.isolation_level == "observational_only"
 
             if enterprise_mode and backend.isolation_level == "observational_only":
                 self._send_error(

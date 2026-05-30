@@ -42,14 +42,7 @@ def detect_env_leak(
     baselines: dict[str, Baseline] | None = None,
 ) -> list[Finding]:
     """Detect access to or leakage of sensitive environment variables."""
-    import re
-
     findings: list[Finding] = []
-    combined = "\n".join(
-        op.path for op in profile.fs_ops if op.operation in ("read", "write")
-    )
-    if profile.stdout_len or profile.stderr_len:
-        combined += "\n"
 
     # Check filesystem ops for .env file access
     for op in profile.fs_ops:
