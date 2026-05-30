@@ -1041,7 +1041,7 @@ class PicoDomeDaemon:
 
     Usage::
 
-        daemon = PicoDomeDaemon(host="0.0.0.0", port=8443)
+        daemon = PicoDomeDaemon(host="127.0.0.1", port=8443)
         daemon.start()   # blocking
         # or
         daemon.start(background=True)

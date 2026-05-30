@@ -69,6 +69,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Allow fallback to subprocess if requested backend is unavailable",
     )
+    sandbox_parser.add_argument(
+        "--allow-runtime",
+        choices=["node", "python"],
+        help="Use a runtime-friendly policy (node or python) that allows common package manager operations",
+    )
     sandbox_parser.add_argument("--cwd", "-C", help="Working directory")
     sandbox_parser.add_argument(
         "--format",
@@ -111,6 +116,11 @@ def main(argv: list[str] | None = None) -> int:
         "--allow-degraded",
         action="store_true",
         help="Allow fallback to subprocess if requested backend is unavailable",
+    )
+    pipeline_parser.add_argument(
+        "--allow-runtime",
+        choices=["node", "python"],
+        help="Use a runtime-friendly policy (node or python) that allows common package manager operations",
     )
     pipeline_parser.add_argument("--cwd", "-C", help="Working directory")
     pipeline_parser.add_argument(
@@ -385,7 +395,14 @@ def _cmd_sandbox(args) -> int:
         print("Error: no command specified", file=sys.stderr)
         return 1
 
-    policy = load_policy(args.policy) if args.policy else None
+    # --allow-runtime takes precedence over --policy
+    if getattr(args, "allow_runtime", None) and not args.policy:
+        from picodome.l3.policy import load_policy as _lp
+        policy = _lp(name=args.allow_runtime)
+    elif args.policy:
+        policy = load_policy(args.policy)
+    else:
+        policy = None
     deterministic = args.deterministic_output
 
     # Resolve backend
@@ -504,13 +521,44 @@ def _cmd_analyze(args) -> int:
     return _compute_exit_code_analysis(result, args)
 
 
+def _auto_detect_policy(command: list[str]):
+    """Auto-detect runtime from command and return appropriate policy.
+
+    If the command looks like npm/node, return node policy.
+    If the command looks like pip/python, return python policy.
+    Otherwise return None (use default).
+    """
+    from picodome.l3.policy import load_policy as _lp
+
+    if not command:
+        return None
+
+    exe = command[0].split("/")[-1].lower() if command[0] else ""
+
+    node_commands = {"npm", "npx", "node", "yarn", "pnpm", "bun"}
+    python_commands = {"pip", "pip3", "python", "python3", "uv", "poetry", "pdm", "conda"}
+
+    if exe in node_commands:
+        return _lp(name="node")
+    elif exe in python_commands:
+        return _lp(name="python")
+    return None
+
+
 def _cmd_pipeline(args) -> int:
     """Run full L3+L4 pipeline."""
     if not args.command:
         print("Error: no command specified", file=sys.stderr)
         return 1
 
-    policy = load_policy(args.policy) if args.policy else None
+    # --allow-runtime takes precedence over --policy
+    if getattr(args, "allow_runtime", None) and not args.policy:
+        policy = load_policy(name=args.allow_runtime)
+    elif args.policy:
+        policy = load_policy(args.policy)
+    else:
+        # Auto-detect runtime from command
+        policy = _auto_detect_policy(args.command)
     deterministic = args.deterministic_output
 
     # Resolve backend

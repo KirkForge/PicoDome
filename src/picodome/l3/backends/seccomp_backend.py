@@ -125,6 +125,10 @@ _PROCESS_SYSCALLS = {
     "vfork",
     "clone",
     "clone3",
+    # Child reaping — inseparable from spawning
+    "wait4",
+    "waitid",
+    "waitpid",
 }
 
 # Comprehensive safe syscalls needed for basic binary execution
@@ -218,6 +222,10 @@ _SAFE_SYSCALLS = {
     "memfd_create",
     "capget",
     "capset",
+    # Child process reaping (inseparable from process management)
+    "wait4",
+    "waitid",
+    "waitpid",
 }
 
 
@@ -361,24 +369,36 @@ class SeccompBackend(SandboxBackend):
 
                 # Check for seccomp kill (SIGSYS = 31)
                 if exit_code == -31:
+                    # Build a helpful diagnostic: which syscall categories were denied
+                    denied_categories = []
+                    if blocked:
+                        denied_categories.append(f"blocked={', '.join(sorted(blocked)[:10])}")
+                    if policy.default_action == SyscallAction.DENY or policy.default_action == SyscallAction.KILL:
+                        denied_categories.append("default_action=DENY")
+                    # Suggest remediation
+                    suggestions = []
+                    if "clone" in blocked or "clone3" in blocked or "fork" in blocked:
+                        suggestions.append("Process spawning was denied. Use --allow-runtime node/python or add process_spawn: allow to your policy.")
+                    if "wait4" in blocked or "waitid" in blocked:
+                        suggestions.append("Child reaping was denied. If you allow process spawning, child reaping syscalls must also be allowed.")
+                    if not suggestions:
+                        suggestions.append("A syscall was blocked by the sandbox policy. Use --allow-runtime node/python for common package managers, or use a permissive policy with default_action=ALLOW.")
+
+                    diagnostic = "Process killed by seccomp — syscall violation."
+                    if denied_categories:
+                        diagnostic += " " + "; ".join(denied_categories) + "."
+                    if suggestions:
+                        diagnostic += " " + suggestions[0]
+
                     events.append(
                         SandboxEvent(
                             rule_id="L3-SECCOMP-KILL",
                             verdict=Verdict.KILL,
                             operation="seccomp_violation",
-                            detail="Process killed by seccomp — syscall violation",
+                            detail=diagnostic,
                             timestamp_ms=int(_now_ms() - start_ms),
                         )
                     )
-                    # Get the blocked syscall list for evidence
-                    if blocked:
-                        events[-1] = SandboxEvent(
-                            rule_id="L3-SECCOMP-KILL",
-                            verdict=Verdict.KILL,
-                            operation="seccomp_violation",
-                            detail=f"Blocked syscalls: {', '.join(sorted(blocked)[:10])}",
-                            timestamp_ms=int(_now_ms() - start_ms),
-                        )
 
                 # Post-hoc analysis on output
                 events.extend(self._posthoc_analysis(stdout, stderr))

@@ -38,8 +38,12 @@ pip install picodome
 # L3: Sandbox a command
 picodome sandbox python3 -c "print('hello')"
 
-# L3+L4: Full pipeline
+# L3+L4: Full pipeline (auto-detects runtime)
 picodome pipeline npm install some-package
+
+# L3+L4: Explicit runtime policy
+picodome pipeline --allow-runtime node npm install some-package
+picodome sandbox --allow-runtime python pip install some-package
 
 # Analyze existing sandbox output
 picodome sandbox --format json npm test > sandbox.json
@@ -72,7 +76,7 @@ PicoDome auto-detects the best available backend:
 
 **Important**: The subprocess backend is **observational only** — it detects suspicious patterns in output but does not prevent syscalls. It is not a true sandbox.
 
-**Important**: The seccomp-bpf backend is a **syscall policy harness**, not a full containment boundary. It filters syscalls at the kernel level (real enforcement), but does not provide namespace/mount/filesystem isolation, `prctl(PR_SET_NO_NEW_PRIVS)`, privilege dropping, or `setrlimit`. For safe execution of untrusted packages, compose with user namespaces, `bubblewrap`, or `gVisor`. Default-deny policies will kill processes on missing syscalls (e.g. `clone3`, `wait4`) — use `--allow-runtime node` or the per-runtime profiles for common package managers, or use default-allow with explicit deny rules.
+**Important**: The seccomp-bpf backend is a **syscall policy harness**, not a full containment boundary. It filters syscalls at the kernel level (real enforcement), but does not provide namespace/mount/filesystem isolation, `prctl(PR_SET_NO_NEW_PRIVS)`, privilege dropping, or `setrlimit`. For safe execution of untrusted packages, compose with user namespaces, `bubblewrap`, or `gVisor`. Default-deny policies will kill processes on missing syscalls. Use `--allow-runtime node` or `--allow-runtime python` to select a runtime-appropriate policy, or use `--policy node`/`--policy python` for explicit control. The `pipeline` command auto-detects runtimes (npm/node → node policy, pip/python → python policy).
 
 Use `--backend seccomp-bpf` (or `PICODOME_SANDBOX_BACKEND=seccomp-bpf`) to require a specific backend. If the requested backend is unavailable, PicoDome **fails closed** by default. Use `--allow-degraded` (or `PICODOME_ALLOW_DEGRADED=1`) to opt into subprocess fallback explicitly.
 

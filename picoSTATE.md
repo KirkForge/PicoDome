@@ -80,8 +80,13 @@ A deterministic runtime sandbox and behavioral analysis engine for supply-chain 
 ## Recent Changes (2026-05-30)
 
 - Added 5 new L4 detector rules (PRIVESC, PERSIST, CRYPTO, CONTAINER, DEP) — 10 → 15 total
+- **Fixed critical blocker**: added wait4/waitid/waitpid to seccomp _PROCESS_SYSCALLS and _SAFE_SYSCALLS — child-reaping was denied under default-deny, killing npm/pip subprocesses
+- Added `--allow-runtime {node,python}` CLI flag — selects appropriate named policy
+- Pipeline command now auto-detects runtime (npm/node → node policy, pip/python → python policy)
+- Improved seccomp SIGSYS diagnostic — now shows denied syscall categories and remediation suggestions
 - Renamed all policy names from `iron-dome-*` to `picodome-*`
 - Added 5 new L4 detector rules (ENV, PROC, FS, NET, SC)
 - Fixed CORS default from wildcard to deny-by-default
 - Fixed subprocess backend env inheritance from `os.environ.copy()` to explicit allowlist
+- Fixed daemon docstring example from `0.0.0.0` to `127.0.0.1`
 - Updated README L4 rule table with all 15 rules
