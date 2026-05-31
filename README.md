@@ -1,3 +1,5 @@
+![PicoDome Banner](docs/banner.png)
+
 # PicoDome 🛡️
 
 **Deterministic runtime sandbox and behavioral analysis for supply-chain security — protecting machines (especially LLMs) from injection attacks.**
