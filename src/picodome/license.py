@@ -136,7 +136,7 @@ def _validate_key(key: str) -> LicenseInfo | None:
     PicoDome is free for personal use. Commercial use requires a PicoShogun
     license key issued by the PicoShogun command centre.
 
-    Key format: shogun-<tier>-<org>-<hash>
+    Key format: picoshogun-<tier>-<org>-<hash>
     The <hash> portion must be a valid SHA-256 HMAC of the key prefix,
     signed with the PicoShogun instance secret.
 
@@ -145,13 +145,13 @@ def _validate_key(key: str) -> LicenseInfo | None:
     not cryptographic authenticity. Set PICODOME_LICENSE_KEY or place a
     license file to enable commercial features.
     """
-    if not key.startswith("shogun-"):
-        logger.warning("Invalid license key format: must start with 'shogun-'")
+    if not key.startswith("picoshogun-"):
+        logger.warning("Invalid license key format: must start with 'picoshogun-'")
         return None
 
     parts = key.split("-")
     if len(parts) < 4:
-        logger.warning("Invalid license key format: expected shogun-<tier>-<org>-<hash>")
+        logger.warning("Invalid license key format: expected picoshogun-<tier>-<org>-<hash>")
         return None
 
     tier_str = parts[1]

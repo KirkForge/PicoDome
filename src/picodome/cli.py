@@ -391,6 +391,9 @@ def _add_common_flags(parser: argparse.ArgumentParser) -> None:
 
 def _cmd_sandbox(args) -> int:
     """Run L3 sandbox."""
+    # Strip leading '--' separator (common CLI convention: 'picodome sandbox -- command args')
+    if args.command and args.command[0] == '--':
+        args.command = args.command[1:]
     if not args.command:
         print("Error: no command specified", file=sys.stderr)
         return 1
@@ -547,6 +550,9 @@ def _auto_detect_policy(command: list[str]):
 
 def _cmd_pipeline(args) -> int:
     """Run full L3+L4 pipeline."""
+    # Strip leading '--' separator (common CLI convention: 'picodome pipeline -- command args')
+    if args.command and args.command[0] == '--':
+        args.command = args.command[1:]
     if not args.command:
         print("Error: no command specified", file=sys.stderr)
         return 1

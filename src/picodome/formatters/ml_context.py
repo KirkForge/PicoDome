@@ -45,7 +45,7 @@ def format_ml_context(
 def _l3_ml_context(result: SandboxResult, token_budget: int) -> str:
     """Format L3 sandbox result for ML context."""
     lines = [
-        f"IRON DOME L3 SANDBOX | v{__version__}",
+        f"PICODOME L3 SANDBOX | v{__version__}",
         f"command: {' '.join(result.command)}",
         f"verdict: {result.overall_verdict.value}",
         f"exit_code: {result.exit_code}",
@@ -68,7 +68,7 @@ def _l3_ml_context(result: SandboxResult, token_budget: int) -> str:
 def _l4_ml_context(result: AnalysisResult, token_budget: int) -> str:
     """Format L4 analysis result for ML context."""
     lines = [
-        f"IRON DOME L4 ANALYSIS | v{__version__}",
+        f"PICODOME L4 ANALYSIS | v{__version__}",
         f"target: {result.target}",
         f"verdict: {result.overall_verdict.value}",
         f"findings: {len(result.findings)}",

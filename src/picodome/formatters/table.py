@@ -36,7 +36,7 @@ def _l3_table(result: SandboxResult) -> str:
 
     lines = [
         "╔" + "═" * (width - 2) + "╗",
-        f"║ {'IRON DOME — L3 SANDBOX':^{width - 4}} ║",
+        f"║ {'PICODOME — L3 SANDBOX':^{width - 4}} ║",
         "╠" + "═" * (width - 2) + "╣",
         f"║ {'Command:':<16} {' '.join(result.command):<{width - 20}} ║",
     ]
@@ -88,7 +88,7 @@ def _l4_table(result: AnalysisResult) -> str:
     verdict_icon = _behavioral_icon(result.overall_verdict)
     lines = [
         "╔" + "═" * (width - 2) + "╗",
-        f"║ {'IRON DOME — L4 BEHAVIORAL ANALYSIS':^{width - 4}} ║",
+        f"║ {'PICODOME — L4 BEHAVIORAL ANALYSIS':^{width - 4}} ║",
         "╠" + "═" * (width - 2) + "╣",
         f"║ {'Target:':<16} {result.target:<{width - 20}} ║",
         f"║ {'Verdict:':<16} {verdict_icon}"

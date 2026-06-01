@@ -137,7 +137,7 @@ class TestMLContextFormatter:
         result = _make_sandbox_result()
         output = format_ml_context(result, token_budget=4096)
         assert isinstance(output, str)
-        assert "IRON DOME" in output or "echo" in output
+        assert "PICODOME" in output or "echo" in output
 
     def test_format_analysis(self):
         result = _make_analysis_result()

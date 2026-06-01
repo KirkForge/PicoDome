@@ -1,6 +1,6 @@
 # SLSA — Supply-chain Levels for Software Artifacts
 
-**Project:** PicoDome v0.5.0  
+**Project:** PicoDome (see pyproject.toml for current version)  
 **Target Level:** SLSA Build Level 3 (L3)  
 **Date:** 2026-05-22  
 
@@ -27,7 +27,7 @@ PicoDome is working toward **SLSA Build L3** compliance. Current security measur
 ## Build Pipeline (release.yml)
 
 ```
-git tag v0.5.0 → push → CI triggers:
+git tag v<X.Y.Z> → push → CI triggers:
   1. Quality Gates (tests + mypy + ruff, Python 3.10–3.13)
   2. Determinism Gate (verify-determinism on sample sandbox runs)
   3. Build (python -m build + twine check)
@@ -47,9 +47,9 @@ git tag v0.5.0 → push → CI triggers:
 
 ```bash
 python -m sigstore verify identity \
-  --cert-identity "https://github.com/KirkForge/PicoDome/.github/workflows/release.yml@refs/tags/v0.5.0" \
+  --cert-identity "https://github.com/KirkForge/PicoDome/.github/workflows/release.yml@refs/tags/v<X.Y.Z>" \
   --cert-oidc-issuer "https://token.actions.githubusercontent.com" \
-  picodome-0.5.0-py3-none-any.whl
+  picodome-<X.Y.Z>-py3-none-any.whl
 ```
 
 ### SLSA L3 (Active)
@@ -59,8 +59,8 @@ SLSA L3 provenance is generated and verified on every tagged release. Verificati
 ```bash
 slsa-verifier verify-artifact \
   --source-uri github.com/KirkForge/PicoDome \
-  --source-tag v0.5.0 \
-  picodome-0.5.0-py3-none-any.whl
+  --source-tag v<X.Y.Z> \
+  picodome-<X.Y.Z>-py3-none-any.whl
 ```
 
 ### Determinism Verification (PicoDome-specific)
@@ -97,7 +97,7 @@ This is a stronger guarantee than SLSA alone: not only can you verify *where* th
 
 ```
 Project:  KirkForge/PicoDome
-Version:  v0.5.0
+Version:  (latest release)
 Build:    GitHub Actions (release.yml)
 Signer:   Sigstore (OIDC via GitHub Actions)
 Rekor:    https://rekor.sigstore.dev

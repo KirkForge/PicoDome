@@ -82,7 +82,7 @@ A deterministic runtime sandbox and behavioral analysis engine for supply-chain 
 **Publish-ready for beta.** Core L3+L4 product is solid, three external reviews closed, headline use cases verified end-to-end.
 
 **Remaining honest gaps (not blocking):**
-- License gate accepts any `shogun-` prefixed key (placeholder until Shogun ships real verification)
+- License gate accepts any `picoshogun-` prefixed key (placeholder until PicoShogun ships real verification)
 - SLSA L3 provenance generated but hermetic builds not yet achieved
 - GitHub Actions billing resets June 1 — pre-push gate passes (gitleaks + trufflehog)
 - Scaffolded features (K8s, gRPC, mTLS, Redis, cluster, Sigstore) have zero production deployment evidence — honestly documented
@@ -125,7 +125,7 @@ A deterministic runtime sandbox and behavioral analysis engine for supply-chain 
 
 - Added 5 new L4 detector rules (PRIVESC, PERSIST, CRYPTO, CONTAINER, DEP) — 10 → 15 total
 - Added 5 new L4 detector rules (ENV, PROC, FS, NET, SC)
-- Renamed all policy names from `iron-dome-*` to `picodome-*`
+- Renamed all policy names to `picodome-*` prefix
 - Fixed CORS default from wildcard to deny-by-default
 - Fixed subprocess backend env inheritance from `os.environ.copy()` to explicit allowlist
 - Updated README L4 rule table with all 15 rules
