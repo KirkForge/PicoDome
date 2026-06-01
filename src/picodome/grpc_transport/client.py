@@ -99,8 +99,8 @@ class PicoDomeGRPCClient:
         self._timeout = timeout
         self._max_retries = max_retries
         self._retry_delay = retry_delay
-        self._channel: Any = None
-        self._stub: Any = None
+        self._channel = None
+        self._stub = None
 
     def _ensure_channel(self) -> None:
         """Lazily create the gRPC channel and stub."""
@@ -123,7 +123,7 @@ class PicoDomeGRPCClient:
 
         # Try to use generated stubs, fall back to manual
         try:
-            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc  # type: ignore[attr-defined]
+            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc
 
             self._stub = pb2_grpc.PicoDomeServiceStub(self._channel)
         except ImportError:
@@ -229,8 +229,8 @@ class PicoDomeGRPCClient:
     ) -> ScanResult:
         """Execute a single scan RPC call."""
         try:
-            from picodome.grpc_transport.proto import picodome_pb2 as pb2  # type: ignore[attr-defined]
-            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc  # type: ignore[attr-defined]
+            from picodome.grpc_transport.proto import picodome_pb2 as pb2
+            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc
 
             request = pb2.ScanRequest(
                 command=command,
@@ -314,8 +314,8 @@ class PicoDomeGRPCClient:
         self._ensure_channel()
 
         try:
-            from picodome.grpc_transport.proto import picodome_pb2 as pb2  # type: ignore[attr-defined]
-            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc  # type: ignore[attr-defined]
+            from picodome.grpc_transport.proto import picodome_pb2 as pb2
+            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc
 
             request = pb2.HealthCheckRequest()
             if self._stub is None:
@@ -348,8 +348,8 @@ class PicoDomeGRPCClient:
         self._ensure_channel()
 
         try:
-            from picodome.grpc_transport.proto import picodome_pb2 as pb2  # type: ignore[attr-defined]
-            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc  # type: ignore[attr-defined]
+            from picodome.grpc_transport.proto import picodome_pb2 as pb2
+            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc
 
             request = pb2.PolicyGetRequest(name=name, version=version or 0)
             if self._stub is None:
@@ -389,8 +389,8 @@ class PicoDomeGRPCClient:
         self._ensure_channel()
 
         try:
-            from picodome.grpc_transport.proto import picodome_pb2 as pb2  # type: ignore[attr-defined]
-            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc  # type: ignore[attr-defined]
+            from picodome.grpc_transport.proto import picodome_pb2 as pb2
+            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc
 
             request = pb2.AuditQueryRequest(
                 event_type=event_type or "",
