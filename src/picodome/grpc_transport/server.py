@@ -87,8 +87,8 @@ class PicoDomeGRPCServer:
         self._port = port
         self._mtls_config = mtls_config
         self._max_workers = max_workers
-        self._server = None
-        self._servicer = None
+        self._server: Any = None
+        self._servicer: Any = None
         self._start_time = time.time()
         self._scan_engine = _ScanEngine(scan_fn=scan_fn, analyze_fn=analyze_fn)
         self._scan_count = 0
@@ -115,7 +115,7 @@ class PicoDomeGRPCServer:
         # Register servicer — we use the generated pb2/pb2_grpc if available,
         # otherwise fall back to manual registration
         try:
-            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc
+            from picodome.grpc_transport.proto import picodome_pb2_grpc as pb2_grpc  # type: ignore[attr-defined]
 
             pb2_grpc.add_PicoDomeServiceServicer_to_server(self._servicer, self._server)
         except ImportError:
