@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 from picodome.models import (
     BehavioralVerdict,
     Finding,
-    ScanStats,
 )
+from picodome.models import ScanStats  # noqa: F401 — re-exported for l4/engine convenience
 
 
 @dataclass(frozen=True)

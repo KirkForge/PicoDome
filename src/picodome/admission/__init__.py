@@ -32,6 +32,7 @@ from typing import Any, ClassVar
 logger = logging.getLogger("picodome.admission")
 
 _DEFAULT_PORT = 8443
+_DEFAULT_HOST = "127.0.0.1"
 
 
 # ─── Admission Review models ───────────────────────────────────────────────
@@ -203,11 +204,13 @@ class AdmissionWebhookServer:
 
     def __init__(
         self,
+        host: str = _DEFAULT_HOST,
         port: int = _DEFAULT_PORT,
         cert_file: str | Path | None = None,
         key_file: str | Path | None = None,
         validator: Any = None,
     ) -> None:
+        self._host = host
         self._port = port
         self._cert_file = str(cert_file) if cert_file else ""
         self._key_file = str(key_file) if key_file else ""
@@ -218,7 +221,7 @@ class AdmissionWebhookServer:
         """Start the admission webhook server."""
         AdmissionHandler.validator = self._validator
 
-        self._server = HTTPServer(("0.0.0.0", self._port), AdmissionHandler)
+        self._server = HTTPServer((self._host, self._port), AdmissionHandler)
 
         if self._cert_file and self._key_file:
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)

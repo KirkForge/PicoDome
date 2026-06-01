@@ -46,7 +46,7 @@ KNOWN_KEYS = frozenset(
 
 # Valid values for enum-like config fields
 VALID_SEVERITIES = frozenset({"critical", "high", "medium", "low", "info"})
-VALID_FORMATS = frozenset({"json", "sarif", "table"})
+VALID_FORMATS = frozenset({"json", "sarif", "table", "ml-context", "github", "cyclonedx"})
 VALID_LOG_FORMATS = frozenset({"text", "json"})
 
 
@@ -90,6 +90,13 @@ class PicoDomeConfig:
         # Logging
         self.log_format: str = "text"
 
+        # Storage backend: "sqlite" (default) or "json"
+        self.store_backend: str = "sqlite"
+        self.sqlite_path: str | None = None
+
+        # CORS origins (comma-separated, or "*" for all)
+        self.cors_origins: str = ""
+
     def merge_from_cli(self, args: Any) -> PicoDomeConfig:
         """Merge CLI args into this config. CLI flags override config file values.
 
@@ -117,6 +124,9 @@ class PicoDomeConfig:
         merged.policy = self.policy
         merged.rules = list(self.rules) if self.rules else None
         merged.log_format = self.log_format
+        merged.store_backend = self.store_backend
+        merged.sqlite_path = self.sqlite_path
+        merged.cors_origins = self.cors_origins
 
         # Override with CLI args — only if explicitly set
         if not hasattr(args, "format"):
@@ -247,7 +257,7 @@ def apply_env_overrides(config: PicoDomeConfig) -> PicoDomeConfig:
     CLI flags (applied after this) override env vars.
     """
     # Attributes that accept string values
-    _STRING_ATTRS = {"format", "fail_on", "baseline", "policy", "log_format"}
+    _STRING_ATTRS = {"format", "fail_on", "baseline", "policy", "log_format", "store_backend", "sqlite_path", "cors_origins"}
 
     for env_name, attr_name in _ENV_TO_ATTR.items():
         env_val = os.environ.get(env_name)
@@ -405,6 +415,22 @@ def load_config(target_dir: Path) -> PicoDomeConfig:
             )
         else:
             config.log_format = val
+
+    if "store_backend" in data:
+        val = str(data["store_backend"])
+        if val not in ("sqlite", "json"):
+            logger.warning("Invalid store_backend %r in %s (expected: sqlite or json)", val, config_path)
+        else:
+            config.store_backend = val
+
+    if "sqlite_path" in data:
+        sqlite_path = data["sqlite_path"]
+        if not Path(sqlite_path).is_absolute():
+            sqlite_path = str(config_path.parent / sqlite_path)
+        config.sqlite_path = sqlite_path
+
+    if "cors_origins" in data:
+        config.cors_origins = str(data["cors_origins"])
 
     # Apply environment variable overrides
     config = apply_env_overrides(config)

@@ -12,6 +12,7 @@ or external consumers that expect a simple JSONL feed).
 from __future__ import annotations
 
 import gzip
+import typing
 import logging
 import shutil
 import threading
@@ -55,6 +56,7 @@ class FileSink(AuditSink):
         self._rotate_count = rotate_count
         self._file_path = self._output_dir / self._file_name
         self._lock = threading.Lock()
+        self._fh: typing.TextIO | None = None
 
     # ── Lifecycle ────────────────────────────────────────────────────────
 
@@ -64,12 +66,22 @@ class FileSink(AuditSink):
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
     def stop(self) -> None:
-        """Flush and close."""
+        """Flush and close file handle."""
         self.flush()
+        if self._fh is not None:
+            try:
+                self._fh.close()
+            except OSError:
+                pass
+            self._fh = None
 
     def flush(self) -> None:
-        """No-op for file sink (lines are written immediately)."""
-        pass
+        """Flush cached file handle."""
+        if self._fh is not None:
+            try:
+                self._fh.flush()
+            except OSError:
+                pass
 
     # ── Core ─────────────────────────────────────────────────────────────
 
@@ -94,12 +106,18 @@ class FileSink(AuditSink):
     # ── Internal ─────────────────────────────────────────────────────────
 
     def _write_line(self, line: str) -> None:
-        """Append a line to the file, rotating if needed."""
+        """Append a line to the file, rotating if needed.
+
+        Caches the file handle to avoid opening on every write.
+        The handle is opened in append mode and flushed after each write.
+        """
         if self._file_path.exists() and self._file_path.stat().st_size >= self._max_bytes:
             self._rotate()
 
-        with open(self._file_path, "a", encoding="utf-8") as f:
-            f.write(line + "\n")
+        if self._fh is None:
+            self._fh = open(self._file_path, "a", encoding="utf-8")
+        self._fh.write(line + "\n")
+        self._fh.flush()
 
     def _rotate(self) -> None:
         """Rotate: compress current file to .1.jsonl.gz, shift older files."""
@@ -116,4 +134,10 @@ class FileSink(AuditSink):
             shutil.copyfileobj(f_in, f_out)
 
         # Truncate current log
+        if self._fh is not None:
+            try:
+                self._fh.close()
+            except OSError:
+                pass
+            self._fh = None
         self._file_path.write_text("", encoding="utf-8")

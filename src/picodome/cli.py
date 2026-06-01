@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import os
 from pathlib import Path
 
 from picodome import __version__
@@ -18,7 +19,7 @@ from picodome.formatters.json_fmt import format_json, format_pipeline_json
 from picodome.formatters.ml_context import format_ml_context
 from picodome.formatters.sarif import format_sarif
 from picodome.formatters.table import format_table
-from picodome.guards import DeterministicGuard, diff_results, verify_determinism
+from picodome.guards import DeterministicGuard, diff_results, validate_findings_deterministic, verify_determinism
 from picodome.l3.engine import sandbox_run
 from picodome.l3.models import SandboxResult
 from picodome.l3.policy import load_policy
@@ -34,6 +35,10 @@ _SEVERITY_LEVELS = {
     "low": 3,
     "info": 4,
 }
+
+
+# Default HMAC key for CLI notary commands — warns if used without env var
+_DEFAULT_CLI_HMAC_KEY = "picodome-notary-cli-default"
 
 # Exit codes that trigger --exit-code
 _BAD_VERDICTS = {"DENY", "KILL", "MALICIOUS", "SUSPICIOUS"}
@@ -78,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     sandbox_parser.add_argument(
         "--format",
         "-f",
-        choices=["json", "sari", "table", "ml-context", "github", "cyclonedx"],
+        choices=["json", "sarif", "table", "ml-context", "github", "cyclonedx"],
         default="table",
     )
     _add_common_flags(sandbox_parser)
@@ -94,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     analyze_parser.add_argument(
         "--format",
         "-f",
-        choices=["json", "sari", "table", "ml-context", "github", "cyclonedx"],
+        choices=["json", "sarif", "table", "ml-context", "github", "cyclonedx"],
         default="table",
     )
     analyze_parser.add_argument("--rules", "-r", nargs="*", help="Specific rule IDs to run")
@@ -126,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
     pipeline_parser.add_argument(
         "--format",
         "-f",
-        choices=["json", "sari", "table", "ml-context", "github", "cyclonedx"],
+        choices=["json", "sarif", "table", "ml-context", "github", "cyclonedx"],
         default="table",
     )
     pipeline_parser.add_argument("--rules", "-r", nargs="*", help="Specific L4 rule IDs to run")
@@ -179,7 +184,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # ── health ────────────────────────────────────────────────────────
     health_parser = sub.add_parser("health", help="Run health checks")
-    health_parser.add_argument("--format", "-", choices=["json", "table"], default="table", help="Output format")
+    health_parser.add_argument("--format", "-f", choices=["json", "table"], default="table", help="Output format")
 
     # ── audit-query ───────────────────────────────────────────────────
     audit_parser = sub.add_parser("audit", help="Query the audit log")
@@ -199,7 +204,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # ── policy-versioned ──────────────────────────────────────────────
     policy_v_parser = sub.add_parser("policy-versions", help="Manage versioned policies")
-    policy_v_parser.add_argument("action", choices=["list", "show", "dif", "rollback", "verify"], help="Policy action")
+    policy_v_parser.add_argument("action", choices=["list", "show", "diff", "rollback", "verify"], help="Policy action")
     policy_v_parser.add_argument("--name", help="Policy name")
     policy_v_parser.add_argument("--version", type=int, help="Policy version")
     policy_v_parser.add_argument("--version-a", type=int, help="First version for diff")
@@ -516,6 +521,10 @@ def _cmd_analyze(args) -> int:
         if violations:
             for v in violations:
                 print(f"DETERMINISM VIOLATION: {v}", file=sys.stderr)
+        # Also validate individual findings for determinism
+        finding_violations = validate_findings_deterministic(result.findings)
+        for v in finding_violations:
+            print(f"DETERMINISM VIOLATION (findings): {v}", file=sys.stderr)
 
     # Output
     if not args.quiet:
@@ -1010,7 +1019,9 @@ def _cmd_notary(args) -> int:
             print(f"Error: failed to read entry file: {exc}", file=sys.stderr)
             return 1
 
-        hmac_key = args.hmac_key or "picodome-notary-default-hmac-key"
+        if not args.hmac_key and not os.environ.get("PICODOME_NOTARY_HMAC_KEY"):
+            print("Using default HMAC key. Set PICODOME_NOTARY_HMAC_KEY env var for persistent verification.")
+        hmac_key = args.hmac_key or os.environ.get("PICODOME_NOTARY_HMAC_KEY") or _DEFAULT_CLI_HMAC_KEY
 
         if args.notary == "rekor":
             notary = RekorNotary(
@@ -1048,7 +1059,9 @@ def _cmd_notary(args) -> int:
             print(f"Error: failed to read entry file: {exc}", file=sys.stderr)
             return 1
 
-        hmac_key = args.hmac_key or "picodome-notary-default-hmac-key"
+        if not args.hmac_key and not os.environ.get("PICODOME_NOTARY_HMAC_KEY"):
+            print("Using default HMAC key. Set PICODOME_NOTARY_HMAC_KEY env var for persistent verification.")
+        hmac_key = args.hmac_key or os.environ.get("PICODOME_NOTARY_HMAC_KEY") or _DEFAULT_CLI_HMAC_KEY
 
         if args.notary == "rekor":
             notary = RekorNotary(
@@ -1106,7 +1119,7 @@ def _cmd_cluster(args) -> int:
         backend = MemoryStateBackend() if args.backend == "memory" else SQLiteStateBackend()
 
         manager = ClusterManager(
-            address="0.0.0.0",
+            address="127.0.0.1",
             port=args.port,
             node_id=args.node_id,
             backend=backend,
@@ -1249,7 +1262,7 @@ def _compute_exit_code_sandbox(result: SandboxResult, args) -> int:
 
     # --fail-on: check severity levels
     if args.fail_on:
-        _SEVERITY_LEVELS.get(args.fail_on, 99)
+        threshold = _SEVERITY_LEVELS.get(args.fail_on, 99)
         # Sandbox events don't have severity, but DENY/KILL are bad
         if result.overall_verdict.value in ("DENY", "KILL"):
             return 1

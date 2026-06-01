@@ -7,7 +7,7 @@
 [![CI](https://github.com/KirkForge/PicoDome/actions/workflows/ci.yml/badge.svg)](https://github.com/KirkForge/PicoDome/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/picodome)](https://pypi.org/project/picodome/)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-1459%20passing-brightgreen)](https://github.com/KirkForge/PicoDome)
+[![Tests](https://img.shields.io/badge/tests-1435%20passing-brightgreen)](https://github.com/KirkForge/PicoDome)
 [![Deterministic](https://img.shields.io/badge/deterministic-sha256%20verified-brightgreen)](SCAAT.md)
 [![License: BUSL-1.1](https://img.shields.io/badge/license-BUSL--1.1-blue)](LICENSE)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support%20my%20hardware-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/kirkforge)

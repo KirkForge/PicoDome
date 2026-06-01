@@ -652,7 +652,7 @@ class PicoDomeHandler(BaseHTTPRequestHandler):
         try:
             from picodome.l3.engine import _detect_backend
 
-            enterprise_mode = os.environ.get("PICODOME_ENTERPRISE_MODE", "").lower() in ("1", "true", "yes")
+            enterprise_mode = _ENTERPRISE_MODE
             backend = _detect_backend(allow_degraded=not enterprise_mode)
             is_degraded = backend.isolation_level == "observational_only"
 
@@ -793,7 +793,7 @@ class PicoDomeHandler(BaseHTTPRequestHandler):
             backend: SandboxBackend | None = None
             # F14: Block subprocess backend in enterprise mode
             if _ENTERPRISE_MODE and backend_name == "subprocess":
-                self._send_error(ErrorCodes.FORBIDDEN, detail="subprocess backend is not allowed in enterprise mode")
+                self._send_error(ErrorCodes.ENTERPRISE_ENFORCEMENT, detail="subprocess backend is not allowed in enterprise mode")
                 return
             if backend_name != "auto":
                 backend_map = {
@@ -1187,7 +1187,13 @@ class PicoDomeDaemon:
 
     def start(self, background: bool = False) -> None:
         """Start the daemon HTTP server."""
+        from picodome.mtls import create_ssl_context
+
         server = HTTPServer((self._host, self._port), PicoDomeHandler)
+        ssl_ctx = create_ssl_context()
+        if ssl_ctx:
+            server.socket = ssl_ctx.wrap_socket(server.socket, server_side=True)
+            logger.info("mTLS: TLS enabled on %s:%d", self._host, self._port)
         self._server = server
 
         # Audit
@@ -1297,11 +1303,22 @@ class PicoDomeDaemon:
         signal.signal(signal.SIGTERM, _handle_shutdown)
         signal.signal(signal.SIGINT, _handle_shutdown)
 
-        # SIGHUP for config reload (graceful — future use)
+        # SIGHUP for config reload (graceful — reloads audit sinks and TLS certs)
         if hasattr(signal, "SIGHUP"):
 
             def _handle_hup(signum: int, frame: Any) -> None:
-                logger.info("Received SIGHUP — config reload not yet implemented")
+                logger.info("Received SIGHUP — reloading configuration")
+                try:
+                    from picodome.mtls import reload_ssl_context
+
+                    ctx = reload_ssl_context()
+                    if ctx and self._server:
+                        self._server.socket = ctx.wrap_socket(self._server.socket, server_side=True)
+                        logger.info("SIGHUP: TLS context reloaded")
+                except Exception as exc:
+                    logger.warning("SIGHUP reload failed: %s", exc)
+
+            signal.signal(signal.SIGHUP, _handle_hup)
 
 
 def create_app(

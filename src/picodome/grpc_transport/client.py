@@ -300,14 +300,24 @@ class PicoDomeGRPCClient:
         timeout: float | None = None,
         cwd: str | None = None,
     ) -> ScanResult:
-        """Submit a scan request asynchronously (uses grpcio asyncio if available).
+        """Submit a scan request asynchronously.
 
-        Falls back to synchronous scan if grpcio asyncio is not available.
+        Uses asyncio.to_thread to run the synchronous gRPC call in a
+        thread pool, allowing concurrent scans without blocking the
+        event loop. Falls back to synchronous scan if asyncio is not
+        available.
         """
-        # For now, delegate to sync scan — async gRPC requires grpcio>=1.32
-        # and the async server. This is a reasonable fallback.
-        logger.debug("scan_async: delegating to synchronous scan (async gRPC not yet implemented)")
-        return self.scan(command=command, policy=policy, timeout=timeout, cwd=cwd)
+        import asyncio
+
+        try:
+            loop = asyncio.get_running_loop()
+            logger.debug("scan_async: running synchronous scan in thread pool")
+            return await loop.run_in_executor(
+                None, self.scan, command, policy, timeout, cwd
+            )
+        except RuntimeError:
+            logger.debug("scan_async: no event loop, delegating to synchronous scan")
+            return self.scan(command=command, policy=policy, timeout=timeout, cwd=cwd)
 
     def health(self) -> dict[str, Any]:
         """Check the health of the gRPC server."""

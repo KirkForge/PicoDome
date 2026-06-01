@@ -167,6 +167,18 @@ class SubprocessBackend(SandboxBackend):
             stderr=stderr,
         )
 
+    def _parse_linux_trace(self, trace_output: str) -> list[dict]:
+        """Parse strace-like output using _LINUX_TRACE_PATTERNS.
+
+        Extracts syscall metadata from strace/ptrace output when available.
+        Called when a Linux trace backend provides raw syscall data.
+        """
+        entries = []
+        for name, pattern in _LINUX_TRACE_PATTERNS.items():
+            for match in pattern.finditer(trace_output):
+                entries.append({"syscall": name, "groups": match.groups()})
+        return entries
+
     def _analyze_output(
         self,
         stdout: str,
