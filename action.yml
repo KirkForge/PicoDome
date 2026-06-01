@@ -1,0 +1,196 @@
+name: PicoDome — Runtime Sandbox
+description: Deterministic runtime sandbox and behavioral analysis for supply-chain security
+author: KirkForge
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  command:
+    description: Command to sandbox (e.g. "npm install some-package")
+    required: true
+  mode:
+    description: Run mode — sandbox (L3 only), pipeline (L3+L4), or analyze (post-execution from file)
+    required: false
+    default: 'pipeline'
+  policy:
+    description: Path to policy file (default: built-in)
+    required: false
+    default: ''
+  timeout:
+    description: Timeout in seconds
+    required: false
+    default: '30'
+  format:
+    description: Output format (json, table, sarif)
+    required: false
+    default: 'json'
+  output:
+    description: Output file path for results
+    required: false
+    default: 'picodome-results.json'
+  fail-on:
+    description: Minimum severity to fail the build (low, medium, high, critical)
+    required: false
+    default: 'high'
+  exit-code:
+    description: Exit with non-zero code on findings (true/false)
+    required: false
+    default: 'true'
+  allow-runtime:
+    description: Allow specific runtime (python, node)
+    required: false
+    default: ''
+  rules:
+    description: Comma-separated list of L4 rule IDs to run (defaults to all)
+    required: false
+    default: ''
+  analyze-input:
+    description: Path to JSON file from a previous sandbox run (for analyze mode)
+    required: false
+    default: ''
+  cwd:
+    description: Working directory for the command
+    required: false
+    default: ''
+  verify-determinism:
+    description: Run twice and compare SHA-256 to verify deterministic output (true/false)
+    required: false
+    default: 'false'
+  version:
+    description: PicoDome version to use (e.g. '0.5.0' or 'latest')
+    required: false
+    default: '0.5.0'
+
+outputs:
+  findings:
+    description: Number of findings detected
+    value: ${{ steps.dome.outputs.findings }}
+  result:
+    description: Scan result summary (pass/fail)
+    value: ${{ steps.dome.outputs.result }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Cache PicoDome
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-picodome-${{ inputs.version }}
+
+    - name: Install PicoDome
+      shell: bash
+      run: |
+        if [ "${{ inputs.version }}" = "repo" ]; then
+          pip install "${{ github.action_path }}"
+        elif [ "${{ inputs.version }}" = "latest" ]; then
+          pip install picodome
+        else
+          pip install "picodome==${{ inputs.version }}"
+        fi
+        picodome --version
+
+    - name: Run PicoDome
+      id: dome
+      shell: bash
+      run: |
+        set -o pipefail
+
+        MODE="${{ inputs.mode }}"
+        ARGS=()
+
+        if [ "$MODE" = "analyze" ]; then
+          # Analyze mode — post-execution from saved file
+          if [ -z "${{ inputs.analyze-input }}" ]; then
+            echo "::error::analyze mode requires analyze-input (path to JSON from previous sandbox run)"
+            exit 1
+          fi
+          ARGS+=(--input "${{ inputs.analyze-input }}")
+          if [ -n "${{ inputs.rules }}" ]; then
+            IFS=',' read -ra RULE_ARGS <<< "${{ inputs.rules }}"
+            for rule in "${RULE_ARGS[@]}"; do
+              ARGS+=(--rules "$rule")
+            done
+          fi
+          if [ -n "${{ inputs.fail-on }}" ]; then
+            ARGS+=(--fail-on "${{ inputs.fail-on }}")
+          fi
+          ARGS+=(--format "${{ inputs.format }}")
+          echo "Running: picodome analyze ${ARGS[*]}"
+          picodome analyze "${ARGS[@]}" 2>&1 | tee picodome-output.txt
+
+        else
+          # Sandbox or Pipeline mode
+          ARGS+=(${{ inputs.command }})
+
+          if [ -n "${{ inputs.policy }}" ]; then
+            ARGS+=(--policy "${{ inputs.policy }}")
+          fi
+
+          ARGS+=(--timeout "${{ inputs.timeout }}")
+          ARGS+=(--format "${{ inputs.format }}")
+          ARGS+=(--output "${{ inputs.output }}")
+
+          if [ -n "${{ inputs.allow-runtime }}" ]; then
+            ARGS+=(--allow-runtime "${{ inputs.allow-runtime }}")
+          fi
+
+          if [ -n "${{ inputs.rules }}" ]; then
+            IFS=',' read -ra RULE_ARGS <<< "${{ inputs.rules }}"
+            for rule in "${RULE_ARGS[@]}"; do
+              ARGS+=(--rules "$rule")
+            done
+          fi
+
+          if [ -n "${{ inputs.cwd }}" ]; then
+            ARGS+=(--cwd "${{ inputs.cwd }}")
+          fi
+
+          if [ "${{ inputs.verify-determinism }}" = "true" ]; then
+            ARGS+=(--verify-determinism)
+          fi
+
+          echo "Running: picodome $MODE ${ARGS[*]}"
+          picodome "$MODE" "${ARGS[@]}" 2>&1 | tee picodome-output.txt
+        fi
+
+        EXIT_CODE=$?
+        FINDINGS=0
+        RESULT="pass"
+
+        if [ "$EXIT_CODE" -ne 0 ]; then
+          echo "PicoDome found issues (exit code: $EXIT_CODE)"
+          RESULT="fail"
+        fi
+
+        # Count findings from JSON output
+        if [ -f "${{ inputs.output }}" ]; then
+          FINDINGS=$(python3 -c "import json; d=json.load(open('${{ inputs.output }}')); print(len(d.get('findings', d.get('violations', []))))" 2>/dev/null || echo 0)
+        elif [ -f "picodome-output.txt" ]; then
+          FINDINGS=$(grep -ci "finding\|violation\|alert" picodome-output.txt 2>/dev/null || echo 0)
+        fi
+
+        echo "findings=$FINDINGS" >> "$GITHUB_OUTPUT"
+        echo "result=$RESULT" >> "$GITHUB_OUTPUT"
+
+        if [ "${{ inputs.exit-code }}" = "true" ] && [ "$EXIT_CODE" -ne 0 ]; then
+          echo "::error::PicoDome found issues (exit code: $EXIT_CODE, severity threshold: ${{ inputs.fail-on }})"
+          exit 1
+        fi
+
+    - name: Summary
+      shell: bash
+      run: |
+        echo "## PicoDome Sandbox Results" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Mode:** ${{ inputs.mode }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Command:** \`${{ inputs.command }}\`" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Findings:** ${{ steps.dome.outputs.findings }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Result:** ${{ steps.dome.outputs.result }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- **Timeout:** ${{ inputs.timeout }}s" >> "$GITHUB_STEP_SUMMARY"
